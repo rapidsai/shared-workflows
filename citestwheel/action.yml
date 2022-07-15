@@ -21,9 +21,9 @@ runs:
       run: |
         arch=$(uname -m)
         if [ "${arch}" == "aarch64" ]; then
-          echo "DOCKER_CONTAINER=\"arm64v8/python:${PY_VER}-bullseye\"" >> "${GITHUB_ENV}"
+          echo "DOCKER_CONTAINER=arm64v8/python:${PY_VER}-bullseye" >> "${GITHUB_ENV}"
         elif  [ "${arch}" == "x86_64" ]; then
-          echo "DOCKER_CONTAINER=\"python:${PY_VER}-bullseye\"" >> "${GITHUB_ENV}"
+          echo "DOCKER_CONTAINER=python:${PY_VER}-bullseye" >> "${GITHUB_ENV}"
         fi
       shell: bash
 
