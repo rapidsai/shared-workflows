@@ -36,7 +36,7 @@ runs:
 
         # on x86_64 and Python == 3.8, build sdist (we just need 1 sdist out of the whole binary wheel matrix)
         if [ "${arch}" == "x86_64" ] && [ "${PY_VER}" == "3.8" ]; then
-            echo "CIBW_BEFORE_BUILD_LINUX=python3 -m pip install toml twine && python3 -m pip install \$(python3 -c \'import toml; print(\" \".join(toml.load({package}\"pyproject.toml\")[\"build-system\"][\"requires\"]))\') && python3 setup.py sdist -d /tmp/wheelhouse" >> "${GITHUB_ENV}"
+            echo "CIBW_BEFORE_BUILD_LINUX=/install-build-requirements.sh {package} && python3 {package}/setup.py sdist -d /tmp/wheelhouse" >> "${GITHUB_ENV}"
           fi
 
         echo "CIBW_BUILD=cp${PY_VER//./}-*" >> "${GITHUB_ENV}"
