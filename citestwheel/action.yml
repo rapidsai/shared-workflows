@@ -32,7 +32,7 @@ runs:
         docker run --rm \
           -v /tmp/wheelhouse:/wheels \
           ${DOCKER_CONTAINER} \
-          sh -x -c ${{ inputs.cpu-smoketest-command }} ;\
+          sh -c ${{ inputs.cpu-smoketest-command }}
       shell: bash
 
     - name: Run GPU smoke tests
@@ -43,5 +43,5 @@ runs:
           -v /tmp/wheelhouse:/wheels \
           --runtime=nvidia \
           ${DOCKER_CONTAINER} \
-          sh -x -c ${{ inputs.gpu-smoketest-command }} ;\
+          sh -c ${{ inputs.gpu-smoketest-command }}
       shell: bash
