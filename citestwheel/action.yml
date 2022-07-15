@@ -1,0 +1,47 @@
+name: wheelsmoketest
+description: 'Runs dockerized smoke tests for RAPIDS wheels built by cibuildwheel'
+inputs:
+  cpu-smoketest-command:
+    description: 'CPU-only smoketest command'
+    required: true
+    default: 'true'
+  gpu-smoketest-command:
+    description: 'GPU-enabled smoketest command'
+    required: false
+    default: ''
+  gpu-smoketest-enabled:
+    description: 'Run GPU smoketests'
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: map CPU arch and PY_VER to Debian Bullseye docker container
+      run: |
+        arch=$(uname -m)
+        if [ "${arch}" == "aarch64" ]; then
+          echo "DOCKER_CONTAINER=\"arm64v8/python:${PY_VER}-bullseye\"" >> "${GITHUB_ENV}"
+        elif  [ "${arch}" == "x86_64" ]; then
+          echo "DOCKER_CONTAINER=\"python:${PY_VER}-bullseye\"" >> "${GITHUB_ENV}"
+        fi
+      shell: bash
+
+    - name: Run CPU smoke test
+      run: |
+        docker run --rm \
+          -v /tmp/wheelhouse:/wheels \
+          ${DOCKER_CONTAINER} \
+          sh -c ${{ inputs.cpu-smoketest-command }} ;\
+      shell: bash
+
+    - name: Run GPU smoke tests
+      if: ${{ inputs.gpu-smoketest-enabled }} == 'true'
+      run: |
+        printf "\n\n Running GPU-enabled smoke test for %s on container %s \n\n" "${PY_VER}" "${DOCKER_CONTAINER}"
+        docker run --rm \
+          -v /tmp/wheelhouse:/wheels \
+          --runtime=nvidia \
+          ${DOCKER_CONTAINER} \
+          sh -c ${{ inputs.gpu-smoketest-command }} ;\
+      shell: bash

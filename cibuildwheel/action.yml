@@ -1,0 +1,62 @@
+name: cibuildwheel
+description: 'Installs pipx to run cibuildwheel on the current runner with some opinionated settings for RAPIDS'
+inputs:
+  package-dir:
+    description: 'Path to python package'
+    required: true
+    default: '.'
+  manylinux-platform:
+    description: 'Manylinux platform to repair to'
+    required: true
+    default: 'manylinux_2_17'
+  python-version:
+    description: 'python version'
+    required: true
+    default: '3.8'
+
+runs:
+  using: composite
+  steps:
+    - name: Install python3.8, venv, pip on runner container
+      run: sudo apt update -y && sudo apt install -y python3.8-venv python3-venv python3-pip
+      shell: bash
+
+    - name: Install pipx
+      run: |
+        python3 -m pip install pipx
+        python3 -m pipx ensurepath --force
+      shell: bash
+
+    - name: Create conditional env vars with bash
+      run: |
+        arch=$(uname -m)
+
+        # set arch according to runner arch; arm published from arm, amd from amd
+        echo "CIBW_ARCHS_LINUX=${arch}" >> "${GITHUB_ENV}"
+
+        # on x86_64 and Python == 3.8, build sdist (we just need 1 sdist out of the whole binary wheel matrix)
+        if [ "${arch}" == "x86_64" ] && [ "${PY_VER}" == "3.8" ]; then
+            echo "CIBW_BEFORE_BUILD_LINUX=python3 -m pip install toml twine && python3 -m pip install \$(python3 -c \'import toml; print(\" \".join(toml.load({package}\"pyproject.toml\")[\"build-system\"][\"requires\"]))\') && python3 setup.py sdist -d /tmp/wheelhouse" >> "${GITHUB_ENV}"
+          fi
+
+        echo "CIBW_BUILD=cp${PY_VER//./}-*" >> "${GITHUB_ENV}"
+        echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel repair -w {dest_dir} --plat ${MANYLINUX_PLAT}_${arch} {wheel}" >> "${GITHUB_ENV}"
+      shell: bash
+      env:
+        PY_VER: ${{ inputs.python-version }}
+        MANYLINUX_PLAT: ${{ inputs.manylinux-platform }}
+
+    # Redirecting stderr to stdout to fix interleaving issue in Actions.
+    - name: Invoke cibuildwheel with pipx
+      run: >
+        pipx run --verbose
+        --spec cibuildwheel==2.8.0
+        cibuildwheel
+        ${{ inputs.package-dir }}
+        --output-dir /tmp/wheelhouse
+        2>&1
+      shell: bash
+      env:
+        CIBW_SKIP: "*musllinux*"
+        CIBW_MANYLINUX_X86_64_IMAGE: rapidsai/manylinux:amd64
+        CIBW_MANYLINUX_AARCH64_IMAGE: rapidsai/manylinux:arm64
