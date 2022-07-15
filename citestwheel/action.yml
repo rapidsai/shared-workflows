@@ -30,7 +30,7 @@ runs:
     - name: Run CPU smoke test
       run: |
         docker run --rm \
-          -v /tmp/wheelhouse:/wheels \
+          -v /wheelhouse:/wheels \
           ${DOCKER_CONTAINER} \
           sh -c ${{ inputs.cpu-smoketest-command }}
       shell: bash
@@ -40,7 +40,7 @@ runs:
       run: |
         printf "\n\n Running GPU-enabled smoke test for %s on container %s \n\n" "${PY_VER}" "${DOCKER_CONTAINER}"
         docker run --rm \
-          -v /tmp/wheelhouse:/wheels \
+          -v /wheelhouse:/wheels \
           --runtime=nvidia \
           ${DOCKER_CONTAINER} \
           sh -c ${{ inputs.gpu-smoketest-command }}

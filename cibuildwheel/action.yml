@@ -39,7 +39,7 @@ runs:
         echo "CIBW_ARCHS_LINUX=${arch}" >> "${GITHUB_ENV}"
 
         if [ "${arch}-${PY_VER}" == "${BUILD_SDIST_ON}" ]; then
-            echo "CIBW_BEFORE_BUILD_LINUX=/install-build-requirements.sh {package} && python3 {package}/setup.py sdist -d /tmp/wheelhouse" >> "${GITHUB_ENV}"
+            echo "CIBW_BEFORE_BUILD_LINUX=/install-build-requirements.sh {package} && python3 {package}/setup.py sdist -d /wheelhouse" >> "${GITHUB_ENV}"
         fi
 
         echo "CIBW_BUILD=cp${PY_VER//./}-*" >> "${GITHUB_ENV}"
@@ -57,7 +57,7 @@ runs:
         --spec cibuildwheel==2.8.0
         cibuildwheel
         ${{ inputs.package-dir }}
-        --output-dir /tmp/wheelhouse
+        --output-dir /wheelhouse
         2>&1
       shell: bash
       env:
