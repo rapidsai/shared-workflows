@@ -1,6 +1,10 @@
 name: wheelsmoketest
 description: 'Runs dockerized smoke tests for RAPIDS wheels built by cibuildwheel'
 inputs:
+  wheel-dir:
+    description: 'Path to wheels'
+    required: true
+    default: '.'
   cpu-smoketest-command:
     description: 'CPU-only smoketest command'
     required: true
@@ -30,7 +34,7 @@ runs:
     - name: Run CPU smoke test
       run: |
         docker run --rm \
-          -v /wheelhouse:/wheels \
+          -v ${{ inputs.wheel-dir }}:/wheels \
           ${DOCKER_CONTAINER} \
           sh -c ${{ inputs.cpu-smoketest-command }}
       shell: bash
@@ -40,7 +44,7 @@ runs:
       run: |
         printf "\n\n Running GPU-enabled smoke test for %s on container %s \n\n" "${PY_VER}" "${DOCKER_CONTAINER}"
         docker run --rm \
-          -v /wheelhouse:/wheels \
+          -v ${{ inputs.wheel-dir }}:/wheels \
           --runtime=nvidia \
           ${DOCKER_CONTAINER} \
           sh -c ${{ inputs.gpu-smoketest-command }}

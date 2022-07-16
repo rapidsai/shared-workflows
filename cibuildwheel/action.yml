@@ -5,6 +5,10 @@ inputs:
     description: 'Path to python package'
     required: true
     default: '.'
+  output-dir:
+    description: 'Path to output wheels to'
+    required: true
+    default: './dist'
   manylinux-platform:
     description: 'Manylinux platform to repair to'
     required: true
@@ -34,21 +38,18 @@ runs:
     - name: Create conditional env vars with bash
       run: |
         arch=$(uname -m)
+        pyver=${{ inputs.python-version }}
 
         # set arch according to runner arch; arm published from arm, amd from amd
         echo "CIBW_ARCHS_LINUX=${arch}" >> "${GITHUB_ENV}"
 
-        if [ "${arch}-${PY_VER}" == "${BUILD_SDIST_ON}" ]; then
-            echo "CIBW_BEFORE_BUILD_LINUX=/install-build-requirements.sh {package} && python3 {package}/setup.py sdist -d /wheelhouse" >> "${GITHUB_ENV}"
+        if [ "${arch}-${pyver}" == "${{ inputs.build-sdist-on }}" ]; then
+            echo "CIBW_BEFORE_BUILD_LINUX=/install-build-requirements.sh {package} && python3 {package}/setup.py sdist -d ${{ inputs.output-dir }}" >> "${GITHUB_ENV}"
         fi
 
-        echo "CIBW_BUILD=cp${PY_VER//./}-*" >> "${GITHUB_ENV}"
-        echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel repair -w {dest_dir} --plat ${MANYLINUX_PLAT}_${arch} {wheel}" >> "${GITHUB_ENV}"
+        echo "CIBW_BUILD=cp${pyver//./}-*" >> "${GITHUB_ENV}"
+        echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel repair -w {dest_dir} --plat ${{ inputs.manylinux-platform }}_${arch} {wheel}" >> "${GITHUB_ENV}"
       shell: bash
-      env:
-        PY_VER: ${{ inputs.python-version }}
-        MANYLINUX_PLAT: ${{ inputs.manylinux-platform }}
-        BUILD_SDIST_ON: ${{ inputs.build-sdist-on }}
 
     # Redirecting stderr to stdout to fix interleaving issue in Actions.
     - name: Invoke cibuildwheel with pipx
@@ -57,7 +58,7 @@ runs:
         --spec cibuildwheel==2.8.0
         cibuildwheel
         ${{ inputs.package-dir }}
-        --output-dir /wheelhouse
+        --output-dir ${{ inputs.output-dir }}
         2>&1
       shell: bash
       env:
