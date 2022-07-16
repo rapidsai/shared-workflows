@@ -1,4 +1,4 @@
-name: wheelsmoketest
+name: citestwheel
 description: 'Runs dockerized smoke tests for RAPIDS wheels built by cibuildwheel'
 inputs:
   wheel-dir:
@@ -13,10 +13,6 @@ inputs:
     description: 'GPU-enabled smoketest command'
     required: false
     default: ''
-  gpu-smoketest-enabled:
-    description: 'Run GPU smoketests'
-    required: false
-    default: 'false'
 
 runs:
   using: composite
@@ -40,7 +36,7 @@ runs:
       shell: bash
 
     - name: Run GPU smoke tests
-      if: ${{ inputs.gpu-smoketest-enabled }} == 'true'
+      if: "${{ inputs.gpu-smoketest-command != '' }}"
       run: |
         printf "\n\n Running GPU-enabled smoke test for %s on container %s \n\n" "${PY_VER}" "${DOCKER_CONTAINER}"
         docker run --rm \
