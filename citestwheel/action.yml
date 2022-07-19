@@ -17,13 +17,13 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: map CPU arch and PY_VER to Debian Bullseye docker container
+    - name: map CPU arch and RAPIDS_PY_VER to Debian Bullseye docker container
       run: |
         arch=$(uname -m)
         if [ "${arch}" == "aarch64" ]; then
-          echo "DOCKER_CONTAINER=arm64v8/python:${PY_VER}-bullseye" >> "${GITHUB_ENV}"
+          echo "DOCKER_CONTAINER=arm64v8/python:${RAPIDS_PY_VER}-bullseye" >> "${GITHUB_ENV}"
         elif  [ "${arch}" == "x86_64" ]; then
-          echo "DOCKER_CONTAINER=python:${PY_VER}-bullseye" >> "${GITHUB_ENV}"
+          echo "DOCKER_CONTAINER=python:${RAPIDS_PY_VER}-bullseye" >> "${GITHUB_ENV}"
         fi
       shell: bash
 
@@ -38,7 +38,7 @@ runs:
     - name: Run GPU smoke tests
       if: "${{ inputs.gpu-smoketest-command != '' }}"
       run: |
-        printf "\n\n Running GPU-enabled smoke test for %s on container %s \n\n" "${PY_VER}" "${DOCKER_CONTAINER}"
+        printf "\n\n Running GPU-enabled smoke test for %s on container %s \n\n" "${RAPIDS_PY_VER}" "${DOCKER_CONTAINER}"
         docker run --rm \
           -v ${{ inputs.wheel-dir }}:/wheels \
           --runtime=nvidia \
