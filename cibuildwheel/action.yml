@@ -65,11 +65,11 @@ runs:
         # set before-build-linux command to:
         #   1. install build-time deps and generate sdist if arch-pyver pair is specified for sdist
         #   2. run `inputs.cibw-before-all` if it's not empty
-        if [ "${arch}-${pyver}" == "${{ inputs.build-sdist-on }}" ] && [ "${{ inputs.cibw-before-build}" != "" ]; then
+        if [ "${arch}-${pyver}" == "${{ inputs.build-sdist-on }}" ] && [ "${{ inputs.cibw-before-build }}" != "" ]; then
           echo "CIBW_BEFORE_BUILD_LINUX=/install-build-requirements.sh {package} && python3 {package}/setup.py sdist -d ${{ inputs.output-dir }} && ${{ inputs.cibw-before-build }}" >> "${GITHUB_ENV}"
-        elif [ "${arch}-${pyver}" == "${{ inputs.build-sdist-on }}" ] && [ "${{ inputs.cibw-before-build}" == "" ]; then
+        elif [ "${arch}-${pyver}" == "${{ inputs.build-sdist-on }}" ]; then
           echo "CIBW_BEFORE_BUILD_LINUX=/install-build-requirements.sh {package} && python3 {package}/setup.py sdist -d ${{ inputs.output-dir }}" >> "${GITHUB_ENV}"
-        elif [ "${arch}-${pyver}" != "${{ inputs.build-sdist-on }}" ] && [ "${{ inputs.cibw-before-build}" != "" ]; then
+        elif [ "${{ inputs.cibw-before-build }}" != "" ]; then
           echo "CIBW_BEFORE_BUILD_LINUX=${{ inputs.cibw-before-build }}" >> "${GITHUB_ENV}"
         fi
 
