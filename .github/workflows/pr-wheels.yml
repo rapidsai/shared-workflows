@@ -20,7 +20,7 @@ on:
       manylinux-platform:
         required: false
         type: string
-        default: 'manylinux_2_24'
+        default: 'manylinux_2_28'
       cpu-smoketest-command:
         required: true
         type: string
