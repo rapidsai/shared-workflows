@@ -1,0 +1,121 @@
+name: Build RAPIDS project wheels
+
+on:
+  workflow_call:
+    inputs:
+      package-name:
+        required: true
+        type: string
+      package-dir:
+        required: true
+        type: string
+      cibw-before-all:
+        required: false
+        type: string
+        default: ''
+      cibw-environment:
+        required: false
+        type: string
+        default: ''
+      manylinux-platform:
+        required: false
+        type: string
+        default: 'manylinux_2_24'
+      cpu-smoketest-command:
+        required: true
+        type: string
+      gpu-smoketest-command:
+        required: false
+        type: string
+        default: 'false'
+
+jobs:
+  wheel-build:
+    name: cibuildwheel ${{ matrix.python-version }} ${{ matrix.labels[2] }}
+    runs-on: ${{ matrix.labels }}
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9"]
+        labels: [[self-hosted, linux, amd64, cpu4], [self-hosted, linux, arm64, cpu4]]
+    steps:
+    - name: checkout code repo
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0 # unshallow fetch for setuptools-scm
+
+    - name: Build wheels with custom RAPIDS cibuildwheel action
+      uses: sevagh/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions
+      env:
+        CIBW_ENVIRONMENT: "PYTHON_PACKAGE_CUDA_SUFFIX='-cuda11' ${{ inputs.cibw-environment }}"
+        CIBW_BEFORE_ALL_LINUX: ${{ inputs.cibw-before-all }}
+      with:
+        package-dir: ${{ inputs.package_dir }}
+        output-dir: dist
+        manylinux-platform: ${{ inputs.manylinux-platform }}
+        python-version: ${{ matrix.python-version }}
+        #build-sdist-on: "x86_64-3.8"
+
+    - name: Download gha-tools
+      run: |
+        wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
+        pip install awscli
+
+    - name: Upload wheels to downloads.rapids.ai
+      run: rapids-upload-wheels-to-s3 dist
+      env:
+        RAPIDS_BUILD_TYPE: "pull-request"
+        RAPIDS_PY_VER: ${{ matrix.python-version }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+
+  wheel-test:
+    name: wheel smoketest ${{ matrix.python-version }} ${{ matrix.labels[2] }}
+    runs-on: ${{ matrix.labels }}
+    needs: wheel-build
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9"]
+        labels: [[self-hosted, linux, amd64, cpu4], [self-hosted, linux, arm64, cpu4]]
+    steps:
+    - name: Download gha-tools
+      run: |
+        wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
+        pip install awscli
+
+    - name: Download wheels from downloads.rapids.ai
+      run: rapids-download-wheels-from-s3 ./dist
+      env:
+        RAPIDS_BUILD_TYPE: "pull-request"
+        RAPIDS_PY_VER: ${{ matrix.python-version }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+
+    - name: Run wheel smoketests with custom RAPIDS citestwheel action
+      uses: sevagh/shared-action-workflows/citestwheel@feat/wheel-ci-actions
+      env:
+        PY_VER: ${{ matrix.python-version }}
+      with:
+        wheel-dir: $(pwd)/dist
+        cpu-smoketest-command: >
+          "python3 -m venv /clean-venv &&
+          . /clean-venv/bin/activate &&
+          set -x &&
+          python3 -m pip install --verbose /wheels/${{ inputs.package-name }}_cuda11*-cp${PY_VER/./}-cp${PY_VER/./}-${{ inputs.manylinux-platform }}_$(uname -m).whl &&
+          python3 -m pip check &&
+          ${{ inputs.cpu-smoketest-command }};"
+        gpu-smoketest-command: >
+          "python3 -m venv /clean-venv &&
+          . /clean-venv/bin/activate &&
+          set -x &&
+          python3 -m pip install --verbose /wheels/${{ inputs.package-name }}_cuda11*-cp${PY_VER/./}-cp${PY_VER/./}-${{ inputs.manylinux-platform }}_$(uname -m).whl &&
+          python3 -m pip check &&
+          ${{ inputs.gpu-smoketest-command }};"
+
+    - name: Publish wheels to RAPIDS internal PyPI
+      run: |
+        pip install twine
+        twine upload ./dist/*.whl
+      env:
+        TWINE_USERNAME: cibuildwheel
+        TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
+        TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
