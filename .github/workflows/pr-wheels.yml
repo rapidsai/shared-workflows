@@ -49,7 +49,7 @@ jobs:
         CIBW_ENVIRONMENT: "PYTHON_PACKAGE_CUDA_SUFFIX='-cuda11' ${{ inputs.cibw-environment }}"
         CIBW_BEFORE_ALL_LINUX: ${{ inputs.cibw-before-all }}
       with:
-        package-dir: ${{ inputs.package_dir }}
+        package-dir: ${{ inputs.package-dir }}
         output-dir: dist
         manylinux-platform: ${{ inputs.manylinux-platform }}
         python-version: ${{ matrix.python-version }}
