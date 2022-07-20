@@ -9,6 +9,10 @@ on:
       package-dir:
         required: true
         type: string
+      cibw-before-all:
+        required: false
+        type: string
+        default: ''
       cibw-before-build:
         required: false
         type: string
@@ -47,7 +51,6 @@ jobs:
       uses: rapidsai/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions
       env:
         CIBW_ENVIRONMENT: "PYTHON_PACKAGE_CUDA_SUFFIX='-cuda11' ${{ inputs.cibw-environment }}"
-        CIBW_BEFORE_BUILD_LINUX: ${{ inputs.cibw-before-build }}
         CIBW_VERBOSITY: "3"
       with:
         package-dir: ${{ inputs.package-dir }}
@@ -56,6 +59,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
         internal-pypi-user: cibuildwheel
         internal-pypi-pass: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
+        cibw-before-all: ${{ inputs.cibw-before-all }}
+        cibw-before-build: ${{ inputs.cibw-before-build }}
         #build-sdist-on: "x86_64-3.8"
 
     - name: Download gha-tools
