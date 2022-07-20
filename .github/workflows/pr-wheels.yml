@@ -44,7 +44,7 @@ jobs:
         fetch-depth: 0 # unshallow fetch for setuptools-scm
 
     - name: Build wheels with custom RAPIDS cibuildwheel action
-      uses: sevagh/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions
+      uses: rapidsai/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions
       env:
         CIBW_ENVIRONMENT: "PYTHON_PACKAGE_CUDA_SUFFIX='-cuda11' ${{ inputs.cibw-environment }}"
         CIBW_BEFORE_ALL_LINUX: ${{ inputs.cibw-before-all }}
@@ -91,7 +91,7 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
 
     - name: Run wheel smoketests with custom RAPIDS citestwheel action
-      uses: sevagh/shared-action-workflows/citestwheel@feat/wheel-ci-actions
+      uses: rapidsai/shared-action-workflows/citestwheel@feat/wheel-ci-actions
       env:
         PY_VER: ${{ matrix.python-version }}
       with:
