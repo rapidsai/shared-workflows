@@ -53,7 +53,7 @@ jobs:
     - name: Build wheels with custom RAPIDS cibuildwheel action
       uses: rapidsai/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions
       env:
-        CIBW_ENVIRONMENT: "PYTHON_PACKAGE_CUDA_SUFFIX='-cuda11' SKBUILD_CONFIGURE_OPTIONS='${{ inputs.skbuild-configure-options}}' ${{ inputs.cibw-environment }}"
+        CIBW_ENVIRONMENT: "CMAKE_BUILD_PARALLEL_LEVEL=16 PYTHON_PACKAGE_CUDA_SUFFIX='-cuda11' SKBUILD_CONFIGURE_OPTIONS='-DCMAKE_MESSAGE_LOG_LEVEL=DEBUG ${{ inputs.skbuild-configure-options}}' ${{ inputs.cibw-environment }}"
         CIBW_VERBOSITY: "3"
         CIBW_BUILD_FRONTEND: "pip"
       with:
