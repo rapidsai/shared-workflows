@@ -40,7 +40,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.8", "3.9"]
-        labels: [[self-hosted, linux, amd64, cpu4], [self-hosted, linux, arm64, cpu4]]
+        labels: [[self-hosted, linux, amd64, cpu16], [self-hosted, linux, arm64, cpu16]]
     steps:
     - name: checkout code repo
       uses: actions/checkout@v3
