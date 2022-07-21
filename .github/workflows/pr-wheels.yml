@@ -63,14 +63,16 @@ jobs:
 
     - name: Download gha-tools
       run: |
-        wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
+        git clone https://github.com/sevagh/gha-tools.git -b feat/support-changing-wheel-name /tmp/gha-tools
+        echo "/tmp/gha-tools/tools" >> "${GITHUB_PATH}"
         pip install awscli
 
     - name: Upload wheels to downloads.rapids.ai
       run: rapids-upload-wheels-to-s3 dist
       env:
-        RAPIDS_PY_VER: "38_39"
         RAPIDS_BUILD_TYPE: "pull-request"
+        RAPIDS_PY_VER: "38_39"
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
 
@@ -84,7 +86,8 @@ jobs:
     steps:
     - name: Download gha-tools
       run: |
-        wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
+        git clone https://github.com/sevagh/gha-tools.git -b feat/support-changing-wheel-name /tmp/gha-tools
+        echo "/tmp/gha-tools/tools" >> "${GITHUB_PATH}"
         pip install awscli
 
     - name: Download wheels from downloads.rapids.ai
@@ -92,6 +95,7 @@ jobs:
       env:
         RAPIDS_BUILD_TYPE: "pull-request"
         RAPIDS_PY_VER: "38_39"
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
 
@@ -118,7 +122,7 @@ jobs:
     - name: Publish wheels to RAPIDS internal PyPI
       run: |
         pip install twine
-        twine upload ./dist/*.whl
+        twine upload ./dist/"${{ inputs.package-name }}_cuda11*.whl"
       env:
         TWINE_USERNAME: cibuildwheel
         TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
