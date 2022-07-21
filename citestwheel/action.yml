@@ -4,15 +4,16 @@ inputs:
   wheel-dir:
     description: 'Path to wheels'
     required: true
-    default: '.'
+  wheel-filename-pattern:
+    description: 'Filename pattern of wheel e.g. rmm_cuda11-cp38-cp38-manylinux_2_24'
+    required: true
   cpu-smoketest-command:
     description: 'CPU-only smoketest command'
     required: true
-    default: 'true'
   gpu-smoketest-command:
     description: 'GPU-enabled smoketest command'
     required: false
-    default: ''
+    default: 'true'
 
 runs:
   using: composite
@@ -28,20 +29,29 @@ runs:
       shell: bash
 
     - name: Run CPU smoke test
-      run: |
-        docker run --rm \
-          -v ${{ inputs.wheel-dir }}:/wheels \
-          ${DOCKER_CONTAINER} \
-          sh -c ${{ inputs.cpu-smoketest-command }}
+      run: >
+        docker run --rm
+        -v ${{ inputs.wheel-dir }}:/wheels
+        ${DOCKER_CONTAINER}
+        sh -c "python3 -m venv /clean-venv &&
+        . /clean-venv/bin/activate &&
+        set -x &&
+        python3 -m pip install --verbose /wheels/${{ inputs.wheel-filename-pattern }}_$(uname -m).whl &&
+        python3 -m pip check &&
+        ${{ inputs.cpu-smoketest-command }};"
       shell: bash
 
     - name: Run GPU smoke tests
       if: "${{ inputs.gpu-smoketest-command != '' }}"
-      run: |
-        printf "\n\n Running GPU-enabled smoke test for %s on container %s \n\n" "${RAPIDS_PY_VER}" "${DOCKER_CONTAINER}"
-        docker run --rm \
-          -v ${{ inputs.wheel-dir }}:/wheels \
-          --runtime=nvidia \
-          ${DOCKER_CONTAINER} \
-          sh -c ${{ inputs.gpu-smoketest-command }}
+      run: >
+        docker run --rm
+        -v ${{ inputs.wheel-dir }}:/wheels
+        --runtime=nvidia
+        ${DOCKER_CONTAINER}
+        sh -c "python3 -m venv /clean-venv &&
+        . /clean-venv/bin/activate &&
+        set -x &&
+        python3 -m pip install --verbose /wheels/${{ inputs.wheel-filename-pattern }}_$(uname -m).whl &&
+        python3 -m pip check &&
+        ${{ inputs.gpu-smoketest-command }};"
       shell: bash

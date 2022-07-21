@@ -10,17 +10,14 @@ inputs:
   manylinux-platform:
     description: 'Manylinux platform to repair to'
     required: true
-  python-version:
-    description: 'Python version'
-    required: true
   internal-pypi-user:
     description: 'Username for pypi.k8s.rapids.ai'
     required: true
   internal-pypi-pass:
     description: 'Password for pypi.k8s.rapids.ai'
     required: true
-  build-sdist-on:
-    description: 'Which arch-pyver combo to build the sdist from'
+  build-sdist-on-arch:
+    description: 'Which arch to build the sdist from'
     required: false
     default: ''
   cibw-before-all:
@@ -48,7 +45,6 @@ runs:
     - name: Create conditional env vars with bash
       run: |
         arch=$(uname -m)
-        pyver=${{ inputs.python-version }}
 
         # set arch according to runner arch
         echo "CIBW_ARCHS_LINUX=${arch}" >> "${GITHUB_ENV}"
@@ -63,17 +59,16 @@ runs:
         fi
 
         # set before-build-linux command to:
-        #   1. install build-time deps and generate sdist if arch-pyver pair is specified for sdist
+        #   1. install build-time deps and generate sdist if arch is specified for sdist
         #   2. run `inputs.cibw-before-all` if it's not empty
-        if [ "${arch}-${pyver}" == "${{ inputs.build-sdist-on }}" ] && [ "${{ inputs.cibw-before-build }}" != "" ]; then
+        if [ "${{ inputs.build-sdist-on-arch }}" == "${arch}" ] && [ "${{ inputs.cibw-before-build }}" != "" ]; then
           echo "CIBW_BEFORE_BUILD_LINUX=/install-build-requirements.sh {package} && python3 {package}/setup.py sdist -d ${{ inputs.output-dir }} && ${{ inputs.cibw-before-build }}" >> "${GITHUB_ENV}"
-        elif [ "${arch}-${pyver}" == "${{ inputs.build-sdist-on }}" ]; then
+        elif [ "${{ inputs.build-sdist-on-arch }}" == "${arch}" ]; then
           echo "CIBW_BEFORE_BUILD_LINUX=/install-build-requirements.sh {package} && python3 {package}/setup.py sdist -d ${{ inputs.output-dir }}" >> "${GITHUB_ENV}"
         elif [ "${{ inputs.cibw-before-build }}" != "" ]; then
           echo "CIBW_BEFORE_BUILD_LINUX=${{ inputs.cibw-before-build }}" >> "${GITHUB_ENV}"
         fi
 
-        echo "CIBW_BUILD=cp${pyver//./}-*" >> "${GITHUB_ENV}"
         echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel repair -w {dest_dir} --plat ${{ inputs.manylinux-platform }}_${arch} {wheel}" >> "${GITHUB_ENV}"
       shell: bash
 
@@ -87,6 +82,7 @@ runs:
         2>&1
       shell: bash
       env:
+        CIBW_BUILD: "cp38-* cp39-*"
         CIBW_SKIP: "*musllinux*"
         CIBW_MANYLINUX_X86_64_IMAGE: rapidsai/manylinux:amd64
         CIBW_MANYLINUX_AARCH64_IMAGE: rapidsai/manylinux:arm64
