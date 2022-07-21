@@ -18,16 +18,14 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: map CPU arch and RAPIDS_PY_VER to Debian Bullseye docker container
+    - name: map CPU arches to respective Debian Bullseye docker containers
       run: |
-        # first clear any previously-set DOCKER_CONTAINER env var
-        sed -i '/DOCKER_CONTAINER.*/d' "${GITHUB_ENV}"
-
         arch=$(uname -m)
+
         if [ "${arch}" == "aarch64" ]; then
-          echo "DOCKER_CONTAINER=arm64v8/python:${RAPIDS_PY_VER}-bullseye" >> "${GITHUB_ENV}"
+          echo "DOCKER_CONTAINER=arm64v8/python" >> "${GITHUB_ENV}"
         elif  [ "${arch}" == "x86_64" ]; then
-          echo "DOCKER_CONTAINER=python:${RAPIDS_PY_VER}-bullseye" >> "${GITHUB_ENV}"
+          echo "DOCKER_CONTAINER=python" >> "${GITHUB_ENV}"
         fi
       shell: bash
 
@@ -35,7 +33,7 @@ runs:
       run: >
         docker run --rm
         -v ${{ inputs.wheel-dir }}:/wheels
-        ${DOCKER_CONTAINER}
+        "${DOCKER_CONTAINER}:${RAPIDS_PY_VER}-bullseye"
         sh -c "python3 -m venv /clean-venv &&
         . /clean-venv/bin/activate &&
         set -x &&
@@ -50,7 +48,7 @@ runs:
         docker run --rm
         -v ${{ inputs.wheel-dir }}:/wheels
         --runtime=nvidia
-        ${DOCKER_CONTAINER}
+        "${DOCKER_CONTAINER}:${RAPIDS_PY_VER}-bullseye"
         sh -c "python3 -m venv /clean-venv &&
         . /clean-venv/bin/activate &&
         set -x &&
