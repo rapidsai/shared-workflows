@@ -20,6 +20,9 @@ runs:
   steps:
     - name: map CPU arch and RAPIDS_PY_VER to Debian Bullseye docker container
       run: |
+        # first clear any previously-set DOCKER_CONTAINER env var
+        sed -i '/DOCKER_CONTAINER.*/d' "${GITHUB_ENV}"
+
         arch=$(uname -m)
         if [ "${arch}" == "aarch64" ]; then
           echo "DOCKER_CONTAINER=arm64v8/python:${RAPIDS_PY_VER}-bullseye" >> "${GITHUB_ENV}"
