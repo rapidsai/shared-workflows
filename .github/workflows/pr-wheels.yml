@@ -21,6 +21,10 @@ on:
         required: false
         type: string
         default: ''
+      skbuild-build-options:
+        required: false
+        type: string
+        default: ''
       cibw-environment:
         required: false
         type: string
@@ -53,8 +57,7 @@ jobs:
     - name: Build wheels with custom RAPIDS cibuildwheel action
       uses: rapidsai/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions
       env:
-        CIBW_ENVIRONMENT: "CMAKE_BUILD_PARALLEL_LEVEL=16 PYTHON_PACKAGE_CUDA_SUFFIX='-cuda11' SKBUILD_CONFIGURE_OPTIONS='-DCMAKE_MESSAGE_LOG_LEVEL=DEBUG ${{ inputs.skbuild-configure-options}}' ${{ inputs.cibw-environment }}"
-        CIBW_VERBOSITY: "3"
+        CIBW_ENVIRONMENT: "CMAKE_BUILD_PARALLEL_LEVEL=16 PYTHON_PACKAGE_CUDA_SUFFIX='-cuda11' SKBUILD_CONFIGURE_OPTIONS='-GNinja -DCMAKE_MESSAGE_LOG_LEVEL=DEBUG ${{ inputs.skbuild-configure-options}}' SKBUILD_BUILD_OPTIONS='-j16 ${{ inputs.skbuild-build-options }}' ${{ inputs.cibw-environment }}"
         CIBW_BUILD_FRONTEND: "pip"
       with:
         package-dir: ${{ inputs.package-dir }}
