@@ -71,8 +71,7 @@ jobs:
 
     - name: Download gha-tools
       run: |
-        git clone https://github.com/sevagh/gha-tools.git -b feat/support-changing-wheel-name /tmp/gha-tools
-        echo "/tmp/gha-tools/tools" >> "${GITHUB_PATH}"
+        wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
         pip install awscli
 
     - name: Upload wheels to downloads.rapids.ai
@@ -94,8 +93,7 @@ jobs:
     steps:
     - name: Download gha-tools
       run: |
-        git clone https://github.com/sevagh/gha-tools.git -b feat/support-changing-wheel-name /tmp/gha-tools
-        echo "/tmp/gha-tools/tools" >> "${GITHUB_PATH}"
+        wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
         pip install awscli
 
     - name: Download wheels from downloads.rapids.ai
