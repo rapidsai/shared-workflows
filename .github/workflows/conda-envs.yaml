@@ -30,7 +30,9 @@ jobs:
           echo "CONFIG_FILE_DIR=$(dirname ${{ env.CONFIG_FILE_PATH }})" | tee --append $GITHUB_ENV
           echo "CONFIG_FILE_NAME=$(basename ${{ env.CONFIG_FILE_PATH }})" | tee --append $GITHUB_ENV
       - name: Install rapids-env-generator # see https://github.com/rapidsai/rapids-env-generator for details
-        run: pip install git+https://github.com/rapidsai/rapids-env-generator.git@initial-commit#egg=rapids-env-generator
+        run: |
+          wget -O - https://github.com/rapidsai/rapids-env-generator/releases/latest/download/rapids_env_generator_bundle.tar.gz | tar -xz
+          pip install ./rapids_env_generator-*.whl
       - name: Run rapids-env-generator to generate environment files
         run: |
           find ${{ env.CONFIG_FILE_DIR }} -type f ! -name ${{ env.CONFIG_FILE_NAME }} -delete # delete existing environment files
