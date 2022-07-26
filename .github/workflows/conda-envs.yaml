@@ -16,7 +16,6 @@ jobs:
   check_generated_files:
     env:
       CONFIG_FILE_PATH: ${{ inputs.CONFIG_FILE_PATH }}
-    name: ensure conda env files are up-to-date
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
