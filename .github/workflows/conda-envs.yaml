@@ -35,7 +35,7 @@ jobs:
       - name: Run rapids-env-generator to generate environment files
         run: |
           find ${{ env.CONFIG_FILE_DIR }} -type f ! -name ${{ env.CONFIG_FILE_NAME }} -delete # delete existing environment files
-          reg --config ${{ env.CONFIG_FILE_PATH }}
+          rapids-env-generator --config ${{ env.CONFIG_FILE_PATH }}
       - name: Ensure generated environment files are up-to-date
         run: |
           git diff --exit-code
