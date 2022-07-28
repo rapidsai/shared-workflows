@@ -54,20 +54,52 @@ jobs:
       with:
         fetch-depth: 0 # unshallow fetch for setuptools-scm
 
-    - name: Build wheels with custom RAPIDS cibuildwheel action
-      uses: rapidsai/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions
+    - name: Install python3.8, venv, pip on runner container
+      run: sudo apt update -y && sudo apt install -y python3.8-venv python3-venv python3-pip
+      shell: bash
+
+    - name: Install pipx
+      run: |
+        python3 -m pip install pipx
+        python3 -m pipx ensurepath --force
+      shell: bash
+
+    - name: Create conditional CIBW env vars with bash
+      run: |
+        arch=$(uname -m)
+
+        # set arch according to runner arch
+        echo "CIBW_ARCHS_LINUX=${arch}" >> "${GITHUB_ENV}"
+
+        # set before-all-linux command to:
+        #   1. store internal pypi credentials in .netrc
+        #   2. append `&& inputs.cibw-before-all` if it's not empty
+        if [ "${{ inputs.cibw-before-all }}" != "" ]; then
+          echo "CIBW_BEFORE_ALL_LINUX=printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc && ${{ inputs.cibw-before-all }}" >> "${GITHUB_ENV}"
+        else
+          echo "CIBW_BEFORE_ALL_LINUX=printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc" >> "${GITHUB_ENV}"
+        fi
+
+        echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel repair -w {dest_dir} --plat ${{ inputs.manylinux-platform }}_${arch} {wheel} || true" >> "${GITHUB_ENV}"
+      shell: bash
+
+    - name: Invoke cibuildwheel with pipx
+      run: >
+        pipx run --verbose
+        --spec cibuildwheel==2.8.0
+        cibuildwheel
+        ${{ inputs.package-dir }}
+        --output-dir dist
+        2>&1
+      shell: bash
       env:
-        CIBW_ENVIRONMENT: "SKBUILD_CONFIGURE_OPTIONS='${{ inputs.skbuild-configure-options}}' SKBUILD_BUILD_OPTIONS='${{ inputs.skbuild-build-options }}' ${{ inputs.cibw-environment }}"
+        CIBW_BUILD: "cp38-* cp39-*"
+        CIBW_SKIP: "*musllinux*"
+        CIBW_MANYLINUX_X86_64_IMAGE: rapidsai/manylinux:amd64
+        CIBW_MANYLINUX_AARCH64_IMAGE: rapidsai/manylinux:arm64
         CIBW_BUILD_FRONTEND: "pip"
-      with:
-        package-dir: ${{ inputs.package-dir }}
-        output-dir: dist
-        manylinux-platform: ${{ inputs.manylinux-platform }}
-        internal-pypi-user: cibuildwheel
-        internal-pypi-pass: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
-        cibw-before-all: ${{ inputs.cibw-before-all }}
-        cibw-before-build: ${{ inputs.cibw-before-build }}
-        #build-sdist-on: "x86_64-3.8"
+        CIBW_BEFORE_BUILD_LINUX: ${{ inputs.cibw-before-build }}
+        CIBW_ENVIRONMENT: "SKBUILD_CONFIGURE_OPTIONS='${{ inputs.skbuild-configure-options}}' SKBUILD_BUILD_OPTIONS='${{ inputs.skbuild-build-options }}' ${{ inputs.cibw-environment }}"
 
     - name: Download gha-tools
       run: |
