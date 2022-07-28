@@ -137,30 +137,38 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
 
-    - name: Run wheel smoketests for Python 3.8
-      uses: rapidsai/shared-action-workflows/citestwheel@feat/wheel-ci-actions
-      env:
-        RAPIDS_PY_VER: 3.8
-      with:
-        wheel-dir: $(pwd)/dist
-        wheel-filename-pattern: "${{ inputs.package-name }}_cuda11*-cp${RAPIDS_PY_VER/./}-cp${RAPIDS_PY_VER/./}-${{ inputs.manylinux-platform }}"
-        cpu-smoketest-command: ${{ inputs.cpu-smoketest-command }}
-        gpu-smoketest-command: ${{ inputs.gpu-smoketest-command }}
+    - name: Create conditional CITW env vars with bash
+      run: echo "PYTHON_VERSIONS=3.8 3.9" >> "${GITHUB_ENV}"
 
-    - name: Run wheel smoketests for Python 3.9
-      uses: rapidsai/shared-action-workflows/citestwheel@feat/wheel-ci-actions
-      env:
-        RAPIDS_PY_VER: 3.9
-      with:
-        wheel-dir: $(pwd)/dist
-        wheel-filename-pattern: "${{ inputs.package-name }}_cuda11*-cp${RAPIDS_PY_VER/./}-cp${RAPIDS_PY_VER/./}-${{ inputs.manylinux-platform }}"
-        cpu-smoketest-command: ${{ inputs.cpu-smoketest-command }}
-        gpu-smoketest-command: ${{ inputs.gpu-smoketest-command }}
+    - name: Run CPU wheel smoketests in clean Python Bullseye containers
+      run: >
+        for pyver in ${PYTHON_VERSIONS}; do
+          docker run --rm -v $(pwd)/dist:/wheels python:$pyver-bullseye
+          sh -c "
+            python3 -m venv /clean-venv && . /clean-venv/bin/activate && set -x &&
+            python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*-cp${pyver/./}-cp${pyver/./}-${{ inputs.manylinux-platform }}_$(uname -m).whl &&
+            python3 -m pip check &&
+            ${{ inputs.cpu-smoketest-command }};
+          "
+        done
+
+    - name: Run GPU wheel smoketests in clean Python Bullseye containers with NVIDIA runtime
+      if: "${{ inputs.gpu-smoketest-command != '' }}"
+      run: >
+        for pyver in ${PYTHON_VERSIONS}; do
+          docker run --rm -v $(pwd)/dist:/wheels python:$pyver-bullseye
+          sh -c "
+            python3 -m venv /clean-venv && . /clean-venv/bin/activate && set -x &&
+            python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*-cp${pyver/./}-cp${pyver/./}-${{ inputs.manylinux-platform }}_$(uname -m).whl &&
+            python3 -m pip check &&
+            ${{ inputs.cpu-smoketest-command }};
+          "
+        done
 
     - name: Publish wheels to RAPIDS internal PyPI
       run: |
         pip install twine
-        twine upload ./dist/"${{ inputs.package-name }}_cuda11*.whl"
+        twine upload ./dist/"${{ inputs.package-name }}*.whl"
       env:
         TWINE_USERNAME: cibuildwheel
         TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
