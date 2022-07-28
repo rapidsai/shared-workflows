@@ -29,10 +29,6 @@ on:
         required: false
         type: string
         default: ''
-      manylinux-platform:
-        required: false
-        type: string
-        default: 'manylinux_2_28'
       cpu-smoketest-command:
         required: true
         type: string
@@ -80,7 +76,8 @@ jobs:
           echo "CIBW_BEFORE_ALL_LINUX=printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc" >> "${GITHUB_ENV}"
         fi
 
-        echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel repair -w {dest_dir} --plat ${{ inputs.manylinux-platform }}_${arch} {wheel}" >> "${GITHUB_ENV}"
+        # try to repair to the widest possible manylinux, starting from 2_17 i.e. manylinux2014 up to 2_28
+        echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel repair -w {dest_dir} --plat manylinux_2_17_${arch} {wheel} || auditwheel repair -w {dest_dir} --plat manylinux_2_24_${arch} {wheel} || auditwheel repair -w {dest_dir} --plat manylinux_2_27_${arch} {wheel} || auditwheel repair -w {dest_dir} --plat manylinux_2_28_${arch} {wheel}" >> "${GITHUB_ENV}"
       shell: bash
 
     - name: Invoke cibuildwheel with pipx
@@ -146,7 +143,7 @@ jobs:
           docker run --rm -v $(pwd)/dist:/wheels python:$pyver-bullseye \
           sh -c "\
             python3 -m venv /clean-venv && . /clean-venv/bin/activate && set -x &&\
-            python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*-cp${pyver/./}-cp${pyver/./}-${{ inputs.manylinux-platform }}_$(uname -m).whl &&\
+            python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*-cp${pyver/./}-cp${pyver/./}-manylinux_2_*_$(uname -m).whl &&\
             python3 -m pip check ;\
             ${{ inputs.cpu-smoketest-command }}"
         done
@@ -157,7 +154,7 @@ jobs:
         #      docker run --rm --runtime=nvidia -v $(pwd)/dist:/wheels python:$pyver-bullseye \
         #      sh -c "\
         #        python3 -m venv /clean-venv && . /clean-venv/bin/activate && set -x &&\
-        #        python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*-cp${pyver/./}-cp${pyver/./}-${{ inputs.manylinux-platform }}_$(uname -m).whl &&\
+        #        python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*-cp${pyver/./}-cp${pyver/./}-manylinux_2_*_$(uname -m).whl &&\
         #        python3 -m pip check ;\
         #        ${{ inputs.gpu-smoketest-command }}"
         #    done
