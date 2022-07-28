@@ -80,7 +80,7 @@ jobs:
           echo "CIBW_BEFORE_ALL_LINUX=printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc" >> "${GITHUB_ENV}"
         fi
 
-        echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel repair -w {dest_dir} --plat ${{ inputs.manylinux-platform }}_${arch} {wheel} || true" >> "${GITHUB_ENV}"
+        echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel repair -w {dest_dir} --plat ${{ inputs.manylinux-platform }}_${arch} {wheel}" >> "${GITHUB_ENV}"
       shell: bash
 
     - name: Invoke cibuildwheel with pipx
