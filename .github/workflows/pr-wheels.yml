@@ -52,13 +52,11 @@ jobs:
 
     - name: Install python3.8, venv, pip on runner container
       run: sudo apt update -y && sudo apt install -y python3.8-venv python3-venv python3-pip
-      shell: bash
 
     - name: Install pipx
       run: |
         python3 -m pip install pipx
         python3 -m pipx ensurepath --force
-      shell: bash
 
     - name: Create conditional CIBW env vars with bash
       run: |
@@ -77,8 +75,7 @@ jobs:
         fi
 
         # try to repair to the widest possible manylinux, starting from 2_17 i.e. manylinux2014 up to 2_28
-        echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel repair -w {dest_dir} --plat manylinux_2_17_${arch} {wheel} || auditwheel repair -w {dest_dir} --plat manylinux_2_24_${arch} {wheel} || auditwheel repair -w {dest_dir} --plat manylinux_2_27_${arch} {wheel} || auditwheel repair -w {dest_dir} --plat manylinux_2_28_${arch} {wheel}" >> "${GITHUB_ENV}"
-      shell: bash
+        echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_17_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_24_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_27_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_28_${arch} {wheel}" >> "${GITHUB_ENV}"
 
     - name: Invoke cibuildwheel with pipx
       run: >
@@ -88,7 +85,6 @@ jobs:
         ${{ inputs.package-dir }}
         --output-dir dist
         2>&1
-      shell: bash
       env:
         CIBW_BUILD: "cp38-* cp39-*"
         CIBW_SKIP: "*musllinux*"
