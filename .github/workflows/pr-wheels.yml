@@ -36,6 +36,10 @@ on:
         required: false
         type: string
         default: ''
+      auditwheel-repair-override:
+        required: false
+        type: string
+        default: ''
 
 jobs:
   wheel-build:
@@ -75,7 +79,11 @@ jobs:
         fi
 
         # try to repair to the widest possible manylinux, starting from 2_17 i.e. manylinux2014 up to 2_28
-        echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_17_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_24_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_27_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_28_${arch} {wheel}" >> "${GITHUB_ENV}"
+        if [ "${{ inputs.auditwheel-repair-override }}" == "" ]; then
+          echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_17_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_24_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_27_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_28_${arch} {wheel}" >> "${GITHUB_ENV}"
+        else
+          echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=${{ inputs.auditwheel-repair-override }}" >> "${GITHUB_ENV}"
+        fi
 
     - name: Invoke cibuildwheel with pipx
       run: >
@@ -139,7 +147,7 @@ jobs:
           docker run --rm -v $(pwd)/dist:/wheels python:$pyver-bullseye \
           sh -c "\
             python3 -m venv /clean-venv && . /clean-venv/bin/activate && set -x &&\
-            python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*-cp${pyver/./}-cp${pyver/./}-manylinux_2_*_$(uname -m).whl &&\
+            python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*-cp${pyver/./}-cp${pyver/./}*_$(uname -m).whl &&\
             python3 -m pip check ;\
             ${{ inputs.cpu-smoketest-command }}"
         done
@@ -150,7 +158,7 @@ jobs:
         #      docker run --rm --runtime=nvidia -v $(pwd)/dist:/wheels python:$pyver-bullseye \
         #      sh -c "\
         #        python3 -m venv /clean-venv && . /clean-venv/bin/activate && set -x &&\
-        #        python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*-cp${pyver/./}-cp${pyver/./}-manylinux_2_*_$(uname -m).whl &&\
+        #        python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*-cp${pyver/./}-cp${pyver/./}*_$(uname -m).whl &&\
         #        python3 -m pip check ;\
         #        ${{ inputs.gpu-smoketest-command }}"
         #    done
