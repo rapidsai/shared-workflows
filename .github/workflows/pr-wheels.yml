@@ -153,13 +153,14 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
 
-    - name: Run CPU wheel smoketests in clean Python Bullseye containers
+    - name: Run CPU wheel smoketests
+      if: "${{ inputs.cpu-smoketest-command != '' }}"
       run: |
         for pyver in ${PYTHON_VERSIONS}; do
           docker run --rm -v $(pwd)/dist:/wheels python:$pyver-bullseye \
           sh -c "\
             python3 -m venv /clean-venv && . /clean-venv/bin/activate && set -x &&\
-            python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*$(uname -m).whl &&\
+            python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*-cp${pyver/./}-cp${pyver/./}*_$(uname -m).whl &&\
             python3 -m pip check ;\
             ${{ inputs.cpu-smoketest-command }}"
         done
