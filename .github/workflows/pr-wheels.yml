@@ -159,21 +159,12 @@ jobs:
           docker run --rm -v $(pwd)/dist:/wheels python:$pyver-bullseye \
           sh -c "\
             python3 -m venv /clean-venv && . /clean-venv/bin/activate && set -x &&\
-            python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*-cp${pyver/./}-cp${pyver/./}*_$(uname -m).whl &&\
+            python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*$(uname -m).whl &&\
             python3 -m pip check ;\
             ${{ inputs.cpu-smoketest-command }}"
         done
-
         #- name: Run GPU wheel smoketests in clean Python Bullseye containers with NVIDIA runtime
-        #  run: |
-        #    for pyver in ${PYTHON_VERSIONS}; do
-        #      docker run --rm --runtime=nvidia -v $(pwd)/dist:/wheels python:$pyver-bullseye \
-        #      sh -c "\
-        #        python3 -m venv /clean-venv && . /clean-venv/bin/activate && set -x &&\
-        #        python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*-cp${pyver/./}-cp${pyver/./}*_$(uname -m).whl &&\
-        #        python3 -m pip check ;\
-        #        ${{ inputs.gpu-smoketest-command }}"
-        #    done
+        #--runtime=nvidia, inputs.gpu-smoketest-command
 
     - name: Publish wheels to RAPIDS internal PyPI
       run: |
