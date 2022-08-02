@@ -132,26 +132,53 @@ jobs:
     needs: wheel-build
     if: "${{ inputs.gpu-smoketest-command != '' }}"
     container:
-      image: python:${{ inputs.python-version }}-bullseye
+      image: rapidsai/wheelsmoketest:${{ inputs.python-version }}-${{ matrix.labels[2] }}
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
+        GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }} # gha-tools needs these
+        GITHUB_SHA: ${{ env.GITHUB_SHA }}
+        GITHUB_REF_NAME: ${{ env.GITHUB_REF_NAME }}
         RAPIDS_PY_VER: ${{ inputs.python-version }}
+        RAPIDS_BUILD_TYPE: "pull-request"
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
     steps:
       - name: Run GPU smoketest for wheel
-        run: >
-          "python3 -m venv /clean-venv && . /clean-venv/bin/activate && set -x &&
-          python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*-cp${RAPIDS_PY_VER//./}-cp${RAPIDS_PY_VER//./}*_$(uname -m).whl &&
-          python3 -m pip check;
-          ${{ inputs.gpu-smoketest-command }}"
+        run: /wheelsmoketest.sh ${{ inputs.gpu-smoketest-command }}
 
   wheel-cpu-test:
-    name: wheel CPU test + publish ${{ matrix.labels[2] }} ${{ inputs.python-version }}
+    name: wheel CPU test ${{ matrix.labels[2] }} ${{ inputs.python-version }}
     runs-on: ${{ matrix.labels }}
-    needs: [wheel-build, wheel-gpu-test]
+    strategy:
+      matrix:
+        labels: [[self-hosted, linux, amd64, cpu4], [self-hosted, linux, arm64, cpu4]]
+    needs: wheel-build
+    if: "${{ inputs.cpu-smoketest-command != '' }}"
+    container:
+      image: rapidsai/wheelsmoketest:${{ inputs.python-version }}-${{ matrix.labels[2] }}
+      env:
+        GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }} # gha-tools needs these
+        GITHUB_SHA: ${{ env.GITHUB_SHA }}
+        GITHUB_REF_NAME: ${{ env.GITHUB_REF_NAME }}
+        RAPIDS_PY_VER: ${{ inputs.python-version }}
+        RAPIDS_BUILD_TYPE: "pull-request"
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+    steps:
+      - name: Run CPU smoketest for wheel
+        run: /wheelsmoketest.sh ${{ inputs.cpu-smoketest-command }}
+
+  wheel-publish:
+    name: wheel publish ${{ matrix.labels[2] }} ${{ inputs.python-version }}
+    runs-on: ${{ matrix.labels }}
+    needs: [wheel-build, wheel-gpu-test, wheel-cpu-test]
     if: |
       always() &&
       needs.wheel-build.result == 'success' &&
-      (needs.wheel-gpu-test.result == 'success' || needs.wheel-gpu-test.result == 'skipped')
+      (needs.wheel-gpu-test.result == 'success' || needs.wheel-gpu-test.result == 'skipped') &&
+      (needs.wheel-cpu-test.result == 'success' || needs.wheel-cpu-test.result == 'skipped')
     strategy:
       matrix:
         labels: [[self-hosted, linux, amd64, cpu4], [self-hosted, linux, arm64, cpu4]]
@@ -169,18 +196,6 @@ jobs:
         RAPIDS_PY_VER: ${{ inputs.python-version }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-
-    - name: Run CPU wheel smoketests before publish
-      if: "${{ inputs.cpu-smoketest-command != '' }}"
-      env:
-        RAPIDS_PY_VER: ${{ inputs.python-version }}
-      run: |
-        docker run --rm -v $(pwd)/dist:/wheels python:${RAPIDS_PY_VER}-bullseye \
-        sh -c "\
-          python3 -m venv /clean-venv && . /clean-venv/bin/activate && set -x &&\
-          python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*-cp${RAPIDS_PY_VER//./}-cp${RAPIDS_PY_VER//./}*_$(uname -m).whl &&\
-          python3 -m pip check ;\
-          ${{ inputs.cpu-smoketest-command }}"
 
     - name: Publish wheels to RAPIDS internal PyPI
       run: |
