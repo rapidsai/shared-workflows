@@ -171,17 +171,14 @@ jobs:
         run: /wheelsmoketest.sh "${{ inputs.cpu-smoketest }}"
 
   wheel-publish:
-    name: wheel publish ${{ matrix.labels[2] }} ${{ inputs.python-version }}
-    runs-on: ${{ matrix.labels }}
+    name: wheel publish
+    runs-on: [self-hosted, linux, amd64, cpu4]
     needs: [wheel-build, wheel-gpu-test, wheel-cpu-test]
     if: |
       always() &&
       needs.wheel-build.result == 'success' &&
       (needs.wheel-gpu-test.result == 'success' || needs.wheel-gpu-test.result == 'skipped') &&
       (needs.wheel-cpu-test.result == 'success' || needs.wheel-cpu-test.result == 'skipped')
-    strategy:
-      matrix:
-        labels: [[self-hosted, linux, amd64, cpu4], [self-hosted, linux, arm64, cpu4]]
     steps:
     - name: Download gha-tools
       run: |
