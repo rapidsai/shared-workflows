@@ -32,10 +32,10 @@ on:
         required: false
         type: string
         default: ''
-      cpu-smoketest-command:
+      cpu-smoketest:
         required: true
         type: string
-      gpu-smoketest-command:
+      gpu-smoketest:
         required: false
         type: string
         default: ''
@@ -130,7 +130,7 @@ jobs:
       matrix:
         labels: [[self-hosted, linux, amd64, gpu-v100-495-1]] # add second runner once an ARM GPU node is available
     needs: wheel-build
-    if: "${{ inputs.gpu-smoketest-command != '' }}"
+    if: "${{ inputs.gpu-smoketest != '' }}"
     container:
       image: rapidsai/wheelsmoketest:${{ inputs.python-version }}-${{ matrix.labels[2] }}
       env:
@@ -145,7 +145,7 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
     steps:
       - name: Run GPU smoketest for wheel
-        run: /wheelsmoketest.sh ${{ inputs.gpu-smoketest-command }}
+        run: /wheelsmoketest.sh "${{ inputs.gpu-smoketest }}"
 
   wheel-cpu-test:
     name: wheel CPU test ${{ matrix.labels[2] }} ${{ inputs.python-version }}
@@ -154,7 +154,7 @@ jobs:
       matrix:
         labels: [[self-hosted, linux, amd64, cpu4], [self-hosted, linux, arm64, cpu4]]
     needs: wheel-build
-    if: "${{ inputs.cpu-smoketest-command != '' }}"
+    if: "${{ inputs.cpu-smoketest != '' }}"
     container:
       image: rapidsai/wheelsmoketest:${{ inputs.python-version }}-${{ matrix.labels[2] }}
       env:
@@ -168,7 +168,7 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
     steps:
       - name: Run CPU smoketest for wheel
-        run: /wheelsmoketest.sh ${{ inputs.cpu-smoketest-command }}
+        run: /wheelsmoketest.sh "${{ inputs.cpu-smoketest }}"
 
   wheel-publish:
     name: wheel publish ${{ matrix.labels[2] }} ${{ inputs.python-version }}
