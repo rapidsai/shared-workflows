@@ -129,7 +129,7 @@ jobs:
     needs: wheel-build
     if: "${{ inputs.gpu-smoketest-command != '' }}"
     container:
-      image: python/${{ inputs.python-version }}-bullseye
+      image: python:${{ inputs.python-version }}-bullseye
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_PY_VER: ${{ inputs.python-version }}
