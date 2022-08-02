@@ -125,7 +125,10 @@ jobs:
 
   wheel-gpu-test:
     name: wheel GPU test ${{ matrix.labels[2] }} ${{ inputs.python-version }}
-    runs-on: [self-hosted, linux, amd64, gpu-v100-495-1]
+    runs-on: ${{ matrix.labels }}
+    strategy:
+      matrix:
+        labels: [[self-hosted, linux, amd64, gpu-v100-495-1]] # add second runner once an ARM GPU node is available
     needs: wheel-build
     if: "${{ inputs.gpu-smoketest-command != '' }}"
     container:
@@ -136,10 +139,10 @@ jobs:
     steps:
       - name: Run GPU smoketest for wheel
         run: >
-          python3 -m venv /clean-venv && . /clean-venv/bin/activate && set -x &&
-          "python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*-cp${RAPIDS_PY_VER//./}-cp${RAPIDS_PY_VER//./}*_$(uname -m).whl &&"
+          "python3 -m venv /clean-venv && . /clean-venv/bin/activate && set -x &&
+          python3 -m pip install --verbose /wheels/${{ inputs.package-name }}*-cp${RAPIDS_PY_VER//./}-cp${RAPIDS_PY_VER//./}*_$(uname -m).whl &&
           python3 -m pip check;
-          ${{ inputs.gpu-smoketest-command }}
+          ${{ inputs.gpu-smoketest-command }}"
 
   wheel-cpu-test:
     name: wheel CPU test + publish ${{ matrix.labels[2] }} ${{ inputs.python-version }}
