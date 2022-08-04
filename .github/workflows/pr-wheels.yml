@@ -81,9 +81,9 @@ jobs:
           echo "CIBW_BEFORE_ALL_LINUX=printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc" >> "${GITHUB_ENV}"
         fi
 
-        # try to repair to the widest possible manylinux, starting from 2_17 i.e. manylinux2014 up to 2_28
+        # try to repair to the widest possible manylinux, starting from 2_17 i.e. manylinux2014 up to 2_31
         if [ "${{ inputs.auditwheel-repair-override }}" == "" ]; then
-          echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_17_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_24_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_27_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_28_${arch} {wheel}" >> "${GITHUB_ENV}"
+          echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_17_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_24_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_27_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_28_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_31_${arch} {wheel}" >> "${GITHUB_ENV}"
         else
           echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=${{ inputs.auditwheel-repair-override }}" >> "${GITHUB_ENV}"
         fi
