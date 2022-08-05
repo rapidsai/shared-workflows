@@ -70,6 +70,7 @@ jobs:
         python-version: ${{ inputs.python-version }}
         internal-pypi-user: cibuildwheel
         internal-pypi-pass: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
+        cibw-environment: ${{ inputs.cibw-environment }}
         cibw-before-all: ${{ inputs.cibw-before-all }}
         cibw-before-build: ${{ inputs.cibw-before-build }}
         skbuild-build-options: ${{ inputs.skbuild-build-options }}
