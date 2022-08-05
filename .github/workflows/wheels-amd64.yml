@@ -109,6 +109,9 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
     steps:
+      - name: Install private index credentials in smoketest container
+        run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
+
       - name: Run before steps for GPU smoketest
         if: "${{ inputs.gpu-smoketest-before != '' }}"
         run: "${{ inputs.gpu-smoketest-before }}"
@@ -133,6 +136,9 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
     steps:
+      - name: Install private index credentials in smoketest container
+        run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
+
       - name: Run before steps for CPU smoketest
         if: "${{ inputs.cpu-smoketest-before != '' }}"
         run: "${{ inputs.cpu-smoketest-before }}"
