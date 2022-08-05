@@ -24,6 +24,10 @@ inputs:
     description: 'Extra CIBW_BEFORE_BUILD_LINUX commands'
     required: false
     default: ''
+  cibw-environment:
+    description: 'CIBW_ENVIRONMENT'
+    required: false
+    default: ''
   skbuild-build-options:
     description: 'SKBUILD_BUILD_OPTIONS'
     required: false
