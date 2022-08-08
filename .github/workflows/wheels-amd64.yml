@@ -97,7 +97,7 @@ jobs:
     needs: wheel-build-amd64
     if: "${{ inputs.gpu-smoketest != '' }}"
     container:
-      image: rapidsai/wheelsmoketest:${{ inputs.python-version }}-amd64
+      image: rapidsai/wheelsmoketest:amd64
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }} # gha-tools needs these
@@ -122,7 +122,7 @@ jobs:
     needs: wheel-build-amd64
     if: "${{ inputs.cpu-smoketest != '' }}"
     container:
-      image: rapidsai/wheelsmoketest:${{ inputs.python-version }}-amd64
+      image: rapidsai/wheelsmoketest:amd64
       env:
         GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }} # gha-tools needs these
         GITHUB_SHA: ${{ env.GITHUB_SHA }}
