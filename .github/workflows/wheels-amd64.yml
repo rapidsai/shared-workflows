@@ -79,7 +79,7 @@ jobs:
 
     - name: Download gha-tools
       run: |
-        wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
+        wget https://github.com/rapidsai/gha-tools/releases/download/v0.0.2/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
         pip install awscli
 
     - name: Upload wheels to downloads.rapids.ai
@@ -152,7 +152,7 @@ jobs:
     steps:
     - name: Download gha-tools
       run: |
-        wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
+        wget https://github.com/rapidsai/gha-tools/releases/download/v0.0.2/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
         pip install awscli
 
     - name: Download wheels from downloads.rapids.ai
