@@ -51,6 +51,18 @@ on:
         required: false
         type: string
         default: ''
+      sccache-bucket:
+        required: false
+        type: string
+        default: 'rapids-sccache'
+      sccache-s3-key-prefix:
+        required: false
+        type: string
+        default: 'gha-cibw'
+      sccache-region:
+        required: false
+        type: string
+        default: 'us-west-2'
 
 jobs:
   wheel-build-amd64:
@@ -76,6 +88,11 @@ jobs:
         skbuild-build-options: ${{ inputs.skbuild-build-options }}
         skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
         auditwheel-repair-override: ${{ inputs.auditwheel-repair-override }}
+        sccache-s3-key-prefix: ${{ inputs.sccache-s3-key-prefix }}
+        sccache-region: ${{ inputs.sccache-region }}
+        sccache-bucket: ${{ inputs.sccache-bucket }}
+        sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        sccache-aws-secret-access-key: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
 
     - name: Download gha-tools
       run: |
