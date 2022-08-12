@@ -104,7 +104,7 @@ runs:
         echo "CIBW_BUILD=cp${py_ver//./}-*" >> "${GITHUB_ENV}"
 
         # enable sccache in skbuild config options
-        skbuild_config_opts=${{ inputs.skbuild-configure-options}}
+        skbuild_config_opts="${{ inputs.skbuild-configure-options}}"
         if [ "${{ inputs.sccache-enabled }}" == "true" ]; then
           skbuild_config_opts="${skbuild_config_opts} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
         fi
