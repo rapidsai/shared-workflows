@@ -44,6 +44,10 @@ on:
         required: false
         type: string
         default: ''
+      sccache-enabled:
+        required: false
+        type: string
+        default: 'true'
       sccache-bucket:
         required: false
         type: string
@@ -81,6 +85,7 @@ jobs:
         skbuild-build-options: ${{ inputs.skbuild-build-options }}
         skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
         auditwheel-repair-override: ${{ inputs.auditwheel-repair-override }}
+        sccache-enabled: ${{ inputs.sccache-enabled }}
         sccache-s3-key-prefix: ${{ inputs.sccache-s3-key-prefix }}
         sccache-region: ${{ inputs.sccache-region }}
         sccache-bucket: ${{ inputs.sccache-bucket }}
