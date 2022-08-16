@@ -42,6 +42,7 @@ jobs:
       - name: Ensure an "all" environment exists
         run: |
           # ensure .files.all exists & generates conda environment file
+          set -x
           yq \
             --exit-status \
             '.files | has("all")' ${{ inputs.CONFIG_FILE_PATH }}
@@ -52,7 +53,7 @@ jobs:
           export DEP_LISTS=$(
             yq \
               --output-format json \
-              '[ .dependencies.["conda_requirements","conda"][] | keys ] | flatten | unique | sort' ${{ inputs.CONFIG_FILE_PATH }}
+              '[ .dependencies.["conda_and_requirements","conda"][] | keys ] | flatten | unique | sort' ${{ inputs.CONFIG_FILE_PATH }}
           )
 
           export ALL_ENV_INCLUDES=$(
