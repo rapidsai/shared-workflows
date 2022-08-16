@@ -42,19 +42,25 @@ jobs:
       - name: Ensure an "all" environment exists
         run: |
           # ensure .files.all exists & generates conda environment file
-          yq --exit-status '.files | has("all")' ${{ inputs.CONFIG_FILE_PATH }}
-          yq --exit-status '.files.all.generate | match("both|conda")' ${{ inputs.CONFIG_FILE_PATH }}
+          yq \
+            --exit-status \
+            '.files | has("all")' ${{ inputs.CONFIG_FILE_PATH }}
+          yq \
+            --exit-status \
+            '.files.all.generate | match("both|conda")' ${{ inputs.CONFIG_FILE_PATH }}
 
           export DEP_LISTS=$(
             yq \
               --output-format json \
-              '[ .dependencies.["conda_requirements","conda"][] | keys ] | flatten | unique' ${{ inputs.CONFIG_FILE_PATH }}
+              '[ .dependencies.["conda_requirements","conda"][] | keys ] | flatten | unique | sort' ${{ inputs.CONFIG_FILE_PATH }}
           )
 
           export ALL_ENV_INCLUDES=$(
             yq \
-              --exit-status \
               --output-format json \
               '.files.all.includes | sort' ${{ inputs.CONFIG_FILE_PATH }}
           )
-          yq --null-input --exit-status 'strenv(ALL_ENV_INCLUDES) == strenv(DEP_LISTS)'
+          yq \
+            --null-input \
+            --exit-status \
+            'strenv(ALL_ENV_INCLUDES) == strenv(DEP_LISTS)'
