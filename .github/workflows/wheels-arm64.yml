@@ -1,0 +1,164 @@
+name: Build RAPIDS project wheels
+
+on:
+  workflow_call:
+    inputs:
+      package-name:
+        required: true
+        type: string
+      package-dir:
+        required: true
+        type: string
+      python-version:
+        required: true
+        type: string
+      cibw-before-all:
+        required: false
+        type: string
+        default: ''
+      cibw-before-build:
+        required: false
+        type: string
+        default: ''
+      skbuild-configure-options:
+        required: false
+        type: string
+        default: ''
+      skbuild-build-options:
+        required: false
+        type: string
+        default: ''
+      cibw-environment:
+        required: false
+        type: string
+        default: ''
+      gpu-smoketest:
+        required: false
+        type: string
+        default: ''
+      gpu-smoketest-before:
+        required: false
+        type: string
+        default: 'true'
+      auditwheel-repair-override:
+        required: false
+        type: string
+        default: ''
+      sccache-enabled:
+        required: false
+        type: string
+        default: 'true'
+      sccache-bucket:
+        required: false
+        type: string
+        default: 'rapids-sccache'
+      sccache-s3-key-prefix:
+        required: false
+        type: string
+        default: 'gha-cibw'
+      sccache-region:
+        required: false
+        type: string
+        default: 'us-west-2'
+
+jobs:
+  wheel-build-arm64:
+    name: cibuildwheel arm64 ${{ inputs.python-version }}
+    runs-on: [self-hosted, linux, arm64, cpu16]
+    steps:
+    - name: checkout code repo
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0 # unshallow fetch for setuptools-scm
+
+    - name: Build wheels with custom RAPIDS cibuildwheel action
+      uses: rapidsai/shared-action-workflows/cibw@feat/wheel-ci-actions
+      with:
+        package-dir: ${{ inputs.package-dir }}
+        output-dir: dist
+        python-version: ${{ inputs.python-version }}
+        internal-pypi-user: cibuildwheel
+        internal-pypi-pass: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
+        cibw-environment: ${{ inputs.cibw-environment }}
+        cibw-before-all: ${{ inputs.cibw-before-all }}
+        cibw-before-build: ${{ inputs.cibw-before-build }}
+        skbuild-build-options: ${{ inputs.skbuild-build-options }}
+        skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
+        auditwheel-repair-override: ${{ inputs.auditwheel-repair-override }}
+        sccache-enabled: ${{ inputs.sccache-enabled }}
+        sccache-s3-key-prefix: ${{ inputs.sccache-s3-key-prefix }}
+        sccache-region: ${{ inputs.sccache-region }}
+        sccache-bucket: ${{ inputs.sccache-bucket }}
+        sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        sccache-aws-secret-access-key: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+
+    - name: Download gha-tools
+      run: |
+        wget https://github.com/rapidsai/gha-tools/releases/download/v0.0.2/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
+        pip install awscli
+
+    - name: Upload wheels to downloads.rapids.ai
+      run: rapids-upload-wheels-to-s3 dist
+      env:
+        RAPIDS_BUILD_TYPE: "pull-request"
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        RAPIDS_PY_VER: ${{ inputs.python-version }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+
+  wheel-gpu-test-arm64:
+    name: wheel GPU test arm64 ${{ inputs.python-version }}
+    runs-on: [self-hosted, linux, arm64, gpu-v100-495-1]
+    needs: wheel-build-arm64
+    if: "${{ inputs.gpu-smoketest != '' }}"
+    container:
+      image: rapidsai/wheelsmoketest:arm64
+      env:
+        NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
+        GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }} # gha-tools needs these
+        GITHUB_SHA: ${{ env.GITHUB_SHA }}
+        GITHUB_REF_NAME: ${{ env.GITHUB_REF_NAME }}
+        RAPIDS_PY_VER: ${{ inputs.python-version }}
+        RAPIDS_BUILD_TYPE: "pull-request"
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+        RAPIDS_BEFORE_SMOKETEST_COMMANDS: "${{ inputs.gpu-smoketest-before }}"
+    steps:
+      - name: Install private index credentials in smoketest container
+        run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
+
+      - name: Run GPU smoketest for wheel
+        run: /wheelsmoketest.sh "${{ inputs.gpu-smoketest }}"
+
+  wheel-publish-arm64:
+    name: wheel publish arm64 ${{ inputs.python-version }}
+    needs: [wheel-build-arm64, wheel-gpu-test-arm64]
+    if: |
+      always() &&
+      needs.wheel-build-arm64.result == 'success' &&
+      (needs.wheel-gpu-test-arm64.result == 'success' || needs.wheel-gpu-test-arm64.result == 'skipped')
+    runs-on: [self-hosted, linux, arm64, cpu4]
+    steps:
+    - name: Download gha-tools
+      run: |
+        wget https://github.com/rapidsai/gha-tools/releases/download/v0.0.2/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
+        pip install awscli
+
+    - name: Download wheels from downloads.rapids.ai
+      run: rapids-download-wheels-from-s3 ./dist
+      env:
+        RAPIDS_BUILD_TYPE: "pull-request"
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        RAPIDS_PY_VER: ${{ inputs.python-version }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+
+    - name: Publish wheels to RAPIDS internal PyPI
+      run: |
+        pip install twine
+        twine upload ./dist/"${{ inputs.package-name }}*.whl"
+      env:
+        TWINE_USERNAME: cibuildwheel
+        TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
+        TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
