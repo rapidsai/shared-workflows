@@ -66,6 +66,7 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         RAPIDS_BEFORE_SMOKETEST_COMMANDS: "${{ inputs.cpu-smoketest-before }}"
+        RAPIDS_WHEEL_VER_OVERRIDE: "py3-none-any" # for a pure wheel
     steps:
       - name: Install private index credentials in smoketest container
         run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
