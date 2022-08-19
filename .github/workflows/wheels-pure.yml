@@ -72,7 +72,7 @@ jobs:
       - name: Install private index credentials in smoketest container
         run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
 
-      - name: Run CPU smoketest for wheel
+      - name: Run smoketest for wheel
         run: /wheelsmoketest.sh "${{ inputs.gpu-smoketest }}"
 
   wheel-publish-pure:
