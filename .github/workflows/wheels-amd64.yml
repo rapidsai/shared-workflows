@@ -28,10 +28,6 @@ on:
         required: false
         type: string
         default: ''
-      cibw-environment:
-        required: false
-        type: string
-        default: ''
       cibw-test-requires:
         required: false
         type: string
@@ -52,71 +48,53 @@ on:
         required: false
         type: string
         default: 'true'
-      auditwheel-repair-override:
+      auditwheel-skip-repair:
         required: false
         type: string
-        default: ''
-      sccache-enabled:
-        required: false
-        type: string
-        default: 'true'
-      sccache-bucket:
-        required: false
-        type: string
-        default: 'rapids-sccache'
-      sccache-s3-key-prefix:
-        required: false
-        type: string
-        default: 'gha-cibw'
-      sccache-region:
-        required: false
-        type: string
-        default: 'us-west-2'
+        default: 'false'
 
 jobs:
   wheel-build-amd64:
     name: cibuildwheel amd64 ${{ inputs.python-version }}
     runs-on: [self-hosted, linux, amd64, gpu-v100-495-1]
+    container:
+      image: rapidsai/manylinux:amd64
+      env:
+        NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
+        GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }} # gha-tools needs these
+        GITHUB_SHA: ${{ env.GITHUB_SHA }}
+        GITHUB_REF_NAME: ${{ env.GITHUB_REF_NAME }}
+        RAPIDS_PY_VER: ${{ inputs.python-version }}
+        RAPIDS_BUILD_TYPE: "pull-request"
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+        CIBW_BUILD: ${{ inputs.cibw-build }}
+        CIBW_BEFORE_BUILD_LINUX: ${{ inputs.cibw-before-build }}
+        CIBW_BEFORE_ALL_LINUX: ${{ inputs.cibw-before-all }}
+        CIBW_TEST_REQUIRES: ${{ inputs.cibw-test-requires }}
+        CIBW_TEST_EXTRAS: ${{ inputs.cibw-test-extras }}
+        CIBW_TEST_COMMAND: ${{ inputs.cibw-test-command }}
+        AUDITWHEEL_SKIP_REPAIR: ${{ inputs.auditwheel-skip-repair }}
+        SKBUILD_CONFIGURE_OPTIONS: "${{ inputs.skbuild-configure-options }} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
+        SKBUILD_BUILD_OPTIONS: ${{ inputs.skbuild-build-options }}
+        SCCACHE_REGION: 'us-west-2'
+        SCCACHE_IDLE_TIMEOUT: 32768
+        SCCACHE_BUCKET: 'rapids-sccache'
+        SCCACHE_S3_KEY_PREFIX: 'gha-cibw'
+        PYTHON_PACKAGE_CUDA_SUFFIX: '-cuda11'
     steps:
+    - name: Install private index credentials in smoketest container
+      run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
+
     - name: checkout code repo
       uses: actions/checkout@v3
       with:
         fetch-depth: 0 # unshallow fetch for setuptools-scm
+        path: /project
 
-    - name: Build wheels with custom RAPIDS cibuildwheel action
-      uses: rapidsai/shared-action-workflows/cibw@feat/wheel-ci-actions
-      with:
-        package-dir: ${{ inputs.package-dir }}
-        output-dir: dist
-        python-version: ${{ inputs.python-version }}
-        internal-pypi-user: cibuildwheel
-        internal-pypi-pass: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
-        cibw-environment: ${{ inputs.cibw-environment }}
-        cibw-before-all: ${{ inputs.cibw-before-all }}
-        cibw-before-build: ${{ inputs.cibw-before-build }}
-        skbuild-build-options: ${{ inputs.skbuild-build-options }}
-        skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
-        auditwheel-repair-override: ${{ inputs.auditwheel-repair-override }}
-        sccache-enabled: ${{ inputs.sccache-enabled }}
-        sccache-s3-key-prefix: ${{ inputs.sccache-s3-key-prefix }}
-        sccache-region: ${{ inputs.sccache-region }}
-        sccache-bucket: ${{ inputs.sccache-bucket }}
-        sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
-        sccache-aws-secret-access-key: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-
-    - name: Download gha-tools
-      run: |
-        wget https://github.com/rapidsai/gha-tools/releases/download/v0.0.2/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
-        pip install awscli
-
-    - name: Upload wheels to downloads.rapids.ai
-      run: rapids-upload-wheels-to-s3 dist
-      env:
-        RAPIDS_BUILD_TYPE: "pull-request"
-        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
-        RAPIDS_PY_VER: ${{ inputs.python-version }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+    - name: Run cibuildwheel
+      run: /cibuildwheel.sh "${{ inputs.package-dir }}"
 
   wheel-gpu-test-amd64:
     name: wheel GPU test amd64 ${{ inputs.python-version }}
@@ -137,11 +115,11 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         RAPIDS_BEFORE_SMOKETEST_COMMANDS: "${{ inputs.gpu-smoketest-before }}"
     steps:
-      - name: Install private index credentials in smoketest container
-        run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
+    - name: Install private index credentials in smoketest container
+      run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
 
-      - name: Run GPU smoketest for wheel
-        run: /wheelsmoketest.sh "${{ inputs.gpu-smoketest }}"
+    - name: Run GPU smoketest for wheel
+      run: /wheelsmoketest.sh "${{ inputs.gpu-smoketest }}"
 
   wheel-publish-amd64:
     name: wheel publish amd64 ${{ inputs.python-version }}
