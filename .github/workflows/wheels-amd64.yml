@@ -15,11 +15,11 @@ on:
       cibw-before-all:
         required: false
         type: string
-        default: ''
+        default: 'true'
       cibw-before-build:
         required: false
         type: string
-        default: ''
+        default: 'true'
       skbuild-configure-options:
         required: false
         type: string
