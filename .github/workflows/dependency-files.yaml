@@ -50,10 +50,23 @@ jobs:
             --exit-status \
             '.files.all.generate | match("both|conda")' ${{ inputs.CONFIG_FILE_PATH }}
 
-          export DEP_LISTS=$(
+          export COMMON_DEP_LISTS=$(
             yq \
               --output-format json \
-              '[ .dependencies.["conda_and_requirements","conda"][] | keys ] | flatten | unique | sort' ${{ inputs.CONFIG_FILE_PATH }}
+              '[.dependencies.["conda_and_requirements","conda"].common | keys] | flatten' ${{ inputs.CONFIG_FILE_PATH }}
+          )
+
+          export SPECIFIC_DEP_LISTS=$(
+            yq \
+              --output-format json \
+              '[.dependencies.["conda_and_requirements","conda"].specific[] | keys - ["matrix"]] | flatten' ${{ inputs.CONFIG_FILE_PATH }}
+          )
+
+          export ALL_DEP_LISTS=$(
+            yq \
+              --output-format json \
+              --null-input \
+              'env(SPECIFIC_DEP_LISTS) + env(COMMON_DEP_LISTS) | unique | sort'
           )
 
           export ALL_ENV_INCLUDES=$(
@@ -64,4 +77,4 @@ jobs:
           yq \
             --null-input \
             --exit-status \
-            'strenv(ALL_ENV_INCLUDES) == strenv(DEP_LISTS)'
+            'strenv(ALL_ENV_INCLUDES) == strenv(ALL_DEP_LISTS)'
