@@ -32,6 +32,18 @@ on:
         required: false
         type: string
         default: ''
+      cibw-test-requires:
+        required: false
+        type: string
+        default: ''
+      cibw-test-extras:
+        required: false
+        type: string
+        default: ''
+      cibw-test-command:
+        required: false
+        type: string
+        default: ''
       gpu-smoketest:
         required: false
         type: string
@@ -64,7 +76,7 @@ on:
 jobs:
   wheel-build-amd64:
     name: cibuildwheel amd64 ${{ inputs.python-version }}
-    runs-on: [self-hosted, linux, amd64, cpu16]
+    runs-on: [self-hosted, linux, amd64, gpu-v100-495-1]
     steps:
     - name: checkout code repo
       uses: actions/checkout@v3

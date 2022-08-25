@@ -28,6 +28,18 @@ inputs:
     description: 'CIBW_ENVIRONMENT'
     required: false
     default: ''
+  cibw-test-requires:
+    description: 'CIBW_TEST_REQUIRES'
+    required: false
+    default: ''
+  cibw-test-extras:
+    description: 'CIBW_TEST_EXTRAS'
+    required: false
+    default: ''
+  cibw-test-command:
+    description: 'CIBW_TEST_COMMAND'
+    required: false
+    default: ''
   skbuild-build-options:
     description: 'SKBUILD_BUILD_OPTIONS'
     required: false
@@ -129,3 +141,6 @@ runs:
         CIBW_BUILD_FRONTEND: "pip"
         CIBW_BEFORE_BUILD_LINUX: ${{ inputs.cibw-before-build }}
         CIBW_BUILD_VERBOSITY_LINUX: 3
+        CIBW_TEST_REQUIRES: ${{ inputs.cibw-test-requires }}
+        CIBW_TEST_EXTRAS: ${{ inputs.cibw-test-extras }}
+        CIBW_TEST_COMMAND: ${{ inputs.cibw-test-command }}
