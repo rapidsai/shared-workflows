@@ -1,4 +1,4 @@
-name: Build RAPIDS project wheels
+name: Build RAPIDS wheels for amd64
 
 on:
   workflow_call:
@@ -56,9 +56,9 @@ on:
 jobs:
   wheel-build-amd64:
     name: cibuildwheel amd64 ${{ inputs.python-version }}
-    runs-on: [self-hosted, linux, amd64, gpu-v100-495-1]
+    runs-on: [self-hosted, linux, amd64, cpu16]
     container:
-      image: rapidsai/manylinux:amd64
+      image: rapidsai/cibuildwheel:amd64
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }} # gha-tools needs these
@@ -72,9 +72,6 @@ jobs:
         CIBW_BUILD: ${{ inputs.cibw-build }}
         CIBW_BEFORE_BUILD_LINUX: ${{ inputs.cibw-before-build }}
         CIBW_BEFORE_ALL_LINUX: ${{ inputs.cibw-before-all }}
-        CIBW_TEST_REQUIRES: ${{ inputs.cibw-test-requires }}
-        CIBW_TEST_EXTRAS: ${{ inputs.cibw-test-extras }}
-        CIBW_TEST_COMMAND: ${{ inputs.cibw-test-command }}
         AUDITWHEEL_SKIP_REPAIR: ${{ inputs.auditwheel-skip-repair }}
         SKBUILD_CONFIGURE_OPTIONS: "${{ inputs.skbuild-configure-options }} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
         SKBUILD_BUILD_OPTIONS: ${{ inputs.skbuild-build-options }}
@@ -84,7 +81,7 @@ jobs:
         SCCACHE_S3_KEY_PREFIX: 'gha-cibw'
         PYTHON_PACKAGE_CUDA_SUFFIX: '-cuda11'
     steps:
-    - name: Install private index credentials in smoketest container
+    - name: Install private index credentials in cibuildwheel container
       run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
 
     - name: checkout code repo
@@ -99,7 +96,6 @@ jobs:
     name: wheel GPU test amd64 ${{ inputs.python-version }}
     runs-on: [self-hosted, linux, amd64, gpu-v100-495-1]
     needs: wheel-build-amd64
-    if: "${{ inputs.gpu-smoketest != '' }}"
     container:
       image: rapidsai/wheelsmoketest:amd64
       env:
@@ -112,13 +108,22 @@ jobs:
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-        RAPIDS_BEFORE_SMOKETEST_COMMANDS: "${{ inputs.gpu-smoketest-before }}"
+        CIBW_TEST_REQUIRES: ${{ inputs.cibw-test-requires }}
+        CIBW_TEST_EXTRAS: ${{ inputs.cibw-test-extras }}
+        CIBW_TEST_COMMAND: ${{ inputs.cibw-test-command }}
+        RAPIDS_BEFORE_SMOKETEST_COMMANDS: ${{ inputs.gpu-smoketest-before }}
+        RAPIDS_WHEEL_SMOKETEST_COMMAND: ${{ inputs.gpu-smoketest }}
     steps:
-    - name: Install private index credentials in smoketest container
+    - name: Install private index credentials in cibuildwheel container
       run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
 
-    - name: Run GPU smoketest for wheel
-      run: /wheelsmoketest.sh "${{ inputs.gpu-smoketest }}"
+    - name: checkout code repo
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0 # unshallow fetch for setuptools-scm
+
+    - name: Run GPU-enabled unit tests + smoketest for wheel
+      run: /citestwheel.sh
 
   wheel-publish-amd64:
     name: wheel publish amd64 ${{ inputs.python-version }}
