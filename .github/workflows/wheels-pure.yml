@@ -9,6 +9,19 @@ on:
       package-dir:
         required: true
         type: string
+      cibw-test-requires:
+        required: false
+        type: string
+        default: ''
+      cibw-test-extras:
+        required: false
+        type: string
+        default: ''
+      cibw-test-command:
+        required: false
+        type: string
+        default: ''
+
       gpu-smoketest:
         required: false
         type: string
@@ -53,7 +66,6 @@ jobs:
     name: test
     runs-on: [self-hosted, linux, amd64, gpu-v100-495-1]
     needs: wheel-build-pure
-    if: "${{ inputs.gpu-smoketest != '' }}"
     container:
       image: rapidsai/wheelsmoketest:amd64
       env:
@@ -66,14 +78,18 @@ jobs:
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-        RAPIDS_BEFORE_SMOKETEST_COMMANDS: "${{ inputs.gpu-smoketest-before }}"
+        RAPIDS_BEFORE_TEST_COMMANDS: ${{ inputs.gpu-smoketest-before }}
+        CIBW_TEST_REQUIRES: ${{ inputs.cibw-test-requires }}
+        CIBW_TEST_EXTRAS: ${{ inputs.cibw-test-extras }}
+        CIBW_TEST_COMMAND: ${{ inputs.cibw-test-command }}
+        RAPIDS_WHEEL_SMOKETEST_COMMAND: ${{ inputs.gpu-smoketest }}
         RAPIDS_WHEEL_VER_OVERRIDE: "py3-none-any" # for a pure wheel
     steps:
-      - name: Install private index credentials in smoketest container
+      - name: Install private index credentials in cibuildwheel container
         run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
 
       - name: Run smoketest for wheel
-        run: /wheelsmoketest.sh "${{ inputs.gpu-smoketest }}"
+        run: /citestwheel.sh
 
   wheel-publish-pure:
     name: publish
