@@ -97,7 +97,7 @@ jobs:
     runs-on: [self-hosted, linux, arm64, gpu-a100-495-1]
     needs: wheel-build-arm64
     container:
-      image: rapidsai/wheelsmoketest:arm64
+      image: rapidsai/cibuildwheel:arm64
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }} # gha-tools needs these
