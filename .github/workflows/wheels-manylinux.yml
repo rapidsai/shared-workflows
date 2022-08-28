@@ -1,4 +1,4 @@
-name: Build RAPIDS wheels for arm64
+name: Build RAPIDS manylinux wheels
 
 on:
   workflow_call:
@@ -44,7 +44,11 @@ on:
         required: false
         type: string
         default: ''
-      gpu-smoketest-before:
+      gpu-smoketest-before-arm64:
+        required: false
+        type: string
+        default: 'true'
+      gpu-smoketest-before-amd64:
         required: false
         type: string
         default: 'true'
@@ -54,11 +58,14 @@ on:
         default: 'false'
 
 jobs:
-  wheel-build-arm64:
-    name: cibuildwheel arm64 ${{ inputs.python-version }}
-    runs-on: [self-hosted, linux, arm64, cpu16]
+  wheel-build:
+    name: cibuildwheel ${{ matrix.labels[2] }} ${{ inputs.python-version }}
+    runs-on: ${{ matrix.labels }}
+    strategy:
+      matrix:
+        labels: [[self-hosted, linux, amd64, cpu16], [self-hosted, linux, arm64, cpu16]]
     container:
-      image: rapidsai/cibuildwheel:arm64
+      image: rapidsai/cibuildwheel:${{ matrix.labels[2] }}
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }} # gha-tools needs these
@@ -69,7 +76,6 @@ jobs:
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-        CIBW_BUILD: ${{ inputs.cibw-build }}
         CIBW_BEFORE_BUILD_LINUX: ${{ inputs.cibw-before-build }}
         CIBW_BEFORE_ALL_LINUX: ${{ inputs.cibw-before-all }}
         AUDITWHEEL_SKIP_REPAIR: ${{ inputs.auditwheel-skip-repair }}
@@ -92,12 +98,15 @@ jobs:
     - name: Run cibuildwheel
       run: /cibuildwheel.sh "${{ inputs.package-dir }}"
 
-  wheel-gpu-test-arm64:
-    name: wheel GPU test arm64 ${{ inputs.python-version }}
-    runs-on: [self-hosted, linux, arm64, gpu-a100-495-1]
-    needs: wheel-build-arm64
+  wheel-test:
+    name: wheel test ${{ matrix.labels[2] }} ${{ inputs.python-version }}
+    runs-on: ${{ matrix.labels }}
+    strategy:
+      matrix:
+        labels: [[self-hosted, linux, amd64, gpu-v100-495-1], [self-hosted, linux, arm64, gpu-a100-495-1]]
+    needs: wheel-build-amd64
     container:
-      image: rapidsai/cibuildwheel:arm64
+      image: rapidsai/cibuildwheel:amd64
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }} # gha-tools needs these
@@ -122,17 +131,16 @@ jobs:
       with:
         fetch-depth: 0 # unshallow fetch for setuptools-scm
 
-    - name: Run GPU-enabled unit tests + smoketest for wheel
+    - name: Run unit and smoke tests for wheel
       run: /citestwheel.sh
 
-  wheel-publish-arm64:
-    name: wheel publish arm64 ${{ inputs.python-version }}
-    needs: [wheel-build-arm64, wheel-gpu-test-arm64]
-    if: |
-      always() &&
-      needs.wheel-build-arm64.result == 'success' &&
-      (needs.wheel-gpu-test-arm64.result == 'success' || needs.wheel-gpu-test-arm64.result == 'skipped')
-    runs-on: [self-hosted, linux, arm64, cpu4]
+  wheel-publish:
+    name: wheel publish ${{ matrix.labels[2] }} ${{ inputs.python-version }}
+    needs: [wheel-build, wheel-test]
+    runs-on: ${{ matrix.labels }}
+    strategy:
+      matrix:
+        labels: [[self-hosted, linux, amd64, cpu4], [self-hosted, linux, arm64, cpu4]]
     steps:
     - name: Download gha-tools
       run: |
