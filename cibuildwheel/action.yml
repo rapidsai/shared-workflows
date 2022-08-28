@@ -10,5 +10,5 @@ runs:
   using: composite
   steps:
     - name: Run cibuildwheel
-      run: sh ${{ github.action_path}}/cibuildwheel.sh "${{ inputs.package-dir }}"
+      run: ${GITHUB_ACTION_PATH}/cibuildwheel.sh "${{ inputs.package-dir }}"
       shell: bash

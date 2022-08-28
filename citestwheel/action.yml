@@ -5,5 +5,5 @@ runs:
   using: composite
   steps:
     - name: Run citestwheel
-      run: sh ${{ github.action_path}}/citestwheel.sh
+      run: ${GITHUB_ACTION_PATH}/citestwheel.sh
       shell: bash
