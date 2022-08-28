@@ -28,10 +28,17 @@ for pyver in ${RAPIDS_PY_VER}; do
                 first='no'
         fi
 
+        # see: https://cibuildwheel.readthedocs.io/en/stable/options/#test-extras
+        extra_requires_suffix=''
+        if [ "${CIBW_TEST_EXTRAS}" != "" ]; then
+                extra_requires_suffix="[${CIBW_TEST_EXTRAS}]"
+        fi
+
+        # echo to expand wildcard before adding `[extra]` requires for pip
         if [ "${RAPIDS_WHEEL_VER_OVERRIDE}" != "" ]; then
-                python3 -m pip install --verbose ./dist/${RAPIDS_PY_WHEEL_NAME}*-${RAPIDS_WHEEL_VER_OVERRIDE}.whl
+                python3 -m pip install --verbose $(echo ./dist/${RAPIDS_PY_WHEEL_NAME}*-${RAPIDS_WHEEL_VER_OVERRIDE}.whl)$extra_requires_suffix
         else
-                python3 -m pip install --verbose ./dist/${RAPIDS_PY_WHEEL_NAME}*-cp${pyver//./}-cp${pyver//./}*_$(uname -m).whl
+                python3 -m pip install --verbose $(echo ./dist/${RAPIDS_PY_WHEEL_NAME}*-cp${pyver//./}-cp${pyver//./}*_$(uname -m).whl)$extra_requires_suffix
         fi
 
         python3 -m pip check
@@ -44,13 +51,6 @@ for pyver in ${RAPIDS_PY_VER}; do
 
         if [ "${CIBW_TEST_REQUIRES}" != "" ]; then
                 pip install ${CIBW_TEST_REQUIRES}
-        fi
-
-        # see: https://cibuildwheel.readthedocs.io/en/stable/options/#test-extras
-        if [ "${CIBW_TEST_EXTRAS}" != "" ]; then
-                pip install ./dist/*.whl[${CIBW_TEST_EXTRAS}]
-        else
-                pip install ./dist/*.whl
         fi
 
         sh -c "${CIBW_TEST_COMMAND}"
