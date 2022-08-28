@@ -1,0 +1,14 @@
+name: cibuildwheel for manylinux
+description: 'Runs cibuildwheel to build manylinux wheels'
+
+inputs:
+  package-dir:
+    required: true
+    type: string
+
+runs:
+  using: composite
+  steps:
+    - name: Run cibuildwheel
+      run: ${{ github.action_path}}/cibuildwheel.sh "${{ inputs.package-dir }}"
+      shell: bash

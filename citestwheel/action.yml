@@ -1,0 +1,9 @@
+name: citestwheel for manylinux
+description: 'Runs wheel GPU tests for manylinux wheels'
+
+runs:
+  using: composite
+  steps:
+    - name: Run citestwheel
+      run: ${{ github.action_path}}/citestwheel.sh
+      shell: bash

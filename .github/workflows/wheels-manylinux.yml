@@ -96,7 +96,9 @@ jobs:
         fetch-depth: 0 # unshallow fetch for setuptools-scm
 
     - name: Run cibuildwheel
-      run: /cibuildwheel.sh "${{ inputs.package-dir }}"
+      uses: rapidsai/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions
+      with:
+        package-dir: ${{ inputs.package-dir }}
 
   wheel-test:
     name: wheel test ${{ matrix.labels[2] }} ${{ inputs.python-version }}
@@ -132,8 +134,8 @@ jobs:
       with:
         fetch-depth: 0 # unshallow fetch for setuptools-scm
 
-    - name: Run unit and smoke tests for wheel
-      run: /citestwheel.sh
+    - name: Run citestwheel
+      uses: rapidsai/shared-action-workflows/citestwheel@feat/wheel-ci-actions
 
   wheel-publish:
     name: wheel publish ${{ matrix.labels[2] }} ${{ inputs.python-version }}
