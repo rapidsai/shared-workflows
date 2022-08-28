@@ -59,13 +59,17 @@ on:
 
 jobs:
   wheel-build:
-    name: cibuildwheel ${{ matrix.labels[2] }} ${{ inputs.python-version }}
+    name: cibuildwheel ${{ matrix.cpu-arch }} ${{ inputs.python-version }}
     runs-on: ${{ matrix.labels }}
     strategy:
       matrix:
-        labels: [[self-hosted, linux, amd64, cpu16], [self-hosted, linux, arm64, cpu16]]
+        include:
+          - labels: [self-hosted, linux, amd64, cpu16]
+            cpu-arch: x86_64
+          - labels: [self-hosted, linux, arm64, cpu16]
+            cpu-arch: aarch64
     container:
-      image: rapidsai/cibuildwheel:${{ matrix.labels[2] }}
+      image: rapidsai/manylinux_2_31_${{ matrix.cpu-arch }}
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }} # gha-tools needs these
@@ -101,14 +105,18 @@ jobs:
         package-dir: ${{ inputs.package-dir }}
 
   wheel-test:
-    name: wheel test ${{ matrix.labels[2] }} ${{ inputs.python-version }}
+    name: wheel test ${{ matrix.cpu-arch }} ${{ inputs.python-version }}
     runs-on: ${{ matrix.labels }}
     strategy:
       matrix:
-        labels: [[self-hosted, linux, amd64, gpu-v100-495-1], [self-hosted, linux, arm64, gpu-a100-495-1]]
+        include:
+          - labels: [self-hosted, linux, amd64, gpu-v100-495-1]
+            cpu-arch: x86_64
+          - labels: [self-hosted, linux, arm64, gpu-a100-495-1]
+            cpu-arch: aarch64
     needs: wheel-build
     container:
-      image: rapidsai/cibuildwheel:${{ matrix.labels[2] }}
+      image: rapidsai/manylinux_2_31_${{ matrix.cpu-arch }}
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }} # gha-tools needs these
@@ -138,7 +146,7 @@ jobs:
       uses: rapidsai/shared-action-workflows/citestwheel@feat/wheel-ci-actions
 
   wheel-publish:
-    name: wheel publish ${{ matrix.labels[2] }} ${{ inputs.python-version }}
+    name: wheel publish ${{ matrix.cpu-arch }} ${{ inputs.python-version }}
     needs: [wheel-build, wheel-test]
     runs-on: ${{ matrix.labels }}
     strategy:
