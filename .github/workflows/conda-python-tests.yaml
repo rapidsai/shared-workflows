@@ -1,0 +1,54 @@
+on:
+  workflow_call:
+    inputs:
+      build_type:
+        required: true
+        type: string
+      cuda_ver:
+        required: true
+        type: string
+      linux_ver:
+        required: true
+        type: string
+      py_ver:
+        required: true
+        type: string
+      arch:
+        required: true
+        type: string
+      gpu:
+        required: true
+        type: string
+      driver:
+        required: true
+        type: string
+
+jobs:
+  conda-python-tests:
+    name: Conda Python tests
+    runs-on:
+      - self-hosted
+      - linux
+      - gpu-${{ inputs.gpu }}-${{ inputs.driver }}-1
+      - ${{ inputs.arch }}
+    container:
+      image: rapidsai/ci:cuda${{ inputs.cuda_ver }}-base-${{ inputs.linux_ver }}-py${{ inputs.py_ver }}
+      env:
+        BUILD_TYPE: ${{ inputs.build_type }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+        PY_VER: ${{ inputs.py_ver }}
+        PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}
+        NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
+    steps:
+      - name: Setup gpuci-tools
+        run: |
+          git clone https://github.com/Ethyling/gpuci-tools.git -b gha
+          cp gpuci-tools/tools/* /usr/local/bin
+          rm -rf gpuci-tools
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Python tests
+        run: ci/test_python.sh

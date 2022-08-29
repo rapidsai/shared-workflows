@@ -1,0 +1,29 @@
+on:
+  workflow_call:
+    inputs:
+      build_type:
+        required: true
+        type: string
+
+jobs:
+  conda-pr-cpp-tests:
+    name: Conda C++ matrix tests for PRs
+    secrets: inherit
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { CUDA_VER: "11.0.3", LINUX_VER: "centos7", ARCH: "amd64", PY_VER: "3.8", GPU: "v100", DRIVER: "495" }
+          - { CUDA_VER: "11.2.2", LINUX_VER: "ubuntu18.04", ARCH: "amd64", PY_VER: "3.9", GPU: "v100", DRIVER: "495" }
+          - { CUDA_VER: "11.2.2", LINUX_VER: "ubuntu18.04", ARCH: "arm64", PY_VER: "3.9", GPU: "a100", DRIVER: "495" }
+          - { CUDA_VER: "11.5.1", LINUX_VER: "ubuntu20.04", ARCH: "amd64", PY_VER: "3.9", GPU: "v100", DRIVER: "495" }
+          - { CUDA_VER: "11.5.1", LINUX_VER: "ubuntu20.04", ARCH: "arm64", PY_VER: "3.9", GPU: "a100", DRIVER: "495" }
+    uses: ./.github/workflows/cpp-tests.yaml
+    with:
+      build_type: ${{ inputs.build_type }}
+      cuda_ver: ${{ matrix.CUDA_VER }}
+      linux_ver: ${{ matrix.LINUX_VER }}
+      py_ver: ${{ matrix.PY_VER }}
+      arch: ${{ matrix.ARCH }}
+      gpu: ${{ matrix.GPU }}
+      driver: ${{ matrix.DRIVER }}
