@@ -17,10 +17,10 @@ arch=$(uname -m)
 for pyver in ${RAPIDS_PY_VER}; do
         deactivate || true
 
-        pyunittest="cp${pyver//./}-cp${pyver//./}"
+        pytestenv="cp${pyver//./}-cp${pyver//./}"
 
-        /opt/python/$pyunittest/bin/python -m venv /cibw-unittest-venv-${pyver}
-        . /cibw-unittest-venv-${pyver}/bin/activate
+        /opt/python/$pytestenv/bin/python -m venv /cibw-test-venv-${pyver}
+        . /cibw-test-venv-${pyver}/bin/activate
 
         curl -sS https://bootstrap.pypa.io/get-pip.py | python3
 
