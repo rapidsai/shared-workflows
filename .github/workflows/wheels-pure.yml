@@ -21,7 +21,6 @@ on:
         required: false
         type: string
         default: ''
-
       gpu-smoketest:
         required: false
         type: string
@@ -32,8 +31,8 @@ on:
         default: 'true'
 
 jobs:
-  wheel-build-pure:
-    name: build
+  wheel-build:
+    name: wheel build pure
     runs-on: [self-hosted, linux, amd64, cpu4]
     steps:
     - name: checkout code repo
@@ -62,10 +61,10 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
 
-  wheel-gpu-test:
-    name: test
+  wheel-test:
+    name: wheel test pure
     runs-on: [self-hosted, linux, amd64, gpu-v100-495-1]
-    needs: wheel-build-pure
+    needs: wheel-build
     container:
       image: rapidsai/manylinux_2_31_x86_64
       env:
@@ -91,13 +90,9 @@ jobs:
       - name: Run smoketest for wheel
         run: /citestwheel.sh
 
-  wheel-publish-pure:
-    name: publish
-    needs: [wheel-build-pure, wheel-gpu-test]
-    if: |
-      always() &&
-      needs.wheel-build-pure.result == 'success' &&
-      (needs.wheel-gpu-test.result == 'success' || needs.wheel-gpu-test.result == 'skipped')
+  wheel-publish:
+    name: wheel publish pure
+    needs: [wheel-build, wheel-test]
     runs-on: [self-hosted, linux, amd64, cpu4]
     steps:
     - name: Download gha-tools
