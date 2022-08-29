@@ -3,6 +3,7 @@
 set -eoxu pipefail
 
 export RAPIDS_WHEEL_VER_OVERRIDE="${RAPIDS_WHEEL_VER_OVERRIDE:-}"
+export RAPIDS_WHEEL_VER_OVERRIDE_WITH_ARCH="${RAPIDS_WHEEL_VER_OVERRIDE_WITH_ARCH:-}"
 export CIBW_TEST_EXTRAS="${CIBW_TEST_EXTRAS:-}"
 export CIBW_TEST_REQUIRES="${CIBW_TEST_REQUIRES:-}"
 
@@ -37,6 +38,8 @@ for pyver in ${RAPIDS_PY_VER}; do
         # echo to expand wildcard before adding `[extra]` requires for pip
         if [ "${RAPIDS_WHEEL_VER_OVERRIDE}" != "" ]; then
                 python3 -m pip install --verbose $(echo ./dist/${RAPIDS_PY_WHEEL_NAME}*-${RAPIDS_WHEEL_VER_OVERRIDE}.whl)$extra_requires_suffix
+        elif [ "${RAPIDS_WHEEL_VER_OVERRIDE_WITH_ARCH}" != "" ]; then
+                python3 -m pip install --verbose $(echo ./dist/${RAPIDS_PY_WHEEL_NAME}*-${RAPIDS_WHEEL_VER_OVERRIDE_WITH_ARCH}_$(uname -m).whl)$extra_requires_suffix
         else
                 python3 -m pip install --verbose $(echo ./dist/${RAPIDS_PY_WHEEL_NAME}*-cp${pyver//./}-cp${pyver//./}*_$(uname -m).whl)$extra_requires_suffix
         fi
