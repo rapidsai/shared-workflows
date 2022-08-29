@@ -18,7 +18,7 @@ jobs:
           - { CUDA_VER: "11.2.2", LINUX_VER: "ubuntu18.04", ARCH: "arm64", PY_VER: "3.9", GPU: "a100", DRIVER: "495" }
           - { CUDA_VER: "11.5.1", LINUX_VER: "ubuntu20.04", ARCH: "amd64", PY_VER: "3.9", GPU: "v100", DRIVER: "495" }
           - { CUDA_VER: "11.5.1", LINUX_VER: "ubuntu20.04", ARCH: "arm64", PY_VER: "3.9", GPU: "a100", DRIVER: "495" }
-    uses: ./.github/workflows/python-tests.yaml
+    uses: ./.github/workflows/conda-python-tests.yaml
     with:
       build_type: ${{ inputs.build_type }}
       cuda_ver: ${{ matrix.CUDA_VER }}
