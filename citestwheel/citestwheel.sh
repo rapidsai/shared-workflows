@@ -56,7 +56,7 @@ for pyver in ${RAPIDS_PY_VER}; do
                 pip install ${CIBW_TEST_REQUIRES}
         fi
 
-        sh -c "${CIBW_TEST_COMMAND}"
+        sh -c "${CIBW_TEST_COMMAND/_venv_placeholder/$VIRTUAL_ENV}"
 
         python3 -c "${RAPIDS_WHEEL_SMOKETEST_COMMAND}"
 done
