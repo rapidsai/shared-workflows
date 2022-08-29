@@ -12,6 +12,10 @@ on:
       python-version:
         required: true
         type: string
+      python-wheel-ver-override:
+        required: false
+        type: string
+        default: ''
       cibw-before-all:
         required: false
         type: string
@@ -133,6 +137,7 @@ jobs:
         CIBW_TEST_EXTRAS: ${{ inputs.cibw-test-extras }}
         CIBW_TEST_COMMAND: ${{ inputs.cibw-test-command }}
         RAPIDS_WHEEL_SMOKETEST_COMMAND: ${{ inputs.gpu-smoketest }}
+        RAPIDS_WHEEL_VER_OVERRIDE: ${{ inputs.python-wheel-ver-override }}
     steps:
     - name: Install private index credentials in cibuildwheel container
       run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
