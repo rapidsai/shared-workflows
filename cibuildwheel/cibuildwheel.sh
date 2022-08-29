@@ -2,6 +2,8 @@
 
 set -eoxu pipefail
 
+git config --global --add safe.directory $(readlink -f ./)
+
 outdir=./dist
 code_dir=./"${1}"
 
