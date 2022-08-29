@@ -151,7 +151,11 @@ jobs:
     runs-on: ${{ matrix.labels }}
     strategy:
       matrix:
-        labels: [[self-hosted, linux, amd64, cpu4], [self-hosted, linux, arm64, cpu4]]
+        include:
+          - labels: [self-hosted, linux, amd64, cpu4]
+            cpu-arch: x86_64
+          - labels: [self-hosted, linux, arm64, cpu4]
+            cpu-arch: aarch64
     steps:
     - name: Download gha-tools
       run: |
