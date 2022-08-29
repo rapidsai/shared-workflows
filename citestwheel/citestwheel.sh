@@ -57,5 +57,3 @@ for pyver in ${RAPIDS_PY_VER}; do
 
         python3 -c "${RAPIDS_WHEEL_SMOKETEST_COMMAND}"
 done
-
-rapids-upload-wheels-to-s3 ./dist
