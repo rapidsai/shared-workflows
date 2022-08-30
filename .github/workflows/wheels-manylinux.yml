@@ -56,10 +56,10 @@ on:
         required: false
         type: string
         default: 'true'
-      auditwheel-repair-override:
+      auditwheel-skip-repair:
         required: false
         type: string
-        default: ''
+        default: 'false'
       sccache-enabled:
         required: false
         type: string
@@ -95,7 +95,7 @@ jobs:
         fetch-depth: 0 # unshallow fetch for setuptools-scm
 
     - name: Build wheels with custom RAPIDS cibuildwheel action
-      uses: rapidsai/shared-action-workflows/cibw@feat/wheel-ci-actions
+      uses: rapidsai/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions
       with:
         package-dir: ${{ inputs.package-dir }}
         output-dir: dist
@@ -107,7 +107,7 @@ jobs:
         cibw-before-build: ${{ inputs.cibw-before-build }}
         skbuild-build-options: ${{ inputs.skbuild-build-options }}
         skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
-        auditwheel-repair-override: ${{ inputs.auditwheel-repair-override }}
+        auditwheel-skip-repair: ${{ inputs.auditwheel-skip-repair }}
         sccache-enabled: ${{ inputs.sccache-enabled }}
         sccache-s3-key-prefix: ${{ inputs.sccache-s3-key-prefix }}
         sccache-region: ${{ inputs.sccache-region }}
