@@ -23,6 +23,8 @@ for pyver in ${RAPIDS_PY_VER}; do
 
         curl -sS https://bootstrap.pypa.io/get-pip.py | python3
 
+        which pip
+        sh -c "which pip"
         sh -c "${CIBW_BEFORE_BUILD_LINUX}"
 
         rm -rf /tmp/cibuildwheel/built_wheel
