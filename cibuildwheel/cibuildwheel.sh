@@ -18,18 +18,13 @@ for pyver in ${RAPIDS_PY_VER}; do
 
         pybuild="cp${pyver//./}-cp${pyver//./}"
 
-        unlink /bin/pip && true
-        ln -snf /opt/python/$pybuild/bin/pip /bin/pip
-        sh -c "${CIBW_BEFORE_BUILD_LINUX}"
-
-        /opt/python/$pybuild/bin/python -m venv --system-site-packages /cibw-build-venv-${pyver}
+        /opt/python/$pybuild/bin/python -m venv /cibw-build-venv-${pyver}
 
         . /cibw-build-venv-${pyver}/bin/activate
 
         curl -sS https://bootstrap.pypa.io/get-pip.py | python3
 
-        find /opt/python/$pybuild/ -name '*cudf*.cmake*' || true
-        find /cibw-build-venv-${pyver}/ -name '*cudf*.cmake*' || true
+        sh -c "${CIBW_BEFORE_BUILD_LINUX}"
 
         rm -rf /tmp/cibuildwheel/built_wheel
         mkdir -p /tmp/cibuildwheel/built_wheel
