@@ -139,6 +139,9 @@ jobs:
         RAPIDS_WHEEL_SMOKETEST_COMMAND: ${{ inputs.gpu-smoketest }}
         RAPIDS_WHEEL_VER_OVERRIDE_WITH_ARCH: ${{ inputs.wheel-pattern-override }}
     steps:
+    - name: Run nvidia-smi to make sure GPU is working
+      run: nvidia-smi
+
     - name: Install private index credentials in cibuildwheel container
       run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
 
