@@ -19,6 +19,6 @@ runs:
         docker run
         -v "$(readlink -f ${{ inputs.repo-dir }}):/code-dir"
         -v "$(readlink -f ${{ inputs.output-dir }}):/out-dir"
-        rapidsai/manylinux:amd64
+        rapidsai/manylinux_2_31_x86_64
         sh -c "cd /code-dir && git config --global --add safe.directory /code-dir && /opt/python/cp38-cp38/bin/python -m pip wheel -w /out-dir /code-dir/${{ inputs.package-dir }} --no-deps"
       shell: bash
