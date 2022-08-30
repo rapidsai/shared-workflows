@@ -28,6 +28,9 @@ for pyver in ${RAPIDS_PY_VER}; do
 
         curl -sS https://bootstrap.pypa.io/get-pip.py | python3
 
+        find /opt/python/$pybuild/ -name '*cudf*.cmake*' || true
+        find /cibw-build-venv-${pyver}/ -name '*cudf*.cmake*' || true
+
         rm -rf /tmp/cibuildwheel/built_wheel
         mkdir -p /tmp/cibuildwheel/built_wheel
 
