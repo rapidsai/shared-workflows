@@ -100,7 +100,7 @@ runs:
         fi
 
         # set CIBW_BUILD based on input python version e.g. 3.8 -> cp38-*
-        py_vers=${{ inputs.python-version }}
+        py_vers="${{ inputs.python-version }}"
         cibw_build_str=""
         for pyver in $py_vers; do
           cibw_build_str="${cibw_build_str}cp${py_ver//./}-* "
