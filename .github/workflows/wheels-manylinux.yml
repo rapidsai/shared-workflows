@@ -60,6 +60,22 @@ on:
         required: false
         type: string
         default: ''
+      sccache-enabled:
+        required: false
+        type: string
+        default: 'true'
+      sccache-bucket:
+        required: false
+        type: string
+        default: 'rapids-sccache'
+      sccache-s3-key-prefix:
+        required: false
+        type: string
+        default: 'gha-cibw'
+      sccache-region:
+        required: false
+        type: string
+        default: 'us-west-2'
 
 jobs:
   wheel-build:

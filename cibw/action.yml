@@ -103,7 +103,7 @@ runs:
         py_vers="${{ inputs.python-version }}"
         cibw_build_str=""
         for pyver in $py_vers; do
-          cibw_build_str="${cibw_build_str}cp${py_ver//./}-* "
+          cibw_build_str="${cibw_build_str}cp${pyver//./}-* "
         done
         echo "CIBW_BUILD=$cibw_build_str" >> "${GITHUB_ENV}"
 
@@ -128,8 +128,8 @@ runs:
       shell: bash
       env:
         CIBW_SKIP: "*musllinux*"
-        CIBW_MANYLINUX_X86_64_IMAGE: rapidsai/manylinux:amd64
-        CIBW_MANYLINUX_AARCH64_IMAGE: rapidsai/manylinux:arm64
+        CIBW_MANYLINUX_X86_64_IMAGE: rapidsai/manylinux_2_31_x86_64
+        CIBW_MANYLINUX_AARCH64_IMAGE: rapidsai/manylinux_2_31_aarch64
         CIBW_BUILD_FRONTEND: "pip"
         CIBW_BEFORE_BUILD_LINUX: ${{ inputs.cibw-before-build }}
         CIBW_BUILD_VERBOSITY_LINUX: 3
