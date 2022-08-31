@@ -176,7 +176,7 @@ jobs:
 
   wheel-publish:
     name: wheel publish ${{ matrix.cpu-arch }} ${{ inputs.python-version }}
-    needs: [wheel-build, wheel-test]
+    needs: wheel-build
     runs-on: ${{ matrix.labels }}
     strategy:
       matrix:
