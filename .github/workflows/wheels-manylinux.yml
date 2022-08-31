@@ -171,8 +171,9 @@ jobs:
       with:
         fetch-depth: 0 # unshallow fetch for setuptools-scm
 
-    - name: Run citestwheel
+    - name: Run citestwheel, ignoring failures
       uses: rapidsai/shared-action-workflows/citestwheel@feat/wheel-ci-actions
+      continue-on-error: true
 
   wheel-publish:
     name: wheel publish ${{ matrix.cpu-arch }} ${{ inputs.python-version }}
