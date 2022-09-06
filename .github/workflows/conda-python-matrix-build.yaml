@@ -30,14 +30,8 @@ jobs:
         PY_VER: ${{ matrix.PY_VER }}
         PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}
     steps:
-      - name: Setup gpuci-tools
-        run: |
-          git clone https://github.com/Ethyling/gpuci-tools.git -b gha
-          cp gpuci-tools/tools/* /usr/local/bin
-          rm -rf gpuci-tools
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
       - name: Python build
         run: ci/build_python.sh

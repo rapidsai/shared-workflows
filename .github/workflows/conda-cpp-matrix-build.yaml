@@ -27,14 +27,8 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}
     steps:
-      - name: Setup gpuci-tools
-        run: |
-          git clone https://github.com/Ethyling/gpuci-tools.git -b gha
-          cp gpuci-tools/tools/* /usr/local/bin
-          rm -rf gpuci-tools
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
       - name: C++ build
         run: ci/build_cpp.sh

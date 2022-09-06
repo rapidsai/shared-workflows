@@ -16,10 +16,5 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
     steps:
-      - name: Setup gpuci-tools
-        run: |
-          git clone https://github.com/Ethyling/gpuci-tools.git -b gha
-          cp gpuci-tools/tools/* /usr/local/bin
-          rm -rf gpuci-tools
       - name: Upload packages
         run: ci/upload_to_anaconda.sh

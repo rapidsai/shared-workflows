@@ -41,14 +41,8 @@ jobs:
         PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
-      - name: Setup gpuci-tools
-        run: |
-          git clone https://github.com/Ethyling/gpuci-tools.git -b gha
-          cp gpuci-tools/tools/* /usr/local/bin
-          rm -rf gpuci-tools
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
       - name: C++ tests
         run: ci/test_cpp.sh
