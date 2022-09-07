@@ -140,6 +140,7 @@ jobs:
           - labels: [self-hosted, linux, arm64, gpu-a100-495-1]
             cpu-arch: aarch64
     needs: wheel-build
+    continue-on-error: true # to always trigger wheel-publish
     container:
       image: rapidsai/manylinux_2_31_${{ matrix.cpu-arch }}
       env:
@@ -176,7 +177,7 @@ jobs:
 
   wheel-publish:
     name: wheel publish ${{ matrix.cpu-arch }} ${{ inputs.python-version }}
-    needs: [wheel-build, wheel-test]
+    needs: wheel-build
     runs-on: ${{ matrix.labels }}
     strategy:
       matrix:
