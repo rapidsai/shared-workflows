@@ -65,6 +65,7 @@ jobs:
     name: wheel test pure
     runs-on: [self-hosted, linux, amd64, gpu-v100-495-1]
     needs: wheel-build
+    continue-on-error: true # to always trigger wheel-publish
     container:
       image: rapidsai/manylinux_2_31_x86_64
       env:
@@ -100,7 +101,7 @@ jobs:
 
   wheel-publish:
     name: wheel publish pure
-    needs: [wheel-build, wheel-test]
+    needs: wheel-build
     runs-on: [self-hosted, linux, amd64, cpu4]
     steps:
     - name: Download gha-tools
