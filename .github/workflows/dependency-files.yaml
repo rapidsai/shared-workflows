@@ -41,40 +41,8 @@ jobs:
           test -z "$(git status --porcelain)" # ensures there are no untracked dependency files
       - name: Ensure an "all" environment exists
         run: |
-          # ensure .files.all exists & generates conda environment file
+          # ensure .files.all exists
           set -x
           yq \
             --exit-status \
             '.files | has("all")' ${{ inputs.CONFIG_FILE_PATH }}
-          yq \
-            --exit-status \
-            '.files.all.generate | match("both|conda")' ${{ inputs.CONFIG_FILE_PATH }}
-
-          export COMMON_DEP_LISTS=$(
-            yq \
-              --output-format json \
-              '[.dependencies.["conda_and_requirements","conda"].common | keys] | flatten' ${{ inputs.CONFIG_FILE_PATH }}
-          )
-
-          export SPECIFIC_DEP_LISTS=$(
-            yq \
-              --output-format json \
-              '[.dependencies.["conda_and_requirements","conda"].specific[] | keys - ["matrix"]] | flatten' ${{ inputs.CONFIG_FILE_PATH }}
-          )
-
-          export ALL_DEP_LISTS=$(
-            yq \
-              --output-format json \
-              --null-input \
-              'env(SPECIFIC_DEP_LISTS) + env(COMMON_DEP_LISTS) | unique | sort'
-          )
-
-          export ALL_ENV_INCLUDES=$(
-            yq \
-              --output-format json \
-              '.files.all.includes | sort' ${{ inputs.CONFIG_FILE_PATH }}
-          )
-          yq \
-            --null-input \
-            --exit-status \
-            'strenv(ALL_ENV_INCLUDES) == strenv(ALL_DEP_LISTS)'
