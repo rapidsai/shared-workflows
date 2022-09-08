@@ -4,34 +4,58 @@ on:
       build_type:
         required: true
         type: string
-      cuda_ver:
-        required: true
-        type: string
-      linux_ver:
-        required: true
-        type: string
-      py_ver:
-        required: true
-        type: string
-      arch:
-        required: true
-        type: string
-      gpu:
-        required: true
-        type: string
-      driver:
-        required: true
-        type: string
 
 jobs:
+  compute-cpp-test-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      TEST_MATRIX: ${{ steps.compute-matrix.outputs.TEST_MATRIX }}
+    steps:
+      - name: Compute Python Test Matrix
+        id: compute-matrix
+        run: |
+          PR_TEST_MATRIX='
+            [
+              { "CUDA_VER": "11.0.3", "LINUX_VER": "centos7", "ARCH": "amd64", "PY_VER": "3.8", "GPU": "v100", "DRIVER": "495" },
+              { "CUDA_VER": "11.2.2", "LINUX_VER": "ubuntu18.04", "ARCH": "amd64", "PY_VER": "3.9", "GPU": "v100", "DRIVER": "495" },
+              { "CUDA_VER": "11.2.2", "LINUX_VER": "ubuntu18.04", "ARCH": "arm64", "PY_VER": "3.9", "GPU": "a100", "DRIVER": "495" },
+              { "CUDA_VER": "11.5.1", "LINUX_VER": "ubuntu20.04", "ARCH": "amd64", "PY_VER": "3.9", "GPU": "v100", "DRIVER": "495" },
+              { "CUDA_VER": "11.5.1", "LINUX_VER": "ubuntu20.04", "ARCH": "arm64", "PY_VER": "3.9", "GPU": "a100", "DRIVER": "495" }
+            ]
+          '
+
+          NIGHTLY_TEST_MATRIX='
+            [
+              { "CUDA_VER": "11.0.3", "LINUX_VER": "centos7", "ARCH": "amd64", "PY_VER": "3.8", "GPU": "v100", "DRIVER": "495" },
+              { "CUDA_VER": "11.2.2", "LINUX_VER": "ubuntu18.04", "ARCH": "amd64", "PY_VER": "3.9", "GPU": "v100", "DRIVER": "495" },
+              { "CUDA_VER": "11.2.2", "LINUX_VER": "ubuntu18.04", "ARCH": "arm64", "PY_VER": "3.9", "GPU": "a100", "DRIVER": "495" },
+              { "CUDA_VER": "11.5.1", "LINUX_VER": "ubuntu20.04", "ARCH": "amd64", "PY_VER": "3.9", "GPU": "v100", "DRIVER": "495" },
+              { "CUDA_VER": "11.5.1", "LINUX_VER": "ubuntu20.04", "ARCH": "arm64", "PY_VER": "3.9", "GPU": "a100", "DRIVER": "495" }
+            ]
+          '
+
+          if [ "${BUILD_TYPE}" = "nightly" ]; then
+            echo "::set-output name=TEST_MATRIX::${NIGHTLY_TEST_MATRIX}"
+            echo "nightly"
+            exit 0
+          fi
+
+          echo "::set-output name=TEST_MATRIX::${PR_TEST_MATRIX}"
+          echo "non-nightly"
   tests:
+    name: Conda C++ tests
+    needs: compute-cpp-test-matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{needs.compute-matrix.outputs.TEST_MATRIX}}
     runs-on:
       - self-hosted
       - linux
-      - gpu-${{ inputs.gpu }}-${{ inputs.driver }}-1
-      - ${{ inputs.arch }}
+      - gpu-${{ matrix.GPU }}-${{ matrix.DRIVER }}-1
+      - ${{ matrix.ARCH }}
     container:
-      image: rapidsai/ci:cuda${{ inputs.cuda_ver }}-${{ inputs.linux_ver }}-py${{ inputs.py_ver }}
+      image: rapidsai/ci:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
