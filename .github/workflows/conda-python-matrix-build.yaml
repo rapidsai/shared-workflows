@@ -27,7 +27,6 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-        RAPIDS_PY_VER: ${{ matrix.PY_VER }}
         PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}
     steps:
       - uses: actions/checkout@v3
