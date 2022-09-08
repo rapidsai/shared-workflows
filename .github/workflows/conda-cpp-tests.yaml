@@ -14,6 +14,7 @@ jobs:
       - name: Compute Python Test Matrix
         id: compute-matrix
         run: |
+          env | sort
           PR_TEST_MATRIX='
             [
               { "CUDA_VER": "11.0.3", "LINUX_VER": "centos7", "ARCH": "amd64", "PY_VER": "3.8", "GPU": "v100", "DRIVER": "495" },
