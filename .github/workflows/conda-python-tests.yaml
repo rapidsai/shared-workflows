@@ -4,6 +4,10 @@ on:
       build_type:
         required: true
         type: string
+      ref:
+        type: string
+      repo:
+        type: string
 
 jobs:
   compute-python-test-matrix:
@@ -62,6 +66,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
+          repository: ${{ inputs.repo }}
+          ref: ${{ inputs.ref }}
           fetch-depth: 0
       - name: Python tests
         run: ci/test_python.sh
