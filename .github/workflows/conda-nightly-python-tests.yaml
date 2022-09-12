@@ -6,8 +6,7 @@ on:
         type: string
 
 jobs:
-  conda-nightly-python-tests:
-    name: Conda Python matrix tests for nightly builds
+  tests:
     secrets: inherit
     strategy:
       fail-fast: false

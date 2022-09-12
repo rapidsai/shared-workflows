@@ -6,8 +6,7 @@ on:
         type: string
 
 jobs:
-  conda-pr-python-tests:
-    name: Conda Python matrix tests for PRs
+  tests:
     secrets: inherit
     strategy:
       fail-fast: false

@@ -24,8 +24,7 @@ on:
         type: string
 
 jobs:
-  conda-python-tests:
-    name: Conda Python tests
+  tests:
     runs-on:
       - self-hosted
       - linux

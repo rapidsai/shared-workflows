@@ -6,8 +6,7 @@ on:
         type: string
 
 jobs:
-  conda-cpp-build:
-    name: Conda C++ matrix build
+  build:
     strategy:
       fail-fast: false
       matrix:

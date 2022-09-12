@@ -6,8 +6,7 @@ on:
         type: string
 
 jobs:
-  conda-nightly-cpp-tests:
-    name: Conda C++ matrix tests for nightly builds
+  tests:
     secrets: inherit
     strategy:
       fail-fast: false

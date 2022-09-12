@@ -6,8 +6,7 @@ on:
         type: string
 
 jobs:
-  conda-python-matrix-build:
-    name: Conda Python matrix build
+  build:
     strategy:
       fail-fast: false
       matrix:

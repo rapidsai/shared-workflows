@@ -24,8 +24,7 @@ on:
         type: string
 
 jobs:
-  conda-cpp-tests:
-    name: Conda C++ tests
+  tests:
     runs-on:
       - self-hosted
       - linux
