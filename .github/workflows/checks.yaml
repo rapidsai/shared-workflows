@@ -1,0 +1,30 @@
+on:
+  workflow_call:
+
+jobs:
+  check-size:
+    runs-on: ubuntu-latest
+    container:
+      image: rapidsai/ci:cuda11.5.1-ubuntu20.04-py3.8
+      env:
+        RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set GITHUB_WORKSPACE as safe directory
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+      - name: Run rapids-size-checker
+        run: rapids-size-checker
+  check-style:
+    runs-on: ubuntu-latest
+    container:
+      image: rapidsai/ci:cuda11.5.1-ubuntu20.04-py3.8
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set GITHUB_WORKSPACE as safe directory
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+      - name: Run ci/check_style.sh
+        run: ci/check_style.sh
