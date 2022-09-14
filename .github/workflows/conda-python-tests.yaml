@@ -45,7 +45,6 @@ jobs:
 
           echo "::set-output name=MATRIX::$(jq -nc 'env.MATRICIES | fromjson | {includes: .[env.BUILD_TYPE]}')"
   tests:
-    name: Conda Python tests
     needs: compute-python-test-matrix
     strategy:
       fail-fast: false

@@ -10,8 +10,7 @@ on:
         type: string
 
 jobs:
-  conda-upload-packages:
-    name: Upload conda packages
+  upload:
     runs-on: ubuntu-latest
     container:
       image: condaforge/mambaforge:latest
