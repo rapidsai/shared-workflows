@@ -16,6 +16,10 @@ on:
         required: false
         type: string
         default: ''
+      cibw-environment:
+        type: string
+        required: false
+        default: ''
       cibw-before-all:
         required: false
         type: string
