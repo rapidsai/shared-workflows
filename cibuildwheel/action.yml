@@ -127,12 +127,6 @@ runs:
       with:
         ssh-private-key: ${{ inputs.private-deply-keys }}
 
-    - name: Set up ssh-agent
-      uses: webfactory/ssh-agent@v0.5.4
-      if: inputs.private-deply-keys != ''
-      with:
-        ssh-private-key: ${{ inputs.private-deply-keys }}
-
     - name: Make .ssh config work in cibuildwheel container
       if: inputs.private-deply-keys != ''
       shell: bash
