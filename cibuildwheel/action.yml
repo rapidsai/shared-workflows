@@ -62,6 +62,10 @@ inputs:
     required: false
     type: string
     default: '32768'
+  private-deply-keys:
+    required: false
+    type: string
+    default: ''
 
 runs:
   using: composite
@@ -116,6 +120,26 @@ runs:
         # assemble CIBW_ENVRRIONMENT from skbuild configure and build options
         echo "CIBW_ENVIRONMENT=SKBUILD_CONFIGURE_OPTIONS='${skbuild_config_opts}' SKBUILD_BUILD_OPTIONS='${{ inputs.skbuild-build-options }}' ${{ inputs.cibw-environment }} PYTHON_PACKAGE_CUDA_SUFFIX='-cu11' SCCACHE_S3_KEY_PREFIX=${{ inputs.sccache-s3-key-prefix}} SCCACHE_REGION=${{ inputs.sccache-region }} SCCACHE_IDLE_TIMEOUT=${{ inputs.sccache-idle-timeout }} SCCACHE_BUCKET=${{ inputs.sccache-bucket }} AWS_ACCESS_KEY_ID=${{ inputs.sccache-aws-access-key-id }} AWS_SECRET_ACCESS_KEY=${{ inputs.sccache-aws-secret-access-key }}" >> "${GITHUB_ENV}"
       shell: bash
+
+    - name: Set up ssh-agent
+      uses: webfactory/ssh-agent@v0.5.4
+      if: inputs.private-deply-keys != ''
+      with:
+        ssh-private-key: ${{ inputs.private-deply-keys }}
+
+    - name: Set up ssh-agent
+      uses: webfactory/ssh-agent@v0.5.4
+      if: inputs.private-deply-keys != ''
+      with:
+        ssh-private-key: ${{ inputs.private-deply-keys }}
+
+    - name: Make .ssh config work in cibuildwheel container
+      if: inputs.private-deply-keys != ''
+      shell: bash
+      run: |
+        sed -i "s@$HOME@/root@g" "$HOME/.ssh/config";
+        echo "CIBW_ENVIRONMENT=SSH_AUTH_SOCK=/host/$SSH_AUTH_SOCK $CIBW_ENVIRONMENT" >> "${GITHUB_ENV}";
+        echo "CIBW_BEFORE_ALL_LINUX=$CIBW_BEFORE_ALL_LINUX; cp -ar /host/$HOME/.{ssh,gitconfig} /root" >> "${GITHUB_ENV}";
 
     - name: Invoke cibuildwheel with pipx
       run: >

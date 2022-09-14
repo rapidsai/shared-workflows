@@ -76,6 +76,10 @@ on:
         required: false
         type: string
         default: 'us-west-2'
+      private-deply-keys:
+        required: false
+        type: string
+        default: ''
 
 jobs:
   wheel-build:
@@ -93,9 +97,10 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0 # unshallow fetch for setuptools-scm
+        persist-credentials: false
 
     - name: Build wheels with custom RAPIDS cibuildwheel action
-      uses: rapidsai/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions
+      uses: trxcllnt/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions
       with:
         package-dir: ${{ inputs.package-dir }}
         output-dir: dist
@@ -114,6 +119,7 @@ jobs:
         sccache-bucket: ${{ inputs.sccache-bucket }}
         sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         sccache-aws-secret-access-key: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+        private-deply-keys: ${{ inputs.private-deply-keys }}
 
     - name: Download gha-tools
       run: |
@@ -171,6 +177,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0 # unshallow fetch for setuptools-scm
+        persist-credentials: false
 
     - name: Run citestwheel
       uses: rapidsai/shared-action-workflows/citestwheel@feat/wheel-ci-actions
