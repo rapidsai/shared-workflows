@@ -104,7 +104,7 @@ jobs:
         persist-credentials: false
 
     - name: Build wheels with custom RAPIDS cibuildwheel action
-      uses: trxcllnt/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions
+      uses: rapidsai/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions-ptaylor
       with:
         package-dir: ${{ inputs.package-dir }}
         output-dir: dist
