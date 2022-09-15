@@ -10,7 +10,11 @@ inputs:
   output-dir:
     description: 'Path to output wheels'
     required: true
- 
+  python-package-cuda-suffix:
+    required: false
+    type: string
+    default: ''
+
 runs:
   using: composite
   steps:
@@ -19,6 +23,7 @@ runs:
         docker run
         -v "$(readlink -f ${{ inputs.repo-dir }}):/code-dir"
         -v "$(readlink -f ${{ inputs.output-dir }}):/out-dir"
+        -e PYTHON_PACKAGE_CUDA_SUFFIX="${{ inputs.python-package-cuda-suffix }}"
         rapidsai/manylinux_2_31_x86_64
         sh -c "cd /code-dir && git config --global --add safe.directory /code-dir && /opt/python/cp38-cp38/bin/python -m pip wheel -w /out-dir /code-dir/${{ inputs.package-dir }} --no-deps"
       shell: bash

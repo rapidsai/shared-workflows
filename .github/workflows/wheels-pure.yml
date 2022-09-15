@@ -9,6 +9,10 @@ on:
       package-dir:
         required: true
         type: string
+      python-package-cuda-suffix:
+        required: false
+        type: string
+        default: ''
       cibw-test-requires:
         required: false
         type: string
@@ -42,8 +46,9 @@ jobs:
         persist-credentials: false
 
     - name: Build pure python wheel with pip
-      uses: rapidsai/shared-action-workflows/purewheel@feat/wheel-ci-actions
+      uses: rapidsai/shared-action-workflows/purewheel@feat/wheel-ci-actions-ptaylor
       with:
+        python-package-cuda-suffix: ${{ inputs.python-package-cuda-suffix }}
         package-dir: ${{ inputs.package-dir }}
         output-dir: dist
         repo-dir: ./
