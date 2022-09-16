@@ -62,7 +62,11 @@ inputs:
     required: false
     type: string
     default: '32768'
-  private-deply-keys:
+  cumlprims_mg-private-deply-key:
+    required: false
+    type: string
+    default: ''
+  cugraph-ops-private-deply-key:
     required: false
     type: string
     default: ''
@@ -123,12 +127,14 @@ runs:
 
     - name: Set up ssh-agent
       uses: webfactory/ssh-agent@v0.5.4
-      if: inputs.private-deply-keys != ''
+      if: inputs.cumlprims_mg-private-deply-key != '' || inputs.cugraph-ops-private-deply-key != ''
       with:
-        ssh-private-key: ${{ inputs.private-deply-keys }}
+        ssh-private-key: |
+          ${{ inputs.cumlprims_mg-private-deply-key }}
+          ${{ inputs.cugraph-ops-private-deply-key }}
 
     - name: Make .ssh config work in cibuildwheel container
-      if: inputs.private-deply-keys != ''
+      if: inputs.cumlprims_mg-private-deply-key != '' || inputs.cugraph-ops-private-deply-key != ''
       shell: bash
       run: |
         sed -i "s@$HOME@/root@g" "$HOME/.ssh/config";
