@@ -138,8 +138,8 @@ runs:
       shell: bash
       run: |
         sed -i "s@$HOME@/root@g" "$HOME/.ssh/config";
-        echo "CIBW_ENVIRONMENT=SSH_AUTH_SOCK=/host/$SSH_AUTH_SOCK $CIBW_ENVIRONMENT" >> "${GITHUB_ENV}";
-        echo "CIBW_BEFORE_ALL_LINUX=$CIBW_BEFORE_ALL_LINUX; cp -ar /host/$HOME/.{ssh,gitconfig} /root" >> "${GITHUB_ENV}";
+        echo "CIBW_ENVIRONMENT=SSH_AUTH_SOCK=/host$SSH_AUTH_SOCK $CIBW_ENVIRONMENT" >> "${GITHUB_ENV}";
+        echo "CIBW_BEFORE_ALL_LINUX=$CIBW_BEFORE_ALL_LINUX; cp -ar /host$HOME/.ssh /host$HOME/.gitconfig /root" >> "${GITHUB_ENV}";
 
     - name: Invoke cibuildwheel with pipx
       run: >
