@@ -80,10 +80,6 @@ on:
         required: false
         type: string
         default: 'us-west-2'
-      private-deply-keys:
-        required: false
-        type: string
-        default: ''
 
 jobs:
   wheel-build:
@@ -123,7 +119,9 @@ jobs:
         sccache-bucket: ${{ inputs.sccache-bucket }}
         sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         sccache-aws-secret-access-key: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-        private-deply-keys: ${{ inputs.private-deply-keys }}
+        private-deply-keys: |
+          "${{ secrets.CUMLPRIMS_SSH_PRIVATE_DEPLOY_KEY }}"
+          "${{ secrets.CUGRAPH_OPS_SSH_PRIVATE_DEPLOY_KEY }}"
 
     - name: Download gha-tools
       run: |
