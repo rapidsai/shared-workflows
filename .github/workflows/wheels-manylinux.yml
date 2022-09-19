@@ -40,6 +40,10 @@ on:
         required: false
         type: string
         default: 'manylinux_2_31'
+      manylinux-test-container:
+        required: false
+        type: string
+        default: 'manylinux_2_31'
       cibw-test-requires:
         required: false
         type: string
@@ -104,7 +108,7 @@ jobs:
         persist-credentials: false
 
     - name: Build wheels with custom RAPIDS cibuildwheel action
-      uses: rapidsai/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions-ptaylor
+      uses: rapidsai/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions-2
       with:
         package-dir: ${{ inputs.package-dir }}
         output-dir: dist
@@ -154,7 +158,7 @@ jobs:
     needs: wheel-build
     continue-on-error: true # to always trigger wheel-publish
     container:
-      image: rapidsai/${{ inputs.manylinux-container }}_${{ matrix.cpu-arch }}
+      image: rapidsai/${{ inputs.manylinux-test-container }}_${{ matrix.cpu-arch }}
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }} # gha-tools needs these
@@ -186,7 +190,7 @@ jobs:
         persist-credentials: false
 
     - name: Run citestwheel
-      uses: rapidsai/shared-action-workflows/citestwheel@feat/wheel-ci-actions
+      uses: rapidsai/shared-action-workflows/citestwheel@feat/wheel-ci-actions-2
 
   wheel-publish:
     name: wheel publish ${{ matrix.cpu-arch }} ${{ inputs.python-version }}

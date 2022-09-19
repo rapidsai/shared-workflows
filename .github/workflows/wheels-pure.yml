@@ -46,7 +46,7 @@ jobs:
         persist-credentials: false
 
     - name: Build pure python wheel with pip
-      uses: rapidsai/shared-action-workflows/purewheel@feat/wheel-ci-actions-ptaylor
+      uses: rapidsai/shared-action-workflows/purewheel@feat/wheel-ci-actions-2
       with:
         python-package-cuda-suffix: ${{ inputs.python-package-cuda-suffix }}
         package-dir: ${{ inputs.package-dir }}
@@ -104,7 +104,7 @@ jobs:
         persist-credentials: false
 
     - name: Run citestwheel
-      uses: rapidsai/shared-action-workflows/citestwheel@feat/wheel-ci-actions
+      uses: rapidsai/shared-action-workflows/citestwheel@feat/wheel-ci-actions-2
 
   wheel-publish:
     name: wheel publish pure
