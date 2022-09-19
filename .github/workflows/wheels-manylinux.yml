@@ -36,6 +36,10 @@ on:
         required: false
         type: string
         default: ''
+      manylinux-container:
+        required: false
+        type: string
+        default: 'manylinux_2_31'
       cibw-test-requires:
         required: false
         type: string
@@ -113,6 +117,7 @@ jobs:
         skbuild-build-options: ${{ inputs.skbuild-build-options }}
         skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
         auditwheel-skip-repair: ${{ inputs.auditwheel-skip-repair }}
+        manylinux-container: ${{ inputs.manylinux-container }}
         sccache-enabled: ${{ inputs.sccache-enabled }}
         sccache-s3-key-prefix: ${{ inputs.sccache-s3-key-prefix }}
         sccache-region: ${{ inputs.sccache-region }}
@@ -149,7 +154,7 @@ jobs:
     needs: wheel-build
     continue-on-error: true # to always trigger wheel-publish
     container:
-      image: rapidsai/manylinux_2_31_${{ matrix.cpu-arch }}
+      image: rapidsai/${{ inputs.manylinux-container }}_${{ matrix.cpu-arch }}
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }} # gha-tools needs these

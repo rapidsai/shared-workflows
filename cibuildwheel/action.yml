@@ -16,6 +16,9 @@ inputs:
   internal-pypi-pass:
     description: 'Password for pypi.k8s.rapids.ai'
     required: true
+  manylinux-container:
+    description: 'Specify which manylinux container to use'
+    required: true
   cibw-before-all:
     description: 'Extra CIBW_BEFORE_ALL_LINUX commands'
     required: false
@@ -102,7 +105,7 @@ runs:
 
         # try to repair to the widest possible manylinux, starting from 2_17 i.e. manylinux2014 up to 2_31
         if [ "${{ inputs.auditwheel-skip-repair }}" == "false" ]; then
-          echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_17_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_24_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_27_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_28_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_31_${arch} {wheel}" >> "${GITHUB_ENV}"
+          echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_24_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_27_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_28_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_31_${arch} {wheel}" >> "${GITHUB_ENV}"
         else
           echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=cp {wheel} {dest_dir}" >> "${GITHUB_ENV}"
         fi
@@ -152,8 +155,8 @@ runs:
       shell: bash
       env:
         CIBW_SKIP: "*musllinux*"
-        CIBW_MANYLINUX_X86_64_IMAGE: rapidsai/manylinux_2_31_x86_64
-        CIBW_MANYLINUX_AARCH64_IMAGE: rapidsai/manylinux_2_31_aarch64
+        CIBW_MANYLINUX_X86_64_IMAGE: rapidsai/${{ inputs.manylinux-container }}_x86_64
+        CIBW_MANYLINUX_AARCH64_IMAGE: rapidsai/${{ inputs.manylinux-container }}_aarch64
         CIBW_BUILD_FRONTEND: "pip"
         CIBW_BEFORE_BUILD_LINUX: ${{ inputs.cibw-before-build }}
         CIBW_BUILD_VERBOSITY_LINUX: 3
