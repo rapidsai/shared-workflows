@@ -8,6 +8,9 @@ on:
         type: string
       repo:
         type: string
+      release_build:
+        type: boolean
+        default: false
 
 jobs:
   upload:
@@ -18,7 +21,6 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-        RAPIDS_CONDA_TOKEN: ${{ secrets.RAPIDS_CONDA_TOKEN }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -30,5 +32,12 @@ jobs:
           echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
           echo "RAPIDS_REF_NAME=${{ inputs.ref || github.ref_name }}" >> "${GITHUB_ENV}"
+      - name: Set Proper Conda Upload Token
+        run: |
+          RAPIDS_CONDA_TOKEN=${{ secrets.CONDA_RAPIDSAI_NIGHTLY_TOKEN }}
+          if [ "${{inputs.release_build}}" = "true" ]; then
+            RAPIDS_CONDA_TOKEN=${{ secrets.CONDA_RAPIDSAI_TOKEN }}
+          fi
+          echo "RAPIDS_CONDA_TOKEN=${RAPIDS_CONDA_TOKEN}" >> "${GITHUB_ENV}"
       - name: Upload packages
         run: ci/upload_to_anaconda.sh
