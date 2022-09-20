@@ -1,0 +1,15 @@
+on:
+  workflow_call:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: upsidr/merge-gatekeeper@v1
+        with:
+          self: "pr-builder / run"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          interval: 60
+          timeout: 86400 # 24h
+          ref: ${{ github.ref }}
+          ignored: "triage"
