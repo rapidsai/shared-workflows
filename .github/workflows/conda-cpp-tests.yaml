@@ -4,34 +4,57 @@ on:
       build_type:
         required: true
         type: string
-      cuda_ver:
-        required: true
+      ref:
         type: string
-      linux_ver:
-        required: true
-        type: string
-      py_ver:
-        required: true
-        type: string
-      arch:
-        required: true
-        type: string
-      gpu:
-        required: true
-        type: string
-      driver:
-        required: true
+      repo:
         type: string
 
 jobs:
+  compute-matrix:
+    runs-on: ubuntu-latest
+    env:
+      BUILD_TYPE: ${{ inputs.build_type }}
+    outputs:
+      MATRIX: ${{ steps.compute-matrix.outputs.MATRIX }}
+    steps:
+      - name: Validate Test Type
+        run: |
+          if [[ "$BUILD_TYPE" != "pull-request" ]] && [[ "$BUILD_TYPE" != "nightly" ]]; then
+              echo "Invalid build type! Must be 'nightly' or 'pull-request'."
+              exit 1
+          fi
+      - name: Compute C++ Test Matrix
+        id: compute-matrix
+        run: |
+          export MATRICIES='{
+            "pull-request": [
+              { "CUDA_VER": "11.0.3", "LINUX_VER": "centos7", "ARCH": "amd64", "PY_VER": "3.8", "GPU": "v100", "DRIVER": "495" },
+              { "CUDA_VER": "11.2.2", "LINUX_VER": "ubuntu18.04", "ARCH": "amd64", "PY_VER": "3.9", "GPU": "v100", "DRIVER": "495" },
+              { "CUDA_VER": "11.2.2", "LINUX_VER": "ubuntu18.04", "ARCH": "arm64", "PY_VER": "3.9", "GPU": "a100", "DRIVER": "495" },
+              { "CUDA_VER": "11.5.1", "LINUX_VER": "ubuntu20.04", "ARCH": "amd64", "PY_VER": "3.9", "GPU": "v100", "DRIVER": "495" },
+              { "CUDA_VER": "11.5.1", "LINUX_VER": "ubuntu20.04", "ARCH": "arm64", "PY_VER": "3.9", "GPU": "a100", "DRIVER": "495" }
+            ],
+            "nightly": [
+              { "CUDA_VER": "11.0.3", "LINUX_VER": "centos7", "ARCH": "amd64", "PY_VER": "3.8", "GPU": "v100", "DRIVER": "495" },
+              { "CUDA_VER": "11.2.2", "LINUX_VER": "ubuntu18.04", "ARCH": "amd64", "PY_VER": "3.9", "GPU": "v100", "DRIVER": "495" },
+              { "CUDA_VER": "11.2.2", "LINUX_VER": "ubuntu18.04", "ARCH": "arm64", "PY_VER": "3.9", "GPU": "a100", "DRIVER": "495" },
+              { "CUDA_VER": "11.5.1", "LINUX_VER": "ubuntu20.04", "ARCH": "amd64", "PY_VER": "3.9", "GPU": "v100", "DRIVER": "495" },
+              { "CUDA_VER": "11.5.1", "LINUX_VER": "ubuntu20.04", "ARCH": "arm64", "PY_VER": "3.9", "GPU": "a100", "DRIVER": "495" }
+            ]
+          }'
+          echo "::set-output name=MATRIX::$(jq -nc 'env.MATRICIES | fromjson | {includes: .[env.BUILD_TYPE]}')"
   tests:
+    needs: compute-matrix
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on:
       - self-hosted
       - linux
-      - gpu-${{ inputs.gpu }}-${{ inputs.driver }}-1
-      - ${{ inputs.arch }}
+      - gpu-${{ matrix.includes.GPU }}-${{ matrix.includes.DRIVER }}-1
+      - ${{ matrix.includes.ARCH }}
     container:
-      image: rapidsai/ci:cuda${{ inputs.cuda_ver }}-${{ inputs.linux_ver }}-py${{ inputs.py_ver }}
+      image: rapidsai/ci:cuda${{ matrix.includes.CUDA_VER }}-${{ matrix.includes.LINUX_VER }}-py${{ matrix.includes.PY_VER }}
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
@@ -41,6 +64,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
+          repository: ${{ inputs.repo }}
+          ref: ${{ inputs.ref }}
           fetch-depth: 0
+      - name: Standardize repository information
+        run: |
+          echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
+          echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
+          echo "RAPIDS_REF_NAME=${{ inputs.ref || github.ref_name }}" >> "${GITHUB_ENV}"
       - name: C++ tests
         run: ci/test_cpp.sh

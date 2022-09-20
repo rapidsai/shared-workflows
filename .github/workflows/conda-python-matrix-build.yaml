@@ -4,6 +4,10 @@ on:
       build_type:
         required: true
         type: string
+      ref:
+        type: string
+      repo:
+        type: string
 
 jobs:
   build:
@@ -30,6 +34,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
+          repository: ${{ inputs.repo }}
+          ref: ${{ inputs.ref }}
           fetch-depth: 0
+      - name: Standardize repository information
+        run: |
+          echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
+          echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
+          echo "RAPIDS_REF_NAME=${{ inputs.ref || github.ref_name }}" >> "${GITHUB_ENV}"
       - name: Python build
         run: ci/build_python.sh
