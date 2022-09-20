@@ -10,7 +10,7 @@ on:
         type: string
 
 jobs:
-  compute-cpp-test-matrix:
+  compute-matrix:
     runs-on: ubuntu-latest
     env:
       BUILD_TYPE: ${{ inputs.build_type }}
@@ -44,10 +44,10 @@ jobs:
           }'
           echo "::set-output name=MATRIX::$(jq -nc 'env.MATRICIES | fromjson | {includes: .[env.BUILD_TYPE]}')"
   tests:
-    needs: compute-cpp-test-matrix
+    needs: compute-matrix
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.compute-cpp-test-matrix.outputs.MATRIX) }}
+      matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on:
       - self-hosted
       - linux
