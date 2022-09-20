@@ -12,4 +12,4 @@ jobs:
           interval: 60
           timeout: 86400 # 24h
           ref: ${{ github.ref }}
-          ignored: "triage"
+          ignored: "triage,Branch Checker,Label Checker"
