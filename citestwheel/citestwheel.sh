@@ -8,8 +8,7 @@ export CIBW_TEST_EXTRAS="${CIBW_TEST_EXTRAS:-}"
 export CIBW_TEST_REQUIRES="${CIBW_TEST_REQUIRES:-}"
 export CIBW_TEST_COMMAND="${CIBW_TEST_COMMAND:-}"
 export RAPIDS_WHEEL_SMOKETEST_COMMAND="${RAPIDS_WHEEL_SMOKETEST_COMMAND:-}"
-export RAPIDS_BEFORE_TEST_COMMANDS_AMD64="${RAPIDS_BEFORE_TEST_COMMANDS_AMD64:-}"
-export RAPIDS_BEFORE_TEST_COMMANDS_ARM64="${RAPIDS_BEFORE_TEST_COMMANDS_ARM64:-}"
+export RAPIDS_BEFORE_TEST_COMMANDS="${RAPIDS_BEFORE_TEST_COMMANDS:-}"
 
 rm -rf ./dist
 mkdir -p ./dist
@@ -27,11 +26,7 @@ for pyver in ${RAPIDS_PY_VER}; do
 
         curl -sS https://bootstrap.pypa.io/get-pip.py | python3
 
-        if [ "${arch}" == "x86_64" ]; then
-                sh -c "${RAPIDS_BEFORE_TEST_COMMANDS_AMD64}"
-        elif [ "${arch}" == "aarch64" ]; then
-                sh -c "${RAPIDS_BEFORE_TEST_COMMANDS_ARM64}"
-        fi
+        sh -c "${RAPIDS_BEFORE_TEST_COMMANDS}"
 
         if [ "${first}" == "yes" ]; then
                 python -m pip install awscli

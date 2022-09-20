@@ -1,0 +1,217 @@
+name: Build RAPIDS manylinux wheels
+
+on:
+  workflow_call:
+    inputs:
+      package-name:
+        required: true
+        type: string
+      package-dir:
+        required: true
+        type: string
+      python-version:
+        required: true
+        type: string
+      wheel-pattern-override:
+        required: false
+        type: string
+        default: ''
+      cibw-environment:
+        type: string
+        required: false
+        default: ''
+      cibw-before-all:
+        required: false
+        type: string
+        default: 'true'
+      cibw-before-build:
+        required: false
+        type: string
+        default: 'true'
+      skbuild-configure-options:
+        required: false
+        type: string
+        default: ''
+      skbuild-build-options:
+        required: false
+        type: string
+        default: ''
+      manylinux-container:
+        required: false
+        type: string
+        default: 'manylinux_2_31'
+      manylinux-test-container:
+        required: false
+        type: string
+        default: 'manylinux_2_31'
+      cibw-test-requires:
+        required: false
+        type: string
+        default: ''
+      cibw-test-extras:
+        required: false
+        type: string
+        default: ''
+      cibw-test-command:
+        required: false
+        type: string
+        default: ''
+      gpu-smoketest:
+        required: false
+        type: string
+        default: ''
+      gpu-smoketest-before:
+        required: false
+        type: string
+        default: 'true'
+      auditwheel-skip-repair:
+        required: false
+        type: string
+        default: 'false'
+      sccache-enabled:
+        required: false
+        type: string
+        default: 'true'
+      sccache-bucket:
+        required: false
+        type: string
+        default: 'rapids-sccache'
+      sccache-s3-key-prefix:
+        required: false
+        type: string
+        default: 'gha-cibw'
+      sccache-region:
+        required: false
+        type: string
+        default: 'us-west-2'
+
+jobs:
+  wheel-build:
+    name: cibuildwheel ${{ matrix.cpu-arch }} ${{ inputs.python-version }}
+    runs-on: ${{ matrix.labels }}
+    strategy:
+      matrix:
+        include:
+          - labels: [self-hosted, linux, amd64, cpu16]
+            cpu-arch: x86_64
+    steps:
+    - name: checkout code repo
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0 # unshallow fetch for setuptools-scm
+        persist-credentials: false
+
+    - name: Build wheels with custom RAPIDS cibuildwheel action
+      uses: rapidsai/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions-2
+      with:
+        package-dir: ${{ inputs.package-dir }}
+        output-dir: dist
+        python-version: ${{ inputs.python-version }}
+        internal-pypi-user: cibuildwheel
+        internal-pypi-pass: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
+        cibw-environment: ${{ inputs.cibw-environment }}
+        cibw-before-all: ${{ inputs.cibw-before-all }}
+        cibw-before-build: ${{ inputs.cibw-before-build }}
+        skbuild-build-options: ${{ inputs.skbuild-build-options }}
+        skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
+        auditwheel-skip-repair: ${{ inputs.auditwheel-skip-repair }}
+        manylinux-container: ${{ inputs.manylinux-container }}
+        sccache-enabled: ${{ inputs.sccache-enabled }}
+        sccache-s3-key-prefix: ${{ inputs.sccache-s3-key-prefix }}
+        sccache-region: ${{ inputs.sccache-region }}
+        sccache-bucket: ${{ inputs.sccache-bucket }}
+        sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        sccache-aws-secret-access-key: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+        cumlprims_mg-private-deply-key: ${{ secrets.CUMLPRIMS_SSH_PRIVATE_DEPLOY_KEY }}
+        cugraph-ops-private-deply-key: ${{ secrets.CUGRAPH_OPS_SSH_PRIVATE_DEPLOY_KEY }}
+
+    - name: Download gha-tools
+      run: |
+        wget https://github.com/rapidsai/gha-tools/releases/download/v0.0.2/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
+        pip install awscli
+
+    - name: Upload wheels to downloads.rapids.ai
+      run: rapids-upload-wheels-to-s3 dist
+      env:
+        RAPIDS_BUILD_TYPE: "pull-request"
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        RAPIDS_PY_VER: ${{ inputs.python-version }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+
+  wheel-test:
+    name: wheel test ${{ matrix.cpu-arch }} ${{ inputs.python-version }}
+    runs-on: ${{ matrix.labels }}
+    strategy:
+      matrix:
+        include:
+          - labels: [self-hosted, linux, amd64, gpu-v100-495-1]
+            cpu-arch: x86_64
+    needs: wheel-build
+    continue-on-error: true # to always trigger wheel-publish
+    container:
+      image: rapidsai/${{ inputs.manylinux-test-container }}_${{ matrix.cpu-arch }}
+      env:
+        NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
+        GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }} # gha-tools needs these
+        GITHUB_SHA: ${{ env.GITHUB_SHA }}
+        GITHUB_REF_NAME: ${{ env.GITHUB_REF_NAME }}
+        RAPIDS_PY_VER: ${{ inputs.python-version }}
+        RAPIDS_BUILD_TYPE: "pull-request"
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+        RAPIDS_BEFORE_TEST_COMMANDS: ${{ inputs.gpu-smoketest-before }}
+        CIBW_TEST_REQUIRES: ${{ inputs.cibw-test-requires }}
+        CIBW_TEST_EXTRAS: ${{ inputs.cibw-test-extras }}
+        CIBW_TEST_COMMAND: ${{ inputs.cibw-test-command }}
+        RAPIDS_WHEEL_SMOKETEST_COMMAND: ${{ inputs.gpu-smoketest }}
+        RAPIDS_WHEEL_VER_OVERRIDE_WITH_ARCH: ${{ inputs.wheel-pattern-override }}
+    steps:
+    - name: Run nvidia-smi to make sure GPU is working
+      run: nvidia-smi
+
+    - name: Install private index credentials in cibuildwheel container
+      run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
+
+    - name: checkout code repo
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0 # unshallow fetch for setuptools-scm
+        persist-credentials: false
+
+    - name: Run citestwheel
+      uses: rapidsai/shared-action-workflows/citestwheel@feat/wheel-ci-actions-2
+
+  wheel-publish:
+    name: wheel publish ${{ matrix.cpu-arch }} ${{ inputs.python-version }}
+    needs: wheel-build
+    runs-on: ${{ matrix.labels }}
+    strategy:
+      matrix:
+        include:
+          - labels: [self-hosted, linux, amd64, cpu4]
+            cpu-arch: x86_64
+    steps:
+    - name: Download gha-tools
+      run: |
+        wget https://github.com/rapidsai/gha-tools/releases/download/v0.0.2/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
+        pip install awscli
+
+    - name: Download wheels from downloads.rapids.ai
+      run: rapids-download-wheels-from-s3 ./dist
+      env:
+        RAPIDS_BUILD_TYPE: "pull-request"
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        RAPIDS_PY_VER: ${{ inputs.python-version }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+
+    - name: Publish wheels to RAPIDS internal PyPI
+      run: |
+        pip install twine
+        twine upload ./dist/"${{ inputs.package-name }}*.whl"
+      env:
+        TWINE_USERNAME: cibuildwheel
+        TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
+        TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
