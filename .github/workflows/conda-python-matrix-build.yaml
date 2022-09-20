@@ -39,7 +39,6 @@ jobs:
           fetch-depth: 0
       - name: Standardize repository information
         run: |
-          git config --global --add safe.directory '*' # FIX ME! Move to CI image?
           echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
           echo "RAPIDS_REF_NAME=${{ inputs.ref || github.ref_name }}" >> "${GITHUB_ENV}"
