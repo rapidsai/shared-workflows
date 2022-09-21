@@ -21,16 +21,12 @@ on:
       cibw-manylinux-container-arm64:
         required: true
         type: string
-      cibw-auditwheel-repair-platform:
+      cibw-auditwheel-repair-command-amd64: # hint: use 'cp {wheel} {dest_dir}' to skip repairing
         required: true
         type: string
-      cibw-auditwheel-repair-command:
+      cibw-auditwheel-repair-command-arm64:
         required: true
         type: string
-      cibw-auditwheel-post-repair-command:
-        type: string
-        required: false
-        default: 'true'
       cibw-environment:
         type: string
         required: false
@@ -57,33 +53,33 @@ on:
         default: ''
 
       # test settings
-      test-container-amd64:
+      cibw-test-container-amd64:
         required: true
         type: string
-      test-container-arm64:
+      cibw-test-container-arm64:
         required: true
         type: string
-      test-requires:
+      cibw-test-requires:
         required: false
         type: string
         default: ''
-      test-extras:
+      cibw-test-extras:
         required: false
         type: string
         default: ''
-      test-unittest:
+      cibw-test-unittest: # tests are allowed to be blank because the wheel is installed and pip checked
         required: false
         type: string
         default: ''
-      test-smoketest:
+      cibw-test-smoketest:
         required: false
         type: string
         default: ''
-      test-before-amd64:
+      cibw-test-before-amd64:
         required: false
         type: string
         default: 'true'
-      test-before-arm64:
+      cibw-test-before-arm64:
         required: false
         type: string
         default: 'true'
@@ -120,7 +116,8 @@ jobs:
         cibw-before-build: ${{ inputs.cibw-before-build }}
         skbuild-configure-options: ${{ inputs.cibw-skbuild-configure-options }}
         skbuild-build-options: ${{ inputs.cibw-skbuild-build-options }}
-        auditwheel-repair-platform: ${{ inputs.cibw-auditwheel-repair-platform }}
+        auditwheel-repair-command-amd64: ${{ inputs.cibw-auditwheel-repair-command-amd64 }}
+        auditwheel-repair-command-arm64: ${{ inputs.cibw-auditwheel-repair-command-arm64 }}
         sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         sccache-aws-secret-access-key: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         cumlprims_mg-private-deply-key: ${{ secrets.CUMLPRIMS_SSH_PRIVATE_DEPLOY_KEY }}
@@ -167,12 +164,12 @@ jobs:
         RAPIDS_BUILD_TYPE: "pull-request"
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-        RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.gpu-smoketest-before-amd64 }}
-        RAPIDS_BEFORE_TEST_COMMANDS_ARM64: ${{ inputs.gpu-smoketest-before-arm64 }}
+        RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.cibw-test-before-amd64 }}
+        RAPIDS_BEFORE_TEST_COMMANDS_ARM64: ${{ inputs.cibw-test-before-arm64 }}
         CIBW_TEST_REQUIRES: ${{ inputs.cibw-test-requires }}
         CIBW_TEST_EXTRAS: ${{ inputs.cibw-test-extras }}
-        CIBW_TEST_COMMAND: ${{ inputs.cibw-test-command }}
-        RAPIDS_WHEEL_SMOKETEST_COMMAND: ${{ inputs.gpu-smoketest }}
+        CIBW_TEST_COMMAND: ${{ inputs.cibw-test-unittest }}
+        RAPIDS_WHEEL_SMOKETEST_COMMAND: ${{ inputs.cibw-test-smoketest }}
     steps:
     - name: Run nvidia-smi to make sure GPU is working
       run: nvidia-smi

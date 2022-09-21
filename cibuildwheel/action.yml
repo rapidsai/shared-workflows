@@ -10,6 +10,12 @@ inputs:
   python-version:
     description: 'Python version e.g. 3.8'
     required: true
+  auditwheel-repair-command-amd64:
+    description: 'Auditwheel repair command amd64'
+    required: true
+  auditwheel-repair-command-arm64:
+    description: 'Auditwheel repair command amd64'
+    required: true
   internal-pypi-user:
     description: 'Username for pypi.k8s.rapids.ai'
     required: true
@@ -46,10 +52,6 @@ inputs:
     description: 'SKBUILD_BUILD_OPTIONS'
     required: false
     default: ''
-  auditwheel-skip-repair:
-    description: 'Skip auditwheel repair'
-    required: false
-    default: 'false'
   sccache-aws-access-key-id:
     required: true
     type: string
@@ -86,10 +88,13 @@ runs:
         echo "CIBW_ARCHS_LINUX=${arch}" >> "${GITHUB_ENV}"
 
         cibw_before_all=""
+        auditwheel_repair_command=""
         if [ "${arch}" == "x86_64" ]; then
           cibw_before_all="${{ inputs.cibw-before-all-amd64 }}"
+          auditwheel_repair_command="${{ inputs.auditwheel-repair-command-amd64 }}"
         elif [ "${arch}" == "aarch64" ]; then
           cibw_before_all="${{ inputs.cibw-before-all-arm64 }}"
+          auditwheel_repair_command="${{ inputs.auditwheel-repair-command-arm64 }}"
         fi
 
         # set before-all-linux command to:
@@ -101,12 +106,8 @@ runs:
           echo "CIBW_BEFORE_ALL_LINUX=printf 'machine pypi.k8s.rapids.ai\n\tlogin ${{ inputs.internal-pypi-user }}\n\tpassword ${{ inputs.internal-pypi-pass }}\n' > ~/.netrc" >> "${GITHUB_ENV}"
         fi
 
-        # try to repair to the widest possible manylinux, starting from 2_17 i.e. manylinux2014 up to 2_31
-        if [ "${{ inputs.auditwheel-skip-repair }}" == "false" ]; then
-          echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_17_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_24_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_27_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_28_${arch} {wheel} || auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_31_${arch} {wheel}" >> "${GITHUB_ENV}"
-        else
-          echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=cp {wheel} {dest_dir}" >> "${GITHUB_ENV}"
-        fi
+        # set repair command based on runner arch
+        echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=${auditwheel_repair_command}" >> "${GITHUB_ENV}"
 
         # set CIBW_BUILD based on input python version e.g. 3.8 -> cp38-*
         py_vers="${{ inputs.python-version }}"
