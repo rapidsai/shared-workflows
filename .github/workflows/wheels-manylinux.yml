@@ -40,6 +40,10 @@ on:
         required: false
         type: string
         default: ''
+      skbuild-build-options:
+        required: false
+        type: string
+        default: ''
       manylinux-test-container-amd64:
         required: false
         type: string
@@ -108,6 +112,7 @@ jobs:
         manylinux-container-arm64: ${{ inputs.manylinux-container-arm64 }}
         cibw-before-build: ${{ inputs.cibw-before-build }}
         skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
+        skbuild-build-options: ${{ inputs.skbuild-build-options }}
         auditwheel-skip-repair: ${{ inputs.auditwheel-skip-repair }}
         sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         sccache-aws-secret-access-key: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
