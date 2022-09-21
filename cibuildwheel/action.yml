@@ -31,10 +31,6 @@ inputs:
     description: 'CIBW_ENVIRONMENT'
     required: false
     default: ''
-  skbuild-build-options:
-    description: 'SKBUILD_BUILD_OPTIONS'
-    required: false
-    default: ''
   skbuild-configure-options:
     description: 'SKBUILD_CONFIGURE_OPTIONS'
     required: false
@@ -43,28 +39,12 @@ inputs:
     description: 'Skip auditwheel repair'
     required: false
     default: 'false'
-  sccache-enabled:
-    required: true
-    type: string
-  sccache-bucket:
-    required: true
-    type: string
-  sccache-s3-key-prefix:
-    required: true
-    type: string
-  sccache-region:
-    required: true
-    type: string
   sccache-aws-access-key-id:
     required: true
     type: string
   sccache-aws-secret-access-key:
     required: true
     type: string
-  sccache-idle-timeout:
-    required: false
-    type: string
-    default: '32768'
   cumlprims_mg-private-deply-key:
     required: false
     type: string
@@ -120,12 +100,10 @@ runs:
 
         # enable sccache in skbuild config options
         skbuild_config_opts="${{ inputs.skbuild-configure-options}}"
-        if [ "${{ inputs.sccache-enabled }}" == "true" ]; then
-          skbuild_config_opts="${skbuild_config_opts} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
-        fi
+        skbuild_config_opts="${skbuild_config_opts} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
 
         # assemble CIBW_ENVRRIONMENT from skbuild configure and build options
-        echo "CIBW_ENVIRONMENT=SKBUILD_CONFIGURE_OPTIONS='${skbuild_config_opts}' SKBUILD_BUILD_OPTIONS='${{ inputs.skbuild-build-options }}' ${{ inputs.cibw-environment }} PYTHON_PACKAGE_CUDA_SUFFIX='-cu11' SCCACHE_S3_KEY_PREFIX=${{ inputs.sccache-s3-key-prefix}} SCCACHE_REGION=${{ inputs.sccache-region }} SCCACHE_IDLE_TIMEOUT=${{ inputs.sccache-idle-timeout }} SCCACHE_BUCKET=${{ inputs.sccache-bucket }} AWS_ACCESS_KEY_ID=${{ inputs.sccache-aws-access-key-id }} AWS_SECRET_ACCESS_KEY=${{ inputs.sccache-aws-secret-access-key }}" >> "${GITHUB_ENV}"
+        echo "CIBW_ENVIRONMENT=SKBUILD_CONFIGURE_OPTIONS='${skbuild_config_opts}' ${{ inputs.cibw-environment }} PYTHON_PACKAGE_CUDA_SUFFIX='-cu11' SCCACHE_S3_KEY_PREFIX=gha-cibw SCCACHE_REGION=us-west-2 SCCACHE_IDLE_TIMEOUT=32768 SCCACHE_BUCKET=rapids-sccache AWS_ACCESS_KEY_ID=${{ inputs.sccache-aws-access-key-id }} AWS_SECRET_ACCESS_KEY=${{ inputs.sccache-aws-secret-access-key }}" >> "${GITHUB_ENV}"
       shell: bash
 
     - name: Set up ssh-agent
