@@ -12,11 +12,23 @@ on:
       python-version:
         required: true
         type: string
+      manylinux-container-amd64:
+        required: false
+        type: string
+        default: 'manylinux_2_31'
+      manylinux-container-arm64:
+        required: false
+        type: string
+        default: 'manylinux_2_31'
       cibw-environment:
         type: string
         required: false
         default: ''
-      cibw-before-all:
+      cibw-before-all-amd64:
+        required: false
+        type: string
+        default: 'true'
+      cibw-before-all-arm64:
         required: false
         type: string
         default: 'true'
@@ -28,14 +40,14 @@ on:
         required: false
         type: string
         default: ''
-      manylinux-container:
+      manylinux-test-container-amd64:
         required: false
         type: string
-        default: 'manylinux_2_31'
-      manylinux-test-container:
+        default: 'manylinux_2_27'
+      manylinux-test-container-arm64:
         required: false
         type: string
-        default: 'manylinux_2_31'
+        default: 'manylinux_2_27'
       cibw-test-requires:
         required: false
         type: string
@@ -52,11 +64,11 @@ on:
         required: false
         type: string
         default: ''
-      gpu-smoketest-before-arm64:
+      gpu-smoketest-before-amd64:
         required: false
         type: string
         default: 'true'
-      gpu-smoketest-before-amd64:
+      gpu-smoketest-before-arm64:
         required: false
         type: string
         default: 'true'
@@ -89,19 +101,20 @@ jobs:
         package-dir: ${{ inputs.package-dir }}
         output-dir: dist
         python-version: ${{ inputs.python-version }}
-        internal-pypi-user: cibuildwheel
-        internal-pypi-pass: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
         cibw-environment: ${{ inputs.cibw-environment }}
-        cibw-before-all: ${{ inputs.cibw-before-all }}
+        cibw-before-all-amd64: ${{ inputs.cibw-before-all-amd64 }}
+        cibw-before-all-arm64: ${{ inputs.cibw-before-all-arm64 }}
+        manylinux-container-amd64: ${{ inputs.manylinux-container-amd64 }}
+        manylinux-container-arm64: ${{ inputs.manylinux-container-arm64 }}
         cibw-before-build: ${{ inputs.cibw-before-build }}
-        skbuild-build-options: ${{ inputs.skbuild-build-options }}
         skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
         auditwheel-skip-repair: ${{ inputs.auditwheel-skip-repair }}
-        manylinux-container: ${{ inputs.manylinux-container }}
         sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         sccache-aws-secret-access-key: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         cumlprims_mg-private-deply-key: ${{ secrets.CUMLPRIMS_SSH_PRIVATE_DEPLOY_KEY }}
         cugraph-ops-private-deply-key: ${{ secrets.CUGRAPH_OPS_SSH_PRIVATE_DEPLOY_KEY }}
+        internal-pypi-user: cibuildwheel
+        internal-pypi-pass: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
 
     - name: Download gha-tools
       run: |
@@ -125,12 +138,14 @@ jobs:
         include:
           - labels: [self-hosted, linux, amd64, gpu-v100-495-1]
             cpu-arch: x86_64
+            image: ${{ inputs.manylinux-test-container-amd64 }}
           - labels: [self-hosted, linux, arm64, gpu-a100-495-1]
             cpu-arch: aarch64
+            image: ${{ inputs.manylinux-test-container-arm64 }}
     needs: wheel-build
     continue-on-error: true # to always trigger wheel-publish
     container:
-      image: rapidsai/${{ inputs.manylinux-test-container }}_${{ matrix.cpu-arch }}
+      image: rapidsai/${{ matrix.image }}_${{ matrix.cpu-arch }}
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }} # gha-tools needs these

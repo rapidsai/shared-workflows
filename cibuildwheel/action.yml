@@ -16,11 +16,18 @@ inputs:
   internal-pypi-pass:
     description: 'Password for pypi.k8s.rapids.ai'
     required: true
-  manylinux-container:
-    description: 'Specify which manylinux container to use'
+  manylinux-container-amd64:
+    description: 'Specify which manylinux container to use for amd64'
     required: true
-  cibw-before-all:
-    description: 'Extra CIBW_BEFORE_ALL_LINUX commands'
+  manylinux-container-arm64:
+    description: 'Specify which manylinux container to use for arm64'
+    required: true
+  cibw-before-all-amd64:
+    description: 'Extra CIBW_BEFORE_ALL_LINUX commands for amd64'
+    required: false
+    default: ''
+  cibw-before-all-arm64:
+    description: 'Extra CIBW_BEFORE_ALL_LINUX commands for arm64'
     required: false
     default: ''
   cibw-before-build:
@@ -74,11 +81,18 @@ runs:
         # set arch according to runner arch
         echo "CIBW_ARCHS_LINUX=${arch}" >> "${GITHUB_ENV}"
 
+        cibw_before_all=""
+        if [ "${arch}" == "x86_64" ]; then
+          cibw_before_all="${{ inputs.cibw-before-all-amd64 }}"
+        elif [ "${arch}" == "aarch64" ]; then
+          cibw_before_all="${{ inputs.cibw-before-all-arm64 }}"
+        fi
+
         # set before-all-linux command to:
         #   1. store internal pypi credentials in .netrc
-        #   2. append `&& inputs.cibw-before-all` if it's not empty
-        if [ "${{ inputs.cibw-before-all }}" != "" ]; then
-          echo "CIBW_BEFORE_ALL_LINUX=printf 'machine pypi.k8s.rapids.ai\n\tlogin ${{ inputs.internal-pypi-user }}\n\tpassword ${{ inputs.internal-pypi-pass }}\n' > ~/.netrc && ${{ inputs.cibw-before-all }}" >> "${GITHUB_ENV}"
+        #   2. append `&& cibw_before_all` if it's not empty
+        if [ "${cibw_before_all}" != "" ]; then
+          echo "CIBW_BEFORE_ALL_LINUX=printf 'machine pypi.k8s.rapids.ai\n\tlogin ${{ inputs.internal-pypi-user }}\n\tpassword ${{ inputs.internal-pypi-pass }}\n' > ~/.netrc && ${cibw_before_all}" >> "${GITHUB_ENV}"
         else
           echo "CIBW_BEFORE_ALL_LINUX=printf 'machine pypi.k8s.rapids.ai\n\tlogin ${{ inputs.internal-pypi-user }}\n\tpassword ${{ inputs.internal-pypi-pass }}\n' > ~/.netrc" >> "${GITHUB_ENV}"
         fi
@@ -133,8 +147,8 @@ runs:
       shell: bash
       env:
         CIBW_SKIP: "*musllinux*"
-        CIBW_MANYLINUX_X86_64_IMAGE: rapidsai/${{ inputs.manylinux-container }}_x86_64
-        CIBW_MANYLINUX_AARCH64_IMAGE: rapidsai/${{ inputs.manylinux-container }}_aarch64
+        CIBW_MANYLINUX_X86_64_IMAGE: rapidsai/${{ inputs.manylinux-container-amd64 }}_x86_64
+        CIBW_MANYLINUX_AARCH64_IMAGE: rapidsai/${{ inputs.manylinux-container-arm64 }}_aarch64
         CIBW_BUILD_FRONTEND: "pip"
         CIBW_BEFORE_BUILD_LINUX: ${{ inputs.cibw-before-build }}
         CIBW_BUILD_VERBOSITY_LINUX: 3
