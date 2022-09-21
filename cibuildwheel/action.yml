@@ -151,8 +151,8 @@ runs:
       shell: bash
       env:
         CIBW_SKIP: "*musllinux*"
-        CIBW_MANYLINUX_X86_64_IMAGE: rapidsai/${{ inputs.manylinux-container-amd64 }}_x86_64
-        CIBW_MANYLINUX_AARCH64_IMAGE: rapidsai/${{ inputs.manylinux-container-arm64 }}_aarch64
+        CIBW_MANYLINUX_X86_64_IMAGE: ${{ inputs.manylinux-container-amd64 }}_x86_64
+        CIBW_MANYLINUX_AARCH64_IMAGE: ${{ inputs.manylinux-container-arm64 }}_aarch64
         CIBW_BUILD_FRONTEND: "pip"
         CIBW_BEFORE_BUILD_LINUX: ${{ inputs.cibw-before-build }}
         CIBW_BUILD_VERBOSITY_LINUX: 3

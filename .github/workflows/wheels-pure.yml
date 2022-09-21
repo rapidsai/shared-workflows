@@ -55,7 +55,7 @@ jobs:
 
     - name: Download gha-tools
       run: |
-        wget https://github.com/rapidsai/gha-tools/releases/download/v0.0.2/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
+        wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
         pip install awscli
 
     - name: Upload wheels to downloads.rapids.ai
@@ -75,12 +75,12 @@ jobs:
       image: rapidsai/manylinux_2_31_x86_64
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
-        GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }} # gha-tools needs these
-        GITHUB_SHA: ${{ env.GITHUB_SHA }}
-        GITHUB_REF_NAME: ${{ env.GITHUB_REF_NAME }}
-        RAPIDS_PY_VER: "3.8"
-        RAPIDS_BUILD_TYPE: "pull-request"
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        RAPIDS_REPOSITORY: ${{ github.repository }}
+        RAPIDS_SHA: ${{ github.sha }}
+        RAPIDS_REF_NAME: ${{ github.ref_name }}
+        RAPIDS_PY_VERSION: "3.8"
+        RAPIDS_BUILD_TYPE: "pull-request"
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.gpu-smoketest-before }}
@@ -112,7 +112,7 @@ jobs:
     steps:
     - name: Download gha-tools
       run: |
-        wget https://github.com/rapidsai/gha-tools/releases/download/v0.0.2/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
+        wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
         pip install awscli
 
     - name: Download wheels from downloads.rapids.ai
@@ -120,7 +120,10 @@ jobs:
       env:
         RAPIDS_BUILD_TYPE: "pull-request"
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
-        RAPIDS_PY_VER: "3.8"
+        RAPIDS_REPOSITORY: ${{ github.repository }}
+        RAPIDS_SHA: ${{ github.sha }}
+        RAPIDS_REF_NAME: ${{ github.ref_name }}
+        RAPIDS_PY_VERSION: "3.8"
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
 

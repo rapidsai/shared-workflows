@@ -3,6 +3,7 @@ name: Build RAPIDS manylinux wheels
 on:
   workflow_call:
     inputs:
+      # general settings
       package-name:
         required: true
         type: string
@@ -12,14 +13,24 @@ on:
       python-version:
         required: true
         type: string
-      manylinux-container-amd64:
-        required: false
+
+      # cibuildwheel settings
+      cibw-manylinux-container-amd64:
+        required: true
         type: string
-        default: 'manylinux_2_31'
-      manylinux-container-arm64:
-        required: false
+      cibw-manylinux-container-arm64:
+        required: true
         type: string
-        default: 'manylinux_2_31'
+      cibw-auditwheel-repair-platform:
+        required: true
+        type: string
+      cibw-auditwheel-repair-command:
+        required: true
+        type: string
+      cibw-auditwheel-post-repair-command:
+        type: string
+        required: false
+        default: 'true'
       cibw-environment:
         type: string
         required: false
@@ -36,50 +47,46 @@ on:
         required: false
         type: string
         default: 'true'
-      skbuild-configure-options:
+      cibw-skbuild-configure-options:
         required: false
         type: string
         default: ''
-      skbuild-build-options:
+      cibw-skbuild-build-options:
         required: false
         type: string
         default: ''
-      manylinux-test-container-amd64:
-        required: false
+
+      # test settings
+      test-container-amd64:
+        required: true
         type: string
-        default: 'manylinux_2_27'
-      manylinux-test-container-arm64:
-        required: false
+      test-container-arm64:
+        required: true
         type: string
-        default: 'manylinux_2_27'
-      cibw-test-requires:
-        required: false
-        type: string
-        default: ''
-      cibw-test-extras:
+      test-requires:
         required: false
         type: string
         default: ''
-      cibw-test-command:
+      test-extras:
         required: false
         type: string
         default: ''
-      gpu-smoketest:
+      test-unittest:
         required: false
         type: string
         default: ''
-      gpu-smoketest-before-amd64:
+      test-smoketest:
+        required: false
+        type: string
+        default: ''
+      test-before-amd64:
         required: false
         type: string
         default: 'true'
-      gpu-smoketest-before-arm64:
+      test-before-arm64:
         required: false
         type: string
         default: 'true'
-      auditwheel-skip-repair:
-        required: false
-        type: string
-        default: 'false'
 
 jobs:
   wheel-build:
@@ -108,12 +115,12 @@ jobs:
         cibw-environment: ${{ inputs.cibw-environment }}
         cibw-before-all-amd64: ${{ inputs.cibw-before-all-amd64 }}
         cibw-before-all-arm64: ${{ inputs.cibw-before-all-arm64 }}
-        manylinux-container-amd64: ${{ inputs.manylinux-container-amd64 }}
-        manylinux-container-arm64: ${{ inputs.manylinux-container-arm64 }}
+        manylinux-container-amd64: ${{ inputs.cibw-manylinux-container-amd64 }}
+        manylinux-container-arm64: ${{ inputs.cibw-manylinux-container-arm64 }}
         cibw-before-build: ${{ inputs.cibw-before-build }}
-        skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
-        skbuild-build-options: ${{ inputs.skbuild-build-options }}
-        auditwheel-skip-repair: ${{ inputs.auditwheel-skip-repair }}
+        skbuild-configure-options: ${{ inputs.cibw-skbuild-configure-options }}
+        skbuild-build-options: ${{ inputs.cibw-skbuild-build-options }}
+        auditwheel-repair-platform: ${{ inputs.cibw-auditwheel-repair-platform }}
         sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         sccache-aws-secret-access-key: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         cumlprims_mg-private-deply-key: ${{ secrets.CUMLPRIMS_SSH_PRIVATE_DEPLOY_KEY }}
@@ -123,7 +130,7 @@ jobs:
 
     - name: Download gha-tools
       run: |
-        wget https://github.com/rapidsai/gha-tools/releases/download/v0.0.2/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
+        wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
         pip install awscli
 
     - name: Upload wheels to downloads.rapids.ai
@@ -149,15 +156,15 @@ jobs:
             image: ${{ inputs.manylinux-test-container-arm64 }}
     needs: wheel-build
     container:
-      image: rapidsai/${{ matrix.image }}_${{ matrix.cpu-arch }}
+      image: ${{ matrix.image }}_${{ matrix.cpu-arch }}
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
-        GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }} # gha-tools needs these
-        GITHUB_SHA: ${{ env.GITHUB_SHA }}
-        GITHUB_REF_NAME: ${{ env.GITHUB_REF_NAME }}
-        RAPIDS_PY_VER: ${{ inputs.python-version }}
-        RAPIDS_BUILD_TYPE: "pull-request"
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        RAPIDS_REPOSITORY: ${{ github.repository }} # gha-tools needs these
+        RAPIDS_SHA: ${{ github.sha }}
+        RAPIDS_REF_NAME: ${{ github.ref_name }}
+        RAPIDS_PY_VERSION: ${{ inputs.python-version }}
+        RAPIDS_BUILD_TYPE: "pull-request"
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.gpu-smoketest-before-amd64 }}
@@ -189,7 +196,7 @@ jobs:
     steps:
     - name: Download gha-tools, install awscli and twine
       run: |
-        #wget https://github.com/rapidsai/gha-tools/releases/download/v0.0.2/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
+        #wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
         git clone https://github.com/sevagh/gha-tools.git -b feat/support-override-wheel-arch
         sudo cp gha-tools/tools/* /usr/local/bin
         pip install awscli twine
@@ -200,10 +207,12 @@ jobs:
         RAPIDS_PY_WHEEL_ARCH="aarch64" rapids-download-wheels-from-s3 ./dist
         twine upload ./dist/"${{ inputs.package-name }}*.whl"
       env:
-        RAPIDS_BUILD_TYPE: "pull-request"
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
-        RAPIDS_PY_WHEEL_ARCH: "x86_64"
-        RAPIDS_PY_VER: ${{ inputs.python-version }}
+        RAPIDS_REPOSITORY: ${{ github.repository }} # gha-tools needs these
+        RAPIDS_SHA: ${{ github.sha }}
+        RAPIDS_REF_NAME: ${{ github.ref_name }}
+        RAPIDS_PY_VERSION: ${{ inputs.python-version }}
+        RAPIDS_BUILD_TYPE: "pull-request"
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         TWINE_USERNAME: cibuildwheel
