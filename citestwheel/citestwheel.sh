@@ -32,8 +32,6 @@ for pyver in ${RAPIDS_PY_VER}; do
                 sh -c "${RAPIDS_BEFORE_TEST_COMMANDS_ARM64}"
         fi
 
-        sh -c "${RAPIDS_BEFORE_TEST_COMMANDS}"
-
         if [ "${first}" == "yes" ]; then
                 python -m pip install awscli
                 rapids-download-wheels-from-s3 ./dist
