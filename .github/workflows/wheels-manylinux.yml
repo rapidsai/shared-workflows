@@ -183,36 +183,29 @@ jobs:
       uses: rapidsai/shared-action-workflows/citestwheel@feat/wheel-ci-actions-2
 
   wheel-publish:
-    name: wheel publish ${{ matrix.cpu-arch }} ${{ inputs.python-version }}
+    name: wheels publish x86_64 aarch64 ${{ inputs.python-version }}
     needs: wheel-test
-    runs-on: ${{ matrix.labels }}
-    strategy:
-      matrix:
-        include:
-          - labels: [self-hosted, linux, amd64, cpu4]
-            cpu-arch: x86_64
-          - labels: [self-hosted, linux, arm64, cpu4]
-            cpu-arch: aarch64
+    runs-on: [self-hosted, linux, amd64, cpu4]
     steps:
-    - name: Download gha-tools
+    - name: Download gha-tools, install awscli and twine
       run: |
-        wget https://github.com/rapidsai/gha-tools/releases/download/v0.0.2/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
-        pip install awscli
+        #wget https://github.com/rapidsai/gha-tools/releases/download/v0.0.2/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
+        git clone https://github.com/sevagh/gha-tools.git -b feat/support-override-wheel-arch
+        sudo cp gha-tools/tools/* /usr/local/bin
+        pip install awscli twine
 
-    - name: Download wheels from downloads.rapids.ai
-      run: rapids-download-wheels-from-s3 ./dist
+    - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
+      run: |
+        RAPIDS_PY_WHEEL_ARCH="x86_64" rapids-download-wheels-from-s3 ./dist
+        RAPIDS_PY_WHEEL_ARCH="aarch64" rapids-download-wheels-from-s3 ./dist
+        twine upload ./dist/"${{ inputs.package-name }}*.whl"
       env:
         RAPIDS_BUILD_TYPE: "pull-request"
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        RAPIDS_PY_WHEEL_ARCH: "x86_64"
         RAPIDS_PY_VER: ${{ inputs.python-version }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-
-    - name: Publish wheels to RAPIDS internal PyPI
-      run: |
-        pip install twine
-        twine upload ./dist/"${{ inputs.package-name }}*.whl"
-      env:
         TWINE_USERNAME: cibuildwheel
         TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
         TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
