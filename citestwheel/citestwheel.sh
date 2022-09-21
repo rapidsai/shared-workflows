@@ -17,7 +17,7 @@ mkdir -p ./dist
 first='yes'
 arch=$(uname -m)
 
-for pyver in ${RAPIDS_PY_VER}; do
+for pyver in ${RAPIDS_PY_VERSION}; do
         deactivate || true
 
         pytestenv="cp${pyver//./}-cp${pyver//./}"
