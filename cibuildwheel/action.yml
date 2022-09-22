@@ -100,20 +100,21 @@ runs:
           private_key="${{ inputs.cumlprims_mg-private-deploy-key }}${{ inputs.cugraph-ops-private-deploy-key }}"
           ssh_setup=""
 
-          # sleep after ssh-agent to give it time to work
           if [ "${my_container}" == "rapidsai/manylinux2014" ]; then
-            ssh_setup="yum install -y openssh openssh-clients && ssh-agent && sleep 5 &&"
+            ssh_setup="yum install -y openssh openssh-clients && eval \$(ssh-agent) &&"
           else
-            ssh_setup="ssh-agent && sleep 5 &&"
+            ssh_setup="eval \$(ssh-agent) &&"
           fi
           # multiline env var: https://github.com/orgs/community/discussions/24952
           echo 'PRIVATE_SSH_KEY<<EOF' >> "${GITHUB_ENV}"
           echo "$private_key" >> "${GITHUB_ENV}"
+          # add a trailing newline to the ssh key: https://stackoverflow.com/questions/52109775/gitlab-ci-ssh-key-invalid-format/59595773#59595773
+          echo "" >> "${GITHUB_ENV}"
           echo 'EOF' >> "${GITHUB_ENV}"
           # forward multline env var to cibuildwheel container
           echo "CIBW_ENVIRONMENT_PASS_LINUX=PRIVATE_SSH_KEY" >> "${GITHUB_ENV}"
           # add forwarded multline env var later on, by escaping immediate expansion
-          cibw_before_all_ssh="$ssh_setup ssh-add - <<< \$PRIVATE_SSH_KEY &&"
+          cibw_before_all_ssh="$ssh_setup echo \"\$PRIVATE_SSH_KEY\" | ssh-add - &&"
         fi
 
         cibw_before_all=""
