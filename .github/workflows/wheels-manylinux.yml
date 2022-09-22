@@ -15,16 +15,16 @@ on:
         type: string
 
       # cibuildwheel settings
-      cibw-manylinux-container-amd64:
+      manylinux-container-amd64:
         required: true
         type: string
-      cibw-manylinux-container-arm64:
+      manylinux-container-arm64:
         required: true
         type: string
-      cibw-auditwheel-repair-command-amd64: # hint: use 'cp {wheel} {dest_dir}' to skip repairing
+      auditwheel-repair-command-amd64: # hint: use 'cp {wheel} {dest_dir}' to skip repairing
         required: true
         type: string
-      cibw-auditwheel-repair-command-arm64:
+      auditwheel-repair-command-arm64:
         required: true
         type: string
       cibw-environment:
@@ -43,43 +43,44 @@ on:
         required: false
         type: string
         default: 'true'
-      cibw-skbuild-configure-options:
+
+      skbuild-configure-options:
         required: false
         type: string
         default: ''
-      cibw-skbuild-build-options:
+      skbuild-build-options:
         required: false
         type: string
         default: ''
 
       # test settings
-      cibw-test-container-amd64:
+      test-container-amd64:
         required: true
         type: string
-      cibw-test-container-arm64:
+      test-container-arm64:
         required: true
         type: string
-      cibw-test-requires:
+      test-requires:
         required: false
         type: string
         default: ''
-      cibw-test-extras:
+      test-extras:
         required: false
         type: string
         default: ''
-      cibw-test-unittest: # tests are allowed to be blank because the wheel is installed and pip checked
+      test-unittest: # tests are allowed to be blank because the wheel is installed and pip checked
         required: false
         type: string
         default: ''
-      cibw-test-smoketest:
+      test-smoketest:
         required: false
         type: string
         default: ''
-      cibw-test-before-amd64:
+      test-before-amd64:
         required: false
         type: string
         default: 'true'
-      cibw-test-before-arm64:
+      test-before-arm64:
         required: false
         type: string
         default: 'true'
@@ -111,13 +112,13 @@ jobs:
         cibw-environment: ${{ inputs.cibw-environment }}
         cibw-before-all-amd64: ${{ inputs.cibw-before-all-amd64 }}
         cibw-before-all-arm64: ${{ inputs.cibw-before-all-arm64 }}
-        manylinux-container-amd64: ${{ inputs.cibw-manylinux-container-amd64 }}
-        manylinux-container-arm64: ${{ inputs.cibw-manylinux-container-arm64 }}
+        manylinux-container-amd64: ${{ inputs.manylinux-container-amd64 }}
+        manylinux-container-arm64: ${{ inputs.manylinux-container-arm64 }}
         cibw-before-build: ${{ inputs.cibw-before-build }}
-        skbuild-configure-options: ${{ inputs.cibw-skbuild-configure-options }}
-        skbuild-build-options: ${{ inputs.cibw-skbuild-build-options }}
-        auditwheel-repair-command-amd64: ${{ inputs.cibw-auditwheel-repair-command-amd64 }}
-        auditwheel-repair-command-arm64: ${{ inputs.cibw-auditwheel-repair-command-arm64 }}
+        skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
+        skbuild-build-options: ${{ inputs.skbuild-build-options }}
+        auditwheel-repair-command-amd64: ${{ inputs.auditwheel-repair-command-amd64 }}
+        auditwheel-repair-command-arm64: ${{ inputs.auditwheel-repair-command-arm64 }}
         sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         sccache-aws-secret-access-key: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         cumlprims_mg-private-deply-key: ${{ secrets.CUMLPRIMS_SSH_PRIVATE_DEPLOY_KEY }}
@@ -150,10 +151,10 @@ jobs:
         include:
           - labels: [self-hosted, linux, amd64, gpu-v100-495-1]
             cpu-arch: x86_64
-            image: ${{ inputs.cibw-test-container-amd64 }}
+            image: ${{ inputs.test-container-amd64 }}
           - labels: [self-hosted, linux, arm64, gpu-a100-495-1]
             cpu-arch: aarch64
-            image: ${{ inputs.cibw-test-container-arm64 }}
+            image: ${{ inputs.test-container-arm64 }}
     needs: wheel-build
     container:
       image: ${{ matrix.image }}_${{ matrix.cpu-arch }}
@@ -167,12 +168,12 @@ jobs:
         RAPIDS_BUILD_TYPE: "pull-request"
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-        RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.cibw-test-before-amd64 }}
-        RAPIDS_BEFORE_TEST_COMMANDS_ARM64: ${{ inputs.cibw-test-before-arm64 }}
-        CIBW_TEST_REQUIRES: ${{ inputs.cibw-test-requires }}
-        CIBW_TEST_EXTRAS: ${{ inputs.cibw-test-extras }}
-        CIBW_TEST_COMMAND: ${{ inputs.cibw-test-unittest }}
-        RAPIDS_WHEEL_SMOKETEST_COMMAND: ${{ inputs.cibw-test-smoketest }}
+        RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.test-before-amd64 }}
+        RAPIDS_BEFORE_TEST_COMMANDS_ARM64: ${{ inputs.test-before-arm64 }}
+        CIBW_TEST_REQUIRES: ${{ inputs.test-requires }}
+        CIBW_TEST_EXTRAS: ${{ inputs.test-extras }}
+        CIBW_TEST_COMMAND: ${{ inputs.test-unittest }}
+        RAPIDS_WHEEL_SMOKETEST_COMMAND: ${{ inputs.test-smoketest }}
     steps:
     - name: Run nvidia-smi to make sure GPU is working
       run: nvidia-smi
