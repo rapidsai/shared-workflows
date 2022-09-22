@@ -29,7 +29,7 @@ on:
         required: false
         type: string
         default: ''
-      test-smoketest-before:
+      test-before:
         required: false
         type: string
         default: 'true'
