@@ -29,7 +29,7 @@ jobs:
       - name: Compute Python Test Matrix
         id: compute-matrix
         run: |
-          export MATRICIES='{
+          export MATRICES='{
             "pull-request": [
               { "CUDA_VER": "11.0.3", "LINUX_VER": "centos7", "ARCH": "amd64", "PY_VER": "3.8", "GPU": "v100", "DRIVER": "495" },
               { "CUDA_VER": "11.2.2", "LINUX_VER": "ubuntu18.04", "ARCH": "amd64", "PY_VER": "3.9", "GPU": "v100", "DRIVER": "495" },
@@ -50,10 +50,10 @@ jobs:
             ]
           }'
 
-          export TEST_MATRIX=$(jq -nc 'env.MATRICIES | fromjson | .[env.BUILD_TYPE]')
+          export TEST_MATRIX=$(jq -nc 'env.MATRICES | fromjson | .[env.BUILD_TYPE]')
 
           if [[ "${BUILD_TYPE}" == "nightly" && "${{inputs.extended_nightly_tests}}" == "true" ]]; then
-            TEST_MATRIX=$(jq -nc '(env.TEST_MATRIX|fromjson) + (env.MATRICIES|fromjson|.ext_nightly)')
+            TEST_MATRIX=$(jq -nc '(env.TEST_MATRIX|fromjson) + (env.MATRICES|fromjson|.ext_nightly)')
           fi
 
           echo "::set-output name=MATRIX::$(jq -nc 'env.TEST_MATRIX | fromjson | {includes: .}')"
