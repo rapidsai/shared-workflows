@@ -87,12 +87,19 @@ runs:
         # set arch according to runner arch
         echo "CIBW_ARCHS_LINUX=${arch}" >> "${GITHUB_ENV}"
 
+        my_container=""
+        if [ "${arch}" == "x86_64" ]; then
+          my_container="${{ inputs.manylinux-container-amd64 }}"
+        elif [ "${arch}" == "aarch64" ]; then
+          my_container="${{ inputs.manylinux-container-arm64 }}"
+        fi
+
         cibw_before_all_ssh=""
         # add some commands to set up an ssh agent for cloning private repos like cumlprims_mg and cugraph-ops
         if [ "${{ inputs.cumlprims_mg-private-deploy-key }}" != '' ] || [ "${{ inputs.cugraph-ops-private-deploy-key }}" != '' ]; then
           private_key="${{ inputs.cumlprims_mg-private-deploy-key }}${{ inputs.cugraph-ops-private-deploy-key }}"
           ssh_setup=""
-          if [ "${{ inputs.manylinux-container-amd64 }}" == "rapidsai/manylinux2014" ]; then
+          if [ "${my_container}" == "rapidsai/manylinux2014" ]; then
             ssh_setup="yum install -y openssh openssh-clients && ssh-agent &&"
           else
             ssh_setup="ssh-agent &&"
@@ -101,7 +108,10 @@ runs:
           echo 'PRIVATE_SSH_KEY<<EOF' >> "${GITHUB_ENV}"
           echo "$private_key" >> "${GITHUB_ENV}"
           echo 'EOF' >> "${GITHUB_ENV}"
-          cibw_before_all_ssh="$ssh_setup printf '${PRIVATE_SSH_KEY}' > ~/.deploy-key && chmod 0400 ~/.deploy-key && ssh-add ~/.deploy-key &&"
+          # forward multline env var to cibuildwheel container
+          echo "CIBW_ENVIRONMENT_PASS_LINUX=PRIVATE_SSH_KEY" >> "${GITHUB_ENV}"
+          # add forwarded multline env var later on, by escaping immediate expansion
+          cibw_before_all_ssh="$ssh_setup ssh-add - <<< \$PRIVATE_SSH_KEY &&"
         fi
 
         cibw_before_all=""
