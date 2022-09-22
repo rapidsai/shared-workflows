@@ -13,23 +13,23 @@ on:
         required: false
         type: string
         default: ''
-      cibw-test-requires:
+      test-requires:
         required: false
         type: string
         default: ''
-      cibw-test-extras:
+      test-extras:
         required: false
         type: string
         default: ''
-      cibw-test-command:
+      test-unittest:
         required: false
         type: string
         default: ''
-      gpu-smoketest:
+      test-smoketest:
         required: false
         type: string
         default: ''
-      gpu-smoketest-before:
+      test-smoketest-before:
         required: false
         type: string
         default: 'true'
@@ -86,11 +86,11 @@ jobs:
         RAPIDS_BUILD_TYPE: "pull-request"
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-        RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.gpu-smoketest-before }}
-        CIBW_TEST_REQUIRES: ${{ inputs.cibw-test-requires }}
-        CIBW_TEST_EXTRAS: ${{ inputs.cibw-test-extras }}
-        CIBW_TEST_COMMAND: ${{ inputs.cibw-test-command }}
-        RAPIDS_WHEEL_SMOKETEST_COMMAND: ${{ inputs.gpu-smoketest }}
+        RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.test-before }}
+        CIBW_TEST_REQUIRES: ${{ inputs.test-requires }}
+        CIBW_TEST_EXTRAS: ${{ inputs.test-extras }}
+        CIBW_TEST_COMMAND: ${{ inputs.test-unittest }}
+        RAPIDS_WHEEL_SMOKETEST_COMMAND: ${{ inputs.test-smoketest }}
         RAPIDS_WHEEL_VER_OVERRIDE: "py3-none-any" # for a pure wheel
     steps:
     - name: Run nvidia-smi to make sure GPU is working
