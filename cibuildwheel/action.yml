@@ -109,7 +109,6 @@ runs:
           echo 'PRIVATE_SSH_KEY<<EOF' >> "${GITHUB_ENV}"
           echo "$private_key" >> "${GITHUB_ENV}"
           # add a trailing newline to the ssh key: https://stackoverflow.com/questions/52109775/gitlab-ci-ssh-key-invalid-format/59595773#59595773
-          echo "" >> "${GITHUB_ENV}"
           echo 'EOF' >> "${GITHUB_ENV}"
           # forward multline env var to cibuildwheel container
           echo "CIBW_ENVIRONMENT_PASS_LINUX=PRIVATE_SSH_KEY" >> "${GITHUB_ENV}"
