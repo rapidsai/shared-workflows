@@ -8,6 +8,9 @@ on:
         type: string
       repo:
         type: string
+      extended_nightly_tests:
+        type: boolean
+        default: false
 
 jobs:
   compute-matrix:
@@ -40,10 +43,20 @@ jobs:
               { "CUDA_VER": "11.2.2", "LINUX_VER": "ubuntu18.04", "ARCH": "arm64", "PY_VER": "3.9", "GPU": "a100", "DRIVER": "495" },
               { "CUDA_VER": "11.5.1", "LINUX_VER": "ubuntu20.04", "ARCH": "amd64", "PY_VER": "3.9", "GPU": "v100", "DRIVER": "495" },
               { "CUDA_VER": "11.5.1", "LINUX_VER": "ubuntu20.04", "ARCH": "arm64", "PY_VER": "3.9", "GPU": "a100", "DRIVER": "495" }
+            ],
+            "ext_nightly": [
+              { "CUDA_VER": "11.0.3", "LINUX_VER": "centos7", "ARCH": "amd64", "PY_VER": "3.8", "GPU": "t4", "DRIVER": "495" },
+              { "CUDA_VER": "11.2.2", "LINUX_VER": "ubuntu18.04", "ARCH": "amd64", "PY_VER": "3.9", "GPU": "t4", "DRIVER": "495" }
             ]
           }'
 
-          echo "::set-output name=MATRIX::$(jq -nc 'env.MATRICIES | fromjson | {includes: .[env.BUILD_TYPE]}')"
+          export TEST_MATRIX=$(jq -nc 'env.MATRICIES | fromjson | .[env.BUILD_TYPE]')
+
+          if [[ "${BUILD_TYPE}" == "nightly" && "${{inputs.extended_nightly_tests}}" == "true" ]]; then
+            TEST_MATRIX=$(jq -nc '(env.TEST_MATRIX|fromjson) + (env.MATRICIES|fromjson|.ext_nightly)')
+          fi
+
+          echo "::set-output name=MATRIX::$(jq -nc 'env.TEST_MATRIX | fromjson | {includes: .}')"
   tests:
     needs: compute-matrix
     strategy:
