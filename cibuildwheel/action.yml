@@ -99,10 +99,12 @@ runs:
         if [ "${{ inputs.cumlprims_mg-private-deploy-key }}" != '' ] || [ "${{ inputs.cugraph-ops-private-deploy-key }}" != '' ]; then
           private_key="${{ inputs.cumlprims_mg-private-deploy-key }}${{ inputs.cugraph-ops-private-deploy-key }}"
           ssh_setup=""
+
+          # sleep after ssh-agent to give it time to work
           if [ "${my_container}" == "rapidsai/manylinux2014" ]; then
-            ssh_setup="yum install -y openssh openssh-clients && ssh-agent &&"
+            ssh_setup="yum install -y openssh openssh-clients && ssh-agent && sleep 5 &&"
           else
-            ssh_setup="ssh-agent &&"
+            ssh_setup="ssh-agent && sleep 5 &&"
           fi
           # multiline env var: https://github.com/orgs/community/discussions/24952
           echo 'PRIVATE_SSH_KEY<<EOF' >> "${GITHUB_ENV}"
