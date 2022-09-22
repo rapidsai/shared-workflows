@@ -58,11 +58,11 @@ inputs:
   sccache-aws-secret-access-key:
     required: true
     type: string
-  cumlprims_mg-private-deply-key:
+  cumlprims_mg-private-deploy-key:
     required: false
     type: string
     default: ''
-  cugraph-ops-private-deply-key:
+  cugraph-ops-private-deploy-key:
     required: false
     type: string
     default: ''
@@ -121,25 +121,23 @@ runs:
         skbuild_config_opts="${{ inputs.skbuild-configure-options}}"
         skbuild_config_opts="${skbuild_config_opts} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
 
-        # assemble CIBW_ENVRRIONMENT from skbuild configure and build options
+        # assemble CIBW_ENVIRONMENT from skbuild configure and build options
         echo "CIBW_ENVIRONMENT=SKBUILD_CONFIGURE_OPTIONS='${skbuild_config_opts}' SKBUILD_BUILD_OPTIONS='${{ inputs.skbuild-build-options }}' ${{ inputs.cibw-environment }} PYTHON_PACKAGE_CUDA_SUFFIX='-cu11' SCCACHE_S3_KEY_PREFIX=gha-cibw SCCACHE_REGION=us-west-2 SCCACHE_IDLE_TIMEOUT=32768 SCCACHE_BUCKET=rapids-sccache AWS_ACCESS_KEY_ID=${{ inputs.sccache-aws-access-key-id }} AWS_SECRET_ACCESS_KEY=${{ inputs.sccache-aws-secret-access-key }}" >> "${GITHUB_ENV}"
-      shell: bash
 
-    - name: Set up ssh-agent
-      uses: webfactory/ssh-agent@v0.5.4
-      if: inputs.cumlprims_mg-private-deply-key != '' || inputs.cugraph-ops-private-deply-key != ''
-      with:
-        ssh-private-key: |
-          ${{ inputs.cumlprims_mg-private-deply-key }}
-          ${{ inputs.cugraph-ops-private-deply-key }}
-
-    - name: Make .ssh config work in cibuildwheel container
-      if: inputs.cumlprims_mg-private-deply-key != '' || inputs.cugraph-ops-private-deply-key != ''
+        # add some commands to set up an ssh agent for cloning private repos like cumlprims_mg and cugraph-ops
+        if [ "${{ inputs.cumlprims_mg-private-deploy-key }}" != '' ] || [ "${{ inputs.cugraph-ops-private-deploy-key }}" != '' ]; then
+          private_key="${{ inputs.cumlprims_mg-private-deploy-key }}${{ inputs.cugraph-ops-private-deploy-key }}"
+          ssh_setup=""
+          if [ "${{ inputs.manylinux-container-amd64 }}" == "rapidsai/manylinux2014" ]; then
+            ssh_setup="yum install -y openssh openssh-clients && eval \$(ssh-agent) &&"
+          else
+            ssh_setup="eval \$(ssh-agent) &&"
+          fi
+          # avoid (yes/no) prompt from private repo clone
+          echo "CIBW_ENVIRONMENT=GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no' $CIBW_ENVIRONMENT" >> "${GITHUB_ENV}"
+          echo "CIBW_BEFORE_ALL_LINUX=$ssh_setup printf '${private_key}' > ~/.deploy-key && chmod 0400 ~/.deploy-key && ssh-add ~/.deploy-key && $CIBW_BEFORE_ALL_LINUX" >> "${GITHUB_ENV}"
+        fi
       shell: bash
-      run: |
-        sed -i "s@$HOME@/root@g" "$HOME/.ssh/config";
-        echo "CIBW_ENVIRONMENT=SSH_AUTH_SOCK=$SSH_AUTH_SOCK $CIBW_ENVIRONMENT" >> "${GITHUB_ENV}";
-        echo "CIBW_BEFORE_ALL_LINUX=ls /host/runner/* ; cp -ar /host$HOME/.ssh /host$HOME/.gitconfig /root && $CIBW_BEFORE_ALL_LINUX" >> "${GITHUB_ENV}";
 
     - name: Invoke cibuildwheel with pipx
       run: >

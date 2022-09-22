@@ -121,8 +121,8 @@ jobs:
         auditwheel-repair-command-arm64: ${{ inputs.auditwheel-repair-command-arm64 }}
         sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         sccache-aws-secret-access-key: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-        cumlprims_mg-private-deply-key: ${{ secrets.CUMLPRIMS_SSH_PRIVATE_DEPLOY_KEY }}
-        cugraph-ops-private-deply-key: ${{ secrets.CUGRAPH_OPS_SSH_PRIVATE_DEPLOY_KEY }}
+        cumlprims_mg-private-deploy-key: ${{ secrets.CUMLPRIMS_SSH_PRIVATE_DEPLOY_KEY }}
+        cugraph-ops-private-deploy-key: ${{ secrets.CUGRAPH_OPS_SSH_PRIVATE_DEPLOY_KEY }}
         internal-pypi-user: cibuildwheel
         internal-pypi-pass: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
 
