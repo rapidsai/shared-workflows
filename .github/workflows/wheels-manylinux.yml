@@ -197,15 +197,13 @@ jobs:
     steps:
     - name: Download gha-tools, install awscli and twine
       run: |
-        #wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
-        git clone https://github.com/sevagh/gha-tools.git -b feat/support-override-wheel-arch
-        sudo cp gha-tools/tools/* /usr/local/bin
+        wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
         pip install awscli twine
 
     - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
       run: |
-        RAPIDS_PY_WHEEL_ARCH="x86_64" rapids-download-wheels-from-s3 ./dist
-        RAPIDS_PY_WHEEL_ARCH="aarch64" rapids-download-wheels-from-s3 ./dist
+        RAPIDS_ARCH="x86_64" rapids-download-wheels-from-s3 ./dist
+        RAPIDS_ARCH="aarch64" rapids-download-wheels-from-s3 ./dist
         twine upload ./dist/"${{ inputs.package-name }}*.whl"
       env:
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
