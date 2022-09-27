@@ -1,7 +1,7 @@
 on:
   workflow_call:
     inputs:
-      CONFIG_FILE_PATH:
+      dependency_generator_config_file_path:
         description: "Location of the dependencies.yaml configuration file"
         default: "dependencies.yaml"
         required: false
@@ -53,4 +53,4 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       - name: Run rapids-dependency-file-checker
-        run: rapids-dependency-file-checker ${{ inputs.CONFIG_FILE_PATH }}
+        run: rapids-dependency-file-checker ${{ inputs.dependency_generator_config_file_path }}
