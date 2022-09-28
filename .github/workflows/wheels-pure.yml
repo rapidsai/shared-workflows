@@ -59,9 +59,7 @@ jobs:
         repo-dir: ./
 
     - name: Download gha-tools
-      run: |
-        wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
-        pip install awscli
+      uses: rapidsai/shared-action-workflows/gha-tools@feat/wheel-ci-actions-2
 
     - name: Upload wheels to downloads.rapids.ai
       run: rapids-upload-wheels-to-s3 dist
@@ -119,9 +117,7 @@ jobs:
     runs-on: [self-hosted, linux, amd64, cpu4]
     steps:
     - name: Download gha-tools
-      run: |
-        wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
-        pip install awscli
+      uses: rapidsai/shared-action-workflows/gha-tools@feat/wheel-ci-actions-2
 
     - name: Download wheels from downloads.rapids.ai
       run: rapids-download-wheels-from-s3 ./dist
@@ -136,9 +132,7 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
 
     - name: Publish wheels to RAPIDS internal PyPI
-      run: |
-        pip install twine
-        twine upload ./dist/"${{ inputs.package-name }}*.whl"
+      run: rapids-twine.py ./dist/
       env:
         TWINE_USERNAME: cibuildwheel
         TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
