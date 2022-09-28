@@ -11,6 +11,9 @@ on:
       extended_nightly_tests:
         type: boolean
         default: false
+      tests_result_dir:
+        type: string
+        default: "test-results"
 
 jobs:
   compute-matrix:
@@ -88,3 +91,8 @@ jobs:
           echo "RAPIDS_REF_NAME=${{ inputs.ref || github.ref_name }}" >> "${GITHUB_ENV}"
       - name: Python tests
         run: ci/test_python.sh
+      - name: Generate test report
+        uses: test-summary/action@v1
+        with:
+          paths: "${{ inputs.tests_result_dir }}/*.xml"
+        if: always()
