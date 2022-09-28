@@ -13,6 +13,10 @@ on:
         required: false
         type: string
         default: ''
+      python-package-versioneer-override:
+        required: false
+        type: string
+        default: ''
       test-requires:
         required: false
         type: string
@@ -49,6 +53,7 @@ jobs:
       uses: rapidsai/shared-action-workflows/purewheel@feat/wheel-ci-actions-2
       with:
         python-package-cuda-suffix: ${{ inputs.python-package-cuda-suffix }}
+        python-package-versioneer-override: ${{ inputs.python-package-versioneer-override }}
         package-dir: ${{ inputs.package-dir }}
         output-dir: dist
         repo-dir: ./
