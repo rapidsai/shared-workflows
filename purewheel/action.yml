@@ -10,6 +10,9 @@ inputs:
   output-dir:
     description: 'Path to output wheels'
     required: true
+  python-package-versioneer-override:
+    required: true
+    type: string
   python-package-cuda-suffix:
     required: false
     type: string

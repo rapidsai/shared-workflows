@@ -14,9 +14,8 @@ on:
         type: string
         default: ''
       python-package-versioneer-override:
-        required: false
+        required: true
         type: string
-        default: ''
       test-requires:
         required: false
         type: string
@@ -137,3 +136,4 @@ jobs:
         TWINE_USERNAME: cibuildwheel
         TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
         TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
+        RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE: ${{ inputs.python-package-versioneer-override }}
