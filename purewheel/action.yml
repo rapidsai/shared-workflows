@@ -24,7 +24,8 @@ runs:
         -v "$(readlink -f ${{ inputs.repo-dir }}):/code-dir"
         -v "$(readlink -f ${{ inputs.output-dir }}):/out-dir"
         -e PYTHON_PACKAGE_CUDA_SUFFIX="${{ inputs.python-package-cuda-suffix }}"
-        -e PYTHON_PACKAGE_VERSIONEER_OVERRIDE="${{ inputs.python-package-versioneer-override }}"
+        -e RAPIDS_PY_WHEEL_CUDA_SUFFIX="${{ inputs.python-package-cuda-suffix }}"
+        -e RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE="${{ inputs.python-package-versioneer-override }}"
         rapidsai/manylinux_2_31_x86_64
         sh -c "cd /code-dir && git config --global --add safe.directory /code-dir && /opt/python/cp38-cp38/bin/python -m pip wheel -w /out-dir /code-dir/${{ inputs.package-dir }} --no-deps"
       shell: bash
