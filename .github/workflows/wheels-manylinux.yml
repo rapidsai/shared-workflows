@@ -20,6 +20,10 @@ on:
         required: false
         type: string
         default: '-cu11'
+      python-package-build-tag:
+        required: false
+        type: string
+        default: ''
 
       # cibuildwheel settings
       manylinux-container-amd64:
@@ -213,6 +217,7 @@ jobs:
       env:
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
         RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE: ${{ inputs.python-package-versioneer-override }}
+        RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.python-package-build-tag }}
         RAPIDS_REPOSITORY: ${{ github.repository }}
         RAPIDS_SHA: ${{ github.sha }}
         RAPIDS_REF_NAME: ${{ github.ref_name }}

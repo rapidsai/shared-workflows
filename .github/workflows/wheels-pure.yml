@@ -16,6 +16,10 @@ on:
       python-package-versioneer-override:
         required: true
         type: string
+      python-package-build-tag:
+        required: false
+        type: string
+        default: ''
       test-requires:
         required: false
         type: string
@@ -137,3 +141,4 @@ jobs:
         TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
         TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
         RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE: ${{ inputs.python-package-versioneer-override }}
+        RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.python-package-build-tag }}
