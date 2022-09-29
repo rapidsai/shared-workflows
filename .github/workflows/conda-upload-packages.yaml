@@ -37,4 +37,4 @@ jobs:
           fi
           echo "RAPIDS_CONDA_TOKEN=${RAPIDS_CONDA_TOKEN}" >> "${GITHUB_ENV}"
       - name: Upload packages
-        run: ci/upload_to_anaconda.sh
+        run: rapids-upload-to-anaconda
