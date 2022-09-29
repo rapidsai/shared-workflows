@@ -13,7 +13,7 @@ jobs:
   upload:
     runs-on: ubuntu-latest
     container:
-      image: condaforge/mambaforge:latest
+      image: rapidsai/ci:cuda11.5.1-ubuntu20.04-py3.8
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
