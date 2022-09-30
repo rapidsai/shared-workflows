@@ -16,7 +16,7 @@ jobs:
   pipeline:
     runs-on: ubuntu-latest
     container:
-      image: rapidsai/ci:cuda11.5.1-ubuntu20.04-py3.8
+      image: rapidsai/ci:latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3

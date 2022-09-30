@@ -24,7 +24,7 @@ jobs:
     if: ${{ inputs.enable_check_size }}
     runs-on: ubuntu-latest
     container:
-      image: rapidsai/ci:cuda11.5.1-ubuntu20.04-py3.8
+      image: rapidsai/ci:latest
       env:
         RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -36,7 +36,7 @@ jobs:
     if: ${{ inputs.enable_check_style }}
     runs-on: ubuntu-latest
     container:
-      image: rapidsai/ci:cuda11.5.1-ubuntu20.04-py3.8
+      image: rapidsai/ci:latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -48,7 +48,7 @@ jobs:
     if: ${{ inputs.enable_check_generated_files }}
     runs-on: ubuntu-latest
     container:
-      image: rapidsai/ci:cuda11.5.1-ubuntu20.04-py3.8
+      image: rapidsai/ci:latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
