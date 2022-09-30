@@ -20,6 +20,10 @@ on:
         required: false
         type: string
         default: ''
+      test-checkout-src:
+        required: false
+        type: string
+        default: 'true'
       test-requires:
         required: false
         type: string
@@ -107,6 +111,7 @@ jobs:
 
     - name: checkout code repo
       uses: actions/checkout@v3
+      if: ${{ inputs.test-checkout-src }} == 'true'
       with:
         fetch-depth: 0 # unshallow fetch for setuptools-scm
         persist-credentials: false
