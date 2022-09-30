@@ -198,7 +198,7 @@ jobs:
 
     - name: checkout code repo
       uses: actions/checkout@v3
-      if: ${{ inputs.test-checkout-src }} == 'true'
+      if: ${{ inputs.test-checkout-src == 'true' }}
       with:
         fetch-depth: 0 # unshallow fetch for setuptools-scm
         persist-credentials: false
