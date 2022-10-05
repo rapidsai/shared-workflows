@@ -1,0 +1,32 @@
+on:
+  workflow_call:
+    inputs:
+      branch:
+        type: string
+        required: true
+      date:
+        type: string
+        required: true
+      sha:
+        type: string
+        required: true
+      repo:
+        type: string
+        required: true
+      test_workflow_name:
+        type: string
+        default: nightly.yaml
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}
+    steps:
+      - run: |
+          gh workflow run \
+            -R ${{ inputs.repo }} \
+            --ref ${{ inputs.branch }} \
+            ${{ inputs.test_workflow_name }} \
+            -f branch=${{ inputs.branch }} \
+            -f date=${{ inputs.date }} \
+            -f sha=${{ inputs.sha }}
