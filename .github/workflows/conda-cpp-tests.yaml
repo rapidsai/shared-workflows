@@ -6,6 +6,8 @@ on:
         type: string
       branch:
         type: string
+      date:
+        type: string
       sha:
         type: string
       repo:
@@ -96,6 +98,7 @@ jobs:
           echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
           echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
+          echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
       - name: C++ tests
         run: ci/test_cpp.sh
       - name: Generate test report
