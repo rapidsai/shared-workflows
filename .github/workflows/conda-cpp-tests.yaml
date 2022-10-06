@@ -4,7 +4,11 @@ on:
       build_type:
         required: true
         type: string
-      ref:
+      branch:
+        type: string
+      date:
+        type: string
+      sha:
         type: string
       repo:
         type: string
@@ -87,13 +91,14 @@ jobs:
       - uses: actions/checkout@v3
         with:
           repository: ${{ inputs.repo }}
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.sha }}
           fetch-depth: 0
       - name: Standardize repository information
         run: |
           echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
-          echo "RAPIDS_REF_NAME=${{ inputs.ref || github.ref_name }}" >> "${GITHUB_ENV}"
+          echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
+          echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
       - name: C++ tests
         run: ci/test_cpp.sh
       - name: Generate test report
