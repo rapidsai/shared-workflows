@@ -71,6 +71,10 @@ on:
       test-container-arm64:
         required: true
         type: string
+      test-docker-options:
+        required: false
+        type: string
+        default: ''
       test-checkout-src: # allow one to skip checking out source code to run packaged tests
         required: false
         type: string
@@ -173,7 +177,7 @@ jobs:
     needs: wheel-build
     container:
       image: ${{ matrix.image }}_${{ matrix.cpu-arch }}
-      options: --cap-add CAP_SYS_PTRACE --shm-size="8g"
+      options: ${{ inputs.test-docker-options }}
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
