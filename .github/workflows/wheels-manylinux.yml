@@ -173,6 +173,7 @@ jobs:
     needs: wheel-build
     container:
       image: ${{ matrix.image }}_${{ matrix.cpu-arch }}
+      options: --privileged
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
