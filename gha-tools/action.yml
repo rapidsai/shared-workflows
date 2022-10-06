@@ -16,7 +16,6 @@ runs:
 
     - name: Download and install gha-tools and friends
       run: |
-        #wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
-        git clone https://github.com/sevagh/gha-tools -b feat/pypi-wheel-scripts && sudo cp ./gha-tools/tools/* /usr/local/bin/
+        wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | sudo tar -xz -C /usr/local/bin
         pip install awscli twine
       shell: bash
