@@ -74,7 +74,6 @@ on:
       test-docker-options:
         required: false
         type: string
-        default: ''
       test-checkout-src: # allow one to skip checking out source code to run packaged tests
         required: false
         type: string
