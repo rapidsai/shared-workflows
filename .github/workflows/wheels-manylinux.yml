@@ -97,10 +97,6 @@ on:
         required: false
         type: string
         default: ''
-      test-smoketest:
-        required: false
-        type: string
-        default: ''
       test-before-amd64:
         required: false
         type: string
@@ -199,7 +195,6 @@ jobs:
         CIBW_TEST_REQUIRES: ${{ inputs.test-requires }}
         CIBW_TEST_EXTRAS: ${{ inputs.test-extras }}
         CIBW_TEST_COMMAND: ${{ inputs.test-unittest }}
-        RAPIDS_WHEEL_SMOKETEST_COMMAND: ${{ inputs.test-smoketest }}
     steps:
     - name: Run nvidia-smi to make sure GPU is working
       run: nvidia-smi

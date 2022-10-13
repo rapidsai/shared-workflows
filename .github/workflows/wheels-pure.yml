@@ -36,10 +36,6 @@ on:
         required: false
         type: string
         default: ''
-      test-smoketest:
-        required: false
-        type: string
-        default: ''
       test-before:
         required: false
         type: string
@@ -100,7 +96,6 @@ jobs:
         CIBW_TEST_REQUIRES: ${{ inputs.test-requires }}
         CIBW_TEST_EXTRAS: ${{ inputs.test-extras }}
         CIBW_TEST_COMMAND: ${{ inputs.test-unittest }}
-        RAPIDS_WHEEL_SMOKETEST_COMMAND: ${{ inputs.test-smoketest }}
         RAPIDS_WHEEL_VER_OVERRIDE: "py3-none-any" # for a pure wheel
     steps:
     - name: Run nvidia-smi to make sure GPU is working
