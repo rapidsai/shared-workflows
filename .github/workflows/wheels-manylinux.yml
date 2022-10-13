@@ -27,17 +27,21 @@ on:
 
       # cibuildwheel settings
       manylinux-container-amd64:
-        required: true
+        required: false
         type: string
+        default: "rapidsai/manylinux2014"
       manylinux-container-arm64:
-        required: true
+        required: false
         type: string
+        default: "rapidsai/manylinux_2_31"
       auditwheel-repair-command-amd64: # hint: use 'cp {wheel} {dest_dir}' to skip repairing
-        required: true
+        required: false
         type: string
+        default: "auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_17_x86_64 {wheel}"
       auditwheel-repair-command-arm64:
-        required: true
+        required: false
         type: string
+        default: "auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_31_aarch64 {wheel}"
       cibw-environment:
         type: string
         required: false
@@ -66,11 +70,13 @@ on:
 
       # test settings
       test-container-amd64:
-        required: true
+        required: false
         type: string
+        default: "rapidsai/manylinux_2_27"
       test-container-arm64:
-        required: true
+        required: false
         type: string
+        default: "rapidsai/manylinux_2_31"
       test-docker-options:
         required: false
         type: string
