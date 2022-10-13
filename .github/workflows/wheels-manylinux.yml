@@ -170,7 +170,7 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
 
   wheel-test:
-    name: wheel test ${{ matrix.cpu-arch }} ${{ inputs.matrix-version }}
+    name: wheel test ${{ matrix.cpu-arch }} ${{ matrix.python-version }}
     runs-on: ${{ matrix.labels }}
     strategy:
       matrix:
