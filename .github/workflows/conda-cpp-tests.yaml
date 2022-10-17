@@ -103,7 +103,7 @@ jobs:
       - name: C++ tests
         run: ci/test_cpp.sh
       - name: Generate test report
-        uses: test-summary/action@v1
+        uses: test-summary/action@v2
         with:
           paths: "${{ inputs.tests_result_dir }}/*.xml"
         if: always()
