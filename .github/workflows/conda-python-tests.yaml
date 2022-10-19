@@ -69,7 +69,7 @@ jobs:
             TEST_MATRIX=$(jq -nc '(env.TEST_MATRIX|fromjson) + (env.MATRICES|fromjson|.ext_nightly)')
           fi
 
-          echo "::set-output name=MATRIX::$(jq -nc 'env.TEST_MATRIX | fromjson | {includes: .}')"
+          echo "MATRIX=$(jq -nc 'env.TEST_MATRIX | fromjson | {includes: .}')" >> ${GITHUB_OUTPUT}
   tests:
     needs: compute-matrix
     strategy:
