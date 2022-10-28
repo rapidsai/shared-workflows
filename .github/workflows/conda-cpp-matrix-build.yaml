@@ -12,6 +12,9 @@ on:
         type: string
       sha:
         type: string
+      node_type:
+        type: string
+        default: "cpu8"
 
 jobs:
   build:
@@ -24,7 +27,7 @@ jobs:
     runs-on:
       - self-hosted
       - linux
-      - cpu8
+      - ${{ inputs.node_type }}
       - ${{ matrix.ARCH }}
     container:
       image: rapidsai/ci:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
