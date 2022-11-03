@@ -82,10 +82,6 @@ on:
         required: false
         type: string
         default: 'true'
-      test-requires:
-        required: false
-        type: string
-        default: ''
       test-extras:
         required: false
         type: string
@@ -207,7 +203,6 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.test-before-amd64 }}
         RAPIDS_BEFORE_TEST_COMMANDS_ARM64: ${{ inputs.test-before-arm64 }}
-        CIBW_TEST_REQUIRES: ${{ inputs.test-requires }}
         CIBW_TEST_EXTRAS: ${{ inputs.test-extras }}
         CIBW_TEST_COMMAND: ${{ inputs.test-unittest }}
     steps:
