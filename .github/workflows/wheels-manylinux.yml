@@ -26,11 +26,11 @@ on:
       manylinux-container-amd64:
         required: false
         type: string
-        default: "rapidsai/manylinux2014"
+        default: "rapidsai/manylinux2014_x86_64"
       manylinux-container-arm64:
         required: false
         type: string
-        default: "rapidsai/manylinux_2_31"
+        default: "rapidsai/manylinux_2_31_aarch64"
       auditwheel-repair-command-amd64: # hint: use 'cp {wheel} {dest_dir}' to skip repairing
         required: false
         type: string
@@ -101,23 +101,35 @@ on:
 
 jobs:
   wheel-build:
-    name: cibuildwheel ${{ matrix.cpu-arch }} ${{ matrix.python-version }}
+    name: cibuildwheel ${{ matrix.linux-arch }} ${{ matrix.cpython-version }}
     runs-on: ${{ matrix.labels }}
     strategy:
       matrix:
         include:
           - labels: [self-hosted, linux, amd64, cpu16]
-            cpu-arch: x86_64
-            python-version: 3.8
+            linux-arch: x86_64
+            cpython-version: cp38
+            auditwheel-repair-command: ${{ inputs.auditwheel-repair-command-amd64 }}
+            manylinux-container: ${{ inputs.manylinux-container-amd64 }}
+            cibw-before-all: ${{ inputs.cibw-before-all-amd64 }}
           - labels: [self-hosted, linux, arm64, cpu16]
-            cpu-arch: aarch64
-            python-version: 3.8
+            linux-arch: aarch64
+            cpython-version: cp38
+            auditwheel-repair-command: ${{ inputs.auditwheel-repair-command-arm64 }}
+            manylinux-container: ${{ inputs.manylinux-container-arm64 }}
+            cibw-before-all: ${{ inputs.cibw-before-all-arm64 }}
           - labels: [self-hosted, linux, amd64, cpu16]
-            cpu-arch: x86_64
-            python-version: 3.9
+            linux-arch: x86_64
+            cpython-version: cp39
+            auditwheel-repair-command: ${{ inputs.auditwheel-repair-command-amd64 }}
+            manylinux-container: ${{ inputs.manylinux-container-amd64 }}
+            cibw-before-all: ${{ inputs.cibw-before-all-amd64 }}
           - labels: [self-hosted, linux, arm64, cpu16]
-            cpu-arch: aarch64
-            python-version: 3.9
+            linux-arch: aarch64
+            cpython-version: cp39
+            auditwheel-repair-command: ${{ inputs.auditwheel-repair-command-arm64 }}
+            manylinux-container: ${{ inputs.manylinux-container-arm64 }}
+            cibw-before-all: ${{ inputs.cibw-before-all-arm64 }}
     steps:
     - name: checkout code repo
       uses: actions/checkout@v3
@@ -125,24 +137,30 @@ jobs:
         fetch-depth: 0 # unshallow fetch for setuptools-scm
         persist-credentials: false
 
-    - name: Build wheels with custom RAPIDS cibuildwheel action
-      uses: rapidsai/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions-2
+    - name: Build wheels with cibuildwheel action
+      uses: rapidsai/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions-3
       with:
-        package-dir: ${{ inputs.package-dir }}
+        # hardcoded
         output-dir: dist
-        python-version: ${{ matrix.python-version }}
+
+        # matrix settings
+        cpython-version: ${{ matrix.cpython-version }}
+        linux-arch: ${{ matrix.linux-arch }}
+        # matrix settings per-arch
+        cibw-before-all: ${{ matrix.cibw-before-all }}
+        auditwheel-repair-command: ${{ matrix.auditwheel-repair-command }}
+        manylinux-container: ${{ matrix.manylinux-container }}
+
+        # user inputs
+        package-dir: ${{ inputs.package-dir }}
         python-package-cuda-suffix: ${{ inputs.python-package-cuda-suffix }}
         python-package-versioneer-override: ${{ inputs.python-package-versioneer-override }}
         cibw-environment: ${{ inputs.cibw-environment }}
-        cibw-before-all-amd64: ${{ inputs.cibw-before-all-amd64 }}
-        cibw-before-all-arm64: ${{ inputs.cibw-before-all-arm64 }}
-        manylinux-container-amd64: ${{ inputs.manylinux-container-amd64 }}
-        manylinux-container-arm64: ${{ inputs.manylinux-container-arm64 }}
         cibw-before-build: ${{ inputs.cibw-before-build }}
         skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
         skbuild-build-options: ${{ inputs.skbuild-build-options }}
-        auditwheel-repair-command-amd64: ${{ inputs.auditwheel-repair-command-amd64 }}
-        auditwheel-repair-command-arm64: ${{ inputs.auditwheel-repair-command-arm64 }}
+
+        # secrets
         sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         sccache-aws-secret-access-key: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         cumlprims_mg-private-deploy-key: ${{ secrets.CUMLPRIMS_SSH_PRIVATE_DEPLOY_KEY }}
