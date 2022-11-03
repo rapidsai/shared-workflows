@@ -109,24 +109,28 @@ jobs:
           - labels: [self-hosted, linux, amd64, cpu16]
             linux-arch: x86_64
             cpython-version: cp38-*
+            python-version: 3.8
             auditwheel-repair-command: ${{ inputs.auditwheel-repair-command-amd64 }}
             manylinux-container: ${{ inputs.manylinux-container-amd64 }}
             cibw-before-all: ${{ inputs.cibw-before-all-amd64 }}
           - labels: [self-hosted, linux, arm64, cpu16]
             linux-arch: aarch64
             cpython-version: cp38-*
+            python-version: 3.8
             auditwheel-repair-command: ${{ inputs.auditwheel-repair-command-arm64 }}
             manylinux-container: ${{ inputs.manylinux-container-arm64 }}
             cibw-before-all: ${{ inputs.cibw-before-all-arm64 }}
           - labels: [self-hosted, linux, amd64, cpu16]
             linux-arch: x86_64
             cpython-version: cp39-*
+            python-version: 3.9
             auditwheel-repair-command: ${{ inputs.auditwheel-repair-command-amd64 }}
             manylinux-container: ${{ inputs.manylinux-container-amd64 }}
             cibw-before-all: ${{ inputs.cibw-before-all-amd64 }}
           - labels: [self-hosted, linux, arm64, cpu16]
             linux-arch: aarch64
             cpython-version: cp39-*
+            python-version: 3.9
             auditwheel-repair-command: ${{ inputs.auditwheel-repair-command-arm64 }}
             manylinux-container: ${{ inputs.manylinux-container-arm64 }}
             cibw-before-all: ${{ inputs.cibw-before-all-arm64 }}
