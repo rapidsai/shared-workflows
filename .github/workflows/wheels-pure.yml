@@ -45,6 +45,12 @@ jobs:
   wheel-build:
     name: wheel build pure
     runs-on: [self-hosted, linux, amd64, cpu4]
+    container:
+      image: "rapidsai/manylinux_2_31_x86_64"
+      env:
+        RAPIDS_PY_WHEEL_CUDA_SUFFIX: ${{ inputs.python-package-cuda-suffix }}
+        RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE: ${{ inputs.python-package-versioneer-override }}
+
     steps:
     - name: checkout code repo
       uses: actions/checkout@v3
@@ -52,14 +58,9 @@ jobs:
         fetch-depth: 0 # unshallow fetch for setuptools-scm
         persist-credentials: false
 
-    - name: Build pure python wheel with pip
-      uses: rapidsai/shared-action-workflows/purewheel@feat/wheel-ci-actions-2
-      with:
-        python-package-cuda-suffix: ${{ inputs.python-package-cuda-suffix }}
-        python-package-versioneer-override: ${{ inputs.python-package-versioneer-override }}
-        package-dir: ${{ inputs.package-dir }}
-        output-dir: dist
-        repo-dir: ./
+    - name: Build pure python wheel with pip wheel
+      run: >
+        /opt/python/cp38-cp38/bin/python -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps
 
     - name: Download gha-tools
       uses: rapidsai/shared-action-workflows/gha-tools@feat/wheel-ci-actions-2
