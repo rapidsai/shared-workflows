@@ -131,6 +131,7 @@ runs:
       env:
         CIBW_SKIP: "*musllinux*"
         CIBW_MANYLINUX_AARCH64_IMAGE: ${{ inputs.manylinux-container }}
+        CIBW_MANYLINUX_X86_64_IMAGE: ${{ inputs.manylinux-container }}
         CIBW_BUILD_FRONTEND: "pip"
         CIBW_BEFORE_BUILD_LINUX: ${{ inputs.cibw-before-build }}
         CIBW_BUILD_VERBOSITY_LINUX: 3
