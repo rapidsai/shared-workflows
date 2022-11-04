@@ -136,6 +136,8 @@ jobs:
             cibw-before-all: ${{ inputs.cibw-before-all-arm64 }}
     container:
       image: "rapidsai/cibuildwheel_${{ matrix.linux-arch }}"
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
       env:
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
         RAPIDS_PY_WHEEL_CUDA_SUFFIX: ${{ inputs.python-package-cuda-suffix }}
