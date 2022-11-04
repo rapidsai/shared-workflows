@@ -200,18 +200,22 @@ jobs:
           - labels: [self-hosted, linux, amd64, gpu-v100-495-1]
             cpu-arch: x86_64
             image: ${{ inputs.test-container-amd64 }}
+            python-version: 3.8
             cpython-version: cp38
           - labels: [self-hosted, linux, arm64, gpu-a100-495-1]
             cpu-arch: aarch64
             image: ${{ inputs.test-container-arm64 }}
+            python-version: 3.8
             cpython-version: cp38
           - labels: [self-hosted, linux, amd64, gpu-v100-495-1]
             cpu-arch: x86_64
             image: ${{ inputs.test-container-amd64 }}
+            python-version: 3.9
             cpython-version: cp39
           - labels: [self-hosted, linux, arm64, gpu-a100-495-1]
             cpu-arch: aarch64
             image: ${{ inputs.test-container-arm64 }}
+            python-version: 3.9
             cpython-version: cp39
     needs: wheel-build
     container:
@@ -224,6 +228,7 @@ jobs:
         RAPIDS_SHA: ${{ github.sha }}
         RAPIDS_REF_NAME: ${{ github.ref_name }}
         RAPIDS_CPYTHON_VERSION: ${{ matrix.cpython-version }}
+        RAPIDS_PY_VERSION: ${{ matrix.python-version }}
         RAPIDS_BUILD_TYPE: "pull-request"
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}

@@ -3,6 +3,8 @@
 set -eoxu pipefail
 
 export RAPIDS_PY_WHEEL_NAME="${RAPIDS_PY_WHEEL_NAME:-}"
+export RAPIDS_PY_VERSION="${RAPIDS_PY_VERSION:-}"
+export RAPIDS_CPYTHON_VERSION="${RAPIDS_CPYTHON_VERSION:-}"
 export CIBW_TEST_EXTRAS="${CIBW_TEST_EXTRAS:-}"
 export CIBW_TEST_COMMAND="${CIBW_TEST_COMMAND:-}"
 export RAPIDS_BEFORE_TEST_COMMANDS_AMD64="${RAPIDS_BEFORE_TEST_COMMANDS_AMD64:-}"
@@ -14,7 +16,6 @@ arch=$(uname -m)
 
 pybin="python-${RAPIDS_CPYTHON_VERSION}"
 
-$pybin -m pip install awscli
 rapids-download-wheels-from-s3 ./dist
 
 if [ "${arch}" == "x86_64" ]; then
