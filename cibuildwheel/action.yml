@@ -71,16 +71,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Install python3.8, venv, pip on runner container
-      run: sudo apt update -y && sudo apt install -y python3.8-venv python3-venv python3-pip
-      shell: bash
-
-    - name: Install pipx
-      run: |
-        python3 -m pip install pipx
-        python3 -m pipx ensurepath --force
-      shell: bash
-
     - name: Create conditional env vars with bash
       run: |
         cibw_before_all_ssh=""
@@ -121,8 +111,6 @@ runs:
 
     - name: Invoke cibuildwheel with pipx
       run: >
-        pipx run --verbose
-        --spec cibuildwheel==2.8.0
         cibuildwheel
         ${{ inputs.package-dir }}
         --output-dir ${{ inputs.output-dir }}

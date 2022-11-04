@@ -42,7 +42,7 @@ jobs:
     name: wheel build pure
     runs-on: [self-hosted, linux, amd64, cpu4]
     container:
-      image: "rapidsai/manylinux_2_31_x86_64"
+      image: "rapidsai/cibuildwheel_x86_64"
       env:
         RAPIDS_PY_WHEEL_CUDA_SUFFIX: ${{ inputs.python-package-cuda-suffix }}
         RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE: ${{ inputs.python-package-versioneer-override }}
@@ -55,11 +55,7 @@ jobs:
         persist-credentials: false
 
     - name: Build pure python wheel with pip wheel
-      run: >
-        /opt/python/cp38-cp38/bin/python -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps
-
-    - name: Download gha-tools
-      uses: rapidsai/shared-action-workflows/gha-tools@feat/wheel-ci-actions-2
+      run: python-cp38 -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps
 
     - name: Upload wheels to downloads.rapids.ai
       run: rapids-upload-wheels-to-s3 dist
@@ -78,14 +74,14 @@ jobs:
     runs-on: [self-hosted, linux, amd64, gpu-v100-495-1]
     needs: wheel-build
     container:
-      image: rapidsai/manylinux_2_31_x86_64
+      image: "rapidsai/cibuildwheel_x86_64"
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
         RAPIDS_REPOSITORY: ${{ github.repository }}
         RAPIDS_SHA: ${{ github.sha }}
         RAPIDS_REF_NAME: ${{ github.ref_name }}
-        RAPIDS_PY_VERSION: "3.8"
+        RAPIDS_CPYTHON_VERSION: "cp38"
         RAPIDS_BUILD_TYPE: "pull-request"
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
@@ -107,33 +103,30 @@ jobs:
         persist-credentials: false
 
     - name: Run citestwheel
-      uses: rapidsai/shared-action-workflows/citestwheel@feat/wheel-ci-actions-2
+      uses: rapidsai/shared-action-workflows/citestwheel@feat/wheel-ci-actions-3
 
   wheel-publish:
     name: wheel publish pure
     needs: wheel-test
     runs-on: [self-hosted, linux, amd64, cpu4]
-    steps:
-    - name: Download gha-tools
-      uses: rapidsai/shared-action-workflows/gha-tools@feat/wheel-ci-actions-2
-
-    - name: Download wheels from downloads.rapids.ai
-      run: rapids-download-wheels-from-s3 ./dist
+    container:
+      image: rapidsai/cibuildwheel_x86_64
       env:
-        RAPIDS_BUILD_TYPE: "pull-request"
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE: ${{ inputs.python-package-versioneer-override }}
+        RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.python-package-build-tag }}
         RAPIDS_REPOSITORY: ${{ github.repository }}
         RAPIDS_SHA: ${{ github.sha }}
         RAPIDS_REF_NAME: ${{ github.ref_name }}
-        RAPIDS_PY_VERSION: "3.8"
+        RAPIDS_BUILD_TYPE: "pull-request"
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-
-    - name: Publish wheels to RAPIDS internal PyPI
-      run: rapids-twine.py ./dist/
-      env:
         TWINE_USERNAME: cibuildwheel
         TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
         TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
-        RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE: ${{ inputs.python-package-versioneer-override }}
-        RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.python-package-build-tag }}
+
+    steps:
+    - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
+      run: |
+        RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
+        rapids-twine.py ./dist/

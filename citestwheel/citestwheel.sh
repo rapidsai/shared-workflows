@@ -12,15 +12,9 @@ mkdir -p ./dist
 
 arch=$(uname -m)
 
-pyver=${RAPIDS_PY_VERSION}
-pytestenv="cp${pyver//./}-cp${pyver//./}"
+pybin="python-${RAPIDS_CPYTHON_VERSION}"
 
-/opt/python/$pytestenv/bin/python -m venv /cibw-test-venv-${pyver}
-. /cibw-test-venv-${pyver}/bin/activate
-
-curl -sS https://bootstrap.pypa.io/get-pip.py | python3
-
-python -m pip install awscli
+$pybin -m pip install awscli
 rapids-download-wheels-from-s3 ./dist
 
 if [ "${arch}" == "x86_64" ]; then
@@ -36,8 +30,8 @@ if [ "${CIBW_TEST_EXTRAS}" != "" ]; then
 fi
 
 # echo to expand wildcard before adding `[extra]` requires for pip
-python3 -m pip install --verbose $(echo ./dist/${RAPIDS_PY_WHEEL_NAME}*.whl)$extra_requires_suffix
+$pybin -m pip install --verbose $(echo ./dist/${RAPIDS_PY_WHEEL_NAME}*.whl)$extra_requires_suffix
 
-python3 -m pip check
+$pybin -m pip check
 
 sh -c "${CIBW_TEST_COMMAND}"
