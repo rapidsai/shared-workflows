@@ -55,7 +55,7 @@ jobs:
         persist-credentials: false
 
     - name: Build pure python wheel with pip wheel
-      run: python-cp38 -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps
+      run: python -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps
 
     - name: Upload wheels to downloads.rapids.ai
       run: rapids-upload-wheels-to-s3 dist
