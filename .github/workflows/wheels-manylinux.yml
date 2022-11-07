@@ -200,23 +200,19 @@ jobs:
           - labels: [self-hosted, linux, amd64, gpu-v100-495-1]
             cpu-arch: x86_64
             image: ${{ inputs.test-container-amd64 }}
-            python-version: 3.8
-            cpython-version: cp38
+            python-version: "3.8"
           - labels: [self-hosted, linux, arm64, gpu-a100-495-1]
             cpu-arch: aarch64
             image: ${{ inputs.test-container-arm64 }}
-            python-version: 3.8
-            cpython-version: cp38
+            python-version: "3.8"
           - labels: [self-hosted, linux, amd64, gpu-v100-495-1]
             cpu-arch: x86_64
             image: ${{ inputs.test-container-amd64 }}
-            python-version: 3.9
-            cpython-version: cp39
+            python-version: "3.9"
           - labels: [self-hosted, linux, arm64, gpu-a100-495-1]
             cpu-arch: aarch64
             image: ${{ inputs.test-container-arm64 }}
-            python-version: 3.9
-            cpython-version: cp39
+            python-version: "3.9"
     needs: wheel-build
     container:
       image: ${{ matrix.image }}

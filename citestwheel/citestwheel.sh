@@ -4,7 +4,6 @@ set -eoxu pipefail
 
 export RAPIDS_PY_WHEEL_NAME="${RAPIDS_PY_WHEEL_NAME:-}"
 export RAPIDS_PY_VERSION="${RAPIDS_PY_VERSION:-}"
-export RAPIDS_CPYTHON_VERSION="${RAPIDS_CPYTHON_VERSION:-}"
 export CIBW_TEST_EXTRAS="${CIBW_TEST_EXTRAS:-}"
 export CIBW_TEST_COMMAND="${CIBW_TEST_COMMAND:-}"
 export RAPIDS_BEFORE_TEST_COMMANDS_AMD64="${RAPIDS_BEFORE_TEST_COMMANDS_AMD64:-}"
@@ -14,7 +13,11 @@ mkdir -p ./dist
 
 arch=$(uname -m)
 
-pybin="python-${RAPIDS_CPYTHON_VERSION}"
+# need this to init pyenv first
+eval "$(pyenv init -)"
+
+# use pyenv to set appropriate python as default before citestwheel
+pyenv global "${RAPIDS_PY_VERSION}" && python --version
 
 rapids-download-wheels-from-s3 ./dist
 
@@ -31,8 +34,8 @@ if [ "${CIBW_TEST_EXTRAS}" != "" ]; then
 fi
 
 # echo to expand wildcard before adding `[extra]` requires for pip
-$pybin -m pip install --verbose $(echo ./dist/${RAPIDS_PY_WHEEL_NAME}*.whl)$extra_requires_suffix
+python -m pip install --verbose $(echo ./dist/${RAPIDS_PY_WHEEL_NAME}*.whl)$extra_requires_suffix
 
-$pybin -m pip check
+python -m pip check
 
 sh -c "${CIBW_TEST_COMMAND}"
