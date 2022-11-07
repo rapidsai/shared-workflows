@@ -69,11 +69,11 @@ on:
       test-container-amd64:
         required: false
         type: string
-        default: "rapidsai/cibuildwheel_x86_64"
+        default: "rapidsai/citestwheel_x86_64"
       test-container-arm64:
         required: false
         type: string
-        default: "rapidsai/cibuildwheel_aarch64"
+        default: "rapidsai/citestwheel_aarch64"
       test-docker-options:
         required: false
         type: string
