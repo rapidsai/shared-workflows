@@ -1,9 +1,0 @@
-name: citestwheel for manylinux
-description: 'Runs wheel GPU tests for manylinux wheels'
-
-runs:
-  using: composite
-  steps:
-    - name: Run citestwheel
-      run: ${GITHUB_ACTION_PATH}/citestwheel.sh
-      shell: bash

@@ -247,7 +247,7 @@ jobs:
         persist-credentials: false
 
     - name: Run citestwheel
-      uses: rapidsai/shared-action-workflows/citestwheel@feat/wheel-ci-actions-3
+      run: /citestwheel.sh
 
   wheel-publish:
     name: wheels publish all wheels
