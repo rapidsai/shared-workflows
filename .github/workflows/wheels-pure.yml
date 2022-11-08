@@ -13,13 +13,21 @@ on:
         required: false
         type: string
         default: ''
-      python-package-versioneer-override:
-        required: true
+      build-type:
+        required: false
         type: string
+        default: 'nightly'
+
+      # versioneer and twine settings
+      python-package-versioneer-override:
+        required: false
+        type: string
+        default: ''
       python-package-build-tag:
         required: false
         type: string
         default: ''
+
       test-checkout-src:
         required: false
         type: string
@@ -37,6 +45,11 @@ on:
         type: string
         default: 'true'
 
+env:
+  TWINE_USERNAME: cibuildwheel
+  TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
+  TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
+
 jobs:
   wheel-build:
     name: wheel build pure
@@ -45,7 +58,6 @@ jobs:
       image: "rapidsai/cibuildwheel_x86_64"
       env:
         RAPIDS_PY_WHEEL_CUDA_SUFFIX: ${{ inputs.python-package-cuda-suffix }}
-        RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE: ${{ inputs.python-package-versioneer-override }}
 
     steps:
     - name: checkout code repo
@@ -55,13 +67,21 @@ jobs:
         persist-credentials: false
 
     - name: Build pure python wheel with pip wheel
-      run: python -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps
+      run: |
+        versioneer_override="${{ inputs.python-package-versioneer-override }}"
+
+        if [ "${versioneer_override}" == "" ]; then
+          versioneer_override="$(rapids-pip-wheel-version ${{ inputs.package-name }}${{ inputs.python-package-cuda-suffix }})"
+        fi
+          
+        export RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE="${versioneer_override}"
+        python -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps
 
     - name: Upload wheels to downloads.rapids.ai
       run: rapids-upload-wheels-to-s3 dist
       env:
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
-        RAPIDS_BUILD_TYPE: "pull-request"
+        RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
         RAPIDS_REPOSITORY: ${{ github.repository }}
         RAPIDS_SHA: ${{ github.sha }}
         RAPIDS_REF_NAME: ${{ github.ref_name }}
@@ -82,7 +102,7 @@ jobs:
         RAPIDS_SHA: ${{ github.sha }}
         RAPIDS_REF_NAME: ${{ github.ref_name }}
         RAPIDS_CPYTHON_VERSION: "cp38"
-        RAPIDS_BUILD_TYPE: "pull-request"
+        RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.test-before }}
@@ -113,20 +133,16 @@ jobs:
       image: rapidsai/cibuildwheel_x86_64
       env:
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
-        RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE: ${{ inputs.python-package-versioneer-override }}
         RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.python-package-build-tag }}
         RAPIDS_REPOSITORY: ${{ github.repository }}
         RAPIDS_SHA: ${{ github.sha }}
         RAPIDS_REF_NAME: ${{ github.ref_name }}
-        RAPIDS_BUILD_TYPE: "pull-request"
+        RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-        TWINE_USERNAME: cibuildwheel
-        TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
-        TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
 
     steps:
     - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
       run: |
         RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
-        rapids-twine.py ./dist/
+        rapids-twine ./dist/
