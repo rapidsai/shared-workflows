@@ -193,6 +193,7 @@ jobs:
         # user inputs
         package-name: ${{ inputs.package-name }}
         package-dir: ${{ inputs.package-dir }}
+        python-package-versioneer-override: ${{ inputs.python-package-versioneer-override }}
         python-package-cuda-suffix: ${{ inputs.python-package-cuda-suffix }}
         cibw-environment: ${{ inputs.cibw-environment }}
         cibw-before-build: ${{ inputs.cibw-before-build }}
