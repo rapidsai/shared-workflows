@@ -8,6 +8,13 @@ on:
         type: string
       branch:
         type: string
+      date:
+        type: string
+      sha:
+        type: string
+      build-type:
+        required: true
+        type: string
 
       # general settings
       package-name:
@@ -20,10 +27,6 @@ on:
         required: false
         type: string
         default: '-cu11'
-      build-type:
-        required: false
-        type: string
-        default: 'nightly-wheel'
 
       # versioneer and twine settings
       python-package-versioneer-override:
@@ -161,9 +164,6 @@ jobs:
         RAPIDS_PY_WHEEL_CUDA_SUFFIX: ${{ inputs.python-package-cuda-suffix }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
         RAPIDS_PY_VERSION: ${{ matrix.python-version }}
-        RAPIDS_REPOSITORY: ${{ inputs.repo }}
-        RAPIDS_REF_NAME: ${{ inputs.branch }}
-        RAPIDS_WORKFLOW_RUN_ID: ${{ github.run_id }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
 
@@ -172,9 +172,16 @@ jobs:
       uses: actions/checkout@v3
       with:
         repository: ${{ inputs.repo }}
-        ref: ${{ inputs.branch }}
+        ref: ${{ inputs.sha }}
         fetch-depth: 0 # unshallow fetch for setuptools-scm
         persist-credentials: false
+
+    - name: Standardize repository information
+      run: |
+        echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
+        echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
 
     - name: Build wheels with cibuildwheel action
       uses: rapidsai/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions-3
@@ -208,7 +215,6 @@ jobs:
 
     - name: Upload wheels to downloads.rapids.ai
       run: |
-        set -x
         rapids-upload-wheels-to-s3 dist
 
   wheel-test:
@@ -240,9 +246,6 @@ jobs:
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
-        RAPIDS_REPOSITORY: ${{ inputs.repo }}
-        RAPIDS_REF_NAME: ${{ inputs.branch }}
-        RAPIDS_WORKFLOW_RUN_ID: ${{ github.run_id }}
         RAPIDS_CPYTHON_VERSION: ${{ matrix.cpython-version }}
         RAPIDS_PY_VERSION: ${{ matrix.python-version }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
@@ -264,9 +267,16 @@ jobs:
       if: ${{ inputs.test-checkout-src == 'true' }}
       with:
         repository: ${{ inputs.repo }}
-        ref: ${{ inputs.branch }}
+        ref: ${{ inputs.sha }}
         fetch-depth: 0 # unshallow fetch for setuptools-scm
         persist-credentials: false
+
+    - name: Standardize repository information
+      run: |
+        echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
+        echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
 
     - name: Run citestwheel
       run: /citestwheel.sh
@@ -279,15 +289,19 @@ jobs:
       image: rapidsai/cibuildwheel_x86_64
       env:
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
-        RAPIDS_REPOSITORY: ${{ inputs.repo }}
-        RAPIDS_REF_NAME: ${{ inputs.branch }}
-        RAPIDS_WORKFLOW_RUN_ID: ${{ github.run_id }}
         RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.python-package-build-tag }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
 
     steps:
+    - name: Standardize repository information
+      run: |
+        echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
+        echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
+
     - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
       run: |
         RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
