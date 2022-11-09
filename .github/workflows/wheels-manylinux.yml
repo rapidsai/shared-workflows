@@ -115,11 +115,6 @@ on:
         type: string
         default: 'true'
 
-env:
-  TWINE_USERNAME: cibuildwheel
-  TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
-  TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
-
 jobs:
   wheel-build:
     name: cibuildwheel ${{ matrix.linux-arch }} ${{ matrix.cpython-version }}
@@ -293,7 +288,9 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-
+        TWINE_USERNAME: cibuildwheel
+        TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
+        TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
     steps:
     - name: Standardize repository information
       run: |
