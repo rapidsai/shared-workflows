@@ -59,8 +59,22 @@ on:
         default: 'true'
 
 jobs:
+  wheel-epoch-timestamp:
+    name: wheel epoch timestamper
+    runs-on: ubuntu-latest
+    outputs:
+
+    outputs:
+      rapids_epoch_timestamp: ${{ steps.get_epoch_time.outputs.rapids_epoch_timestamp }}
+
+    steps:
+    - name: Get epoch timestamp to use as nightly version
+      id: get_epoch_time
+      run: echo "RAPIDS_EPOCH_TIMESTAMP=$(date +%s)" >> "${GITHUB_OUTPUT}"
+
   wheel-build:
     name: wheel build pure
+    needs: wheel-epoch-timestamp
     runs-on: [self-hosted, linux, amd64, cpu4]
     container:
       image: "rapidsai/cibuildwheel_x86_64"
@@ -95,7 +109,7 @@ jobs:
         versioneer_override="${{ inputs.python-package-versioneer-override }}"
 
         if [ "${versioneer_override}" == "" ]; then
-          versioneer_override="$(rapids-pip-wheel-version ${{ inputs.package-name }}${{ inputs.python-package-cuda-suffix }})"
+          versioneer_override="$(rapids-pip-wheel-version ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }})"
         fi
           
         export RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE="${versioneer_override}"

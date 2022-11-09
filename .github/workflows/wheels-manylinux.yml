@@ -116,8 +116,22 @@ on:
         default: 'true'
 
 jobs:
+  wheel-epoch-timestamp:
+    name: wheel epoch timestamper
+    runs-on: ubuntu-latest
+    outputs:
+
+    outputs:
+      rapids_epoch_timestamp: ${{ steps.get_epoch_time.outputs.rapids_epoch_timestamp }}
+
+    steps:
+    - name: Get epoch timestamp to use as nightly version
+      id: get_epoch_time
+      run: echo "RAPIDS_EPOCH_TIMESTAMP=$(date +%s)" >> "${GITHUB_OUTPUT}"
+
   wheel-build:
     name: cibuildwheel ${{ matrix.linux-arch }} ${{ matrix.cpython-version }}
+    needs: wheel-epoch-timestamp
     runs-on: ${{ matrix.labels }}
     strategy:
       matrix:
@@ -198,6 +212,9 @@ jobs:
         cibw-before-all: ${{ matrix.cibw-before-all }}
         auditwheel-repair-command: ${{ matrix.auditwheel-repair-command }}
         manylinux-container: ${{ matrix.manylinux-container }}
+
+        # pre-picked epoch timestamp to use for all wheels
+        python-package-epoch-timestamp: ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }}
 
         # user inputs
         package-name: ${{ inputs.package-name }}

@@ -24,6 +24,10 @@ inputs:
     description: 'Override package version'
     required: false
     default: ''
+  python-package-epoch-timestamp:
+    description: 'Epoch timestamp to use as nightly version'
+    required: false
+    default: ''
   auditwheel-repair-command:
     description: 'Auditwheel repair command'
     required: true
@@ -86,7 +90,7 @@ runs:
         # use gha-tools rapids-pip-wheel-version to generate next version if unset
         versioneer_override="${{ inputs.python-package-versioneer-override }}"
         if [ "${versioneer_override}" == "" ]; then
-          versioneer_override="$(rapids-pip-wheel-version ${{ inputs.package-name }}${{ inputs.python-package-cuda-suffix }})"
+          versioneer_override="$(rapids-pip-wheel-version ${{ inputs.python-package-epoch-timestamp }})"
         fi
 
         # assemble CIBW_ENVIRONMENT from skbuild configure and build options
