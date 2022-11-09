@@ -206,7 +206,9 @@ jobs:
         internal-pypi-pass: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
 
     - name: Upload wheels to downloads.rapids.ai
-      run: rapids-upload-wheels-to-s3 dist
+      run: |
+        set -x
+        rapids-upload-wheels-to-s3 dist
 
   wheel-test:
     name: wheel test ${{ matrix.cpu-arch }} ${{ matrix.python-version }}
