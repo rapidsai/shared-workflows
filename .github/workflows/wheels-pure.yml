@@ -77,11 +77,17 @@ jobs:
         persist-credentials: false
 
     - name: Standardize repository information
+      id: get_repo_info
       run: |
         echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
         echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
         echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
         echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
+
+        echo "::set-output name=rapids_repository::${RAPIDS_REPOSITORY}"
+        echo "::set-output name=rapids_sha::${RAPIDS_SHA}"
+        echo "::set-output name=rapids_ref_name::${RAPIDS_REF_NAME}"
+        echo "::set-output name=rapids_nightly_date::${RAPIDS_NIGHTLY_DATE}"
 
     - name: Build pure python wheel with pip wheel
       run: |
@@ -102,6 +108,12 @@ jobs:
         RAPIDS_PY_VERSION: "3.8"
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+
+    outputs:
+      rapids_repository: ${{ steps.get_repo_info.outputs.rapids_repository }}
+      rapids_sha: ${{ steps.get_repo_info.outputs.rapids_sha }}
+      rapids_ref_name: ${{ steps.get_repo_info.outputs.rapids_ref_name }}
+      rapids_nightly_date: ${{ steps.get_repo_info.outputs.rapids_nightly_date }}
 
   wheel-test:
     name: wheel test pure
@@ -135,19 +147,19 @@ jobs:
         fetch-depth: 0 # unshallow fetch for setuptools-scm
         persist-credentials: false
 
-    - name: Standardize repository information
+    - name: Get repository information from build step
       run: |
-        echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
-        echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
-        echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
-        echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_REPOSITORY=${{ needs.wheel-build.outputs.rapids_repository }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_SHA=${{ needs.wheel-build.outputs.rapids_sha }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_REF_NAME=${{ needs.wheel-build.outputs.rapids_ref_name }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_NIGHTLY_DATE=${{ needs.wheel-build.outputs.rapids_nightly_date }}" >> "${GITHUB_ENV}"
 
     - name: Run citestwheel
       run: /citestwheel.sh
 
   wheel-publish:
     name: wheel publish pure
-    needs: wheel-test
+    needs: [wheel-build, wheel-test]
     runs-on: [self-hosted, linux, amd64, cpu4]
     container:
       image: rapidsai/cibuildwheel_x86_64
@@ -161,12 +173,12 @@ jobs:
         TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
         TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
     steps:
-    - name: Standardize repository information
+    - name: Get repository information from build step
       run: |
-        echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
-        echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
-        echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
-        echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_REPOSITORY=${{ needs.wheel-build.outputs.rapids_repository }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_SHA=${{ needs.wheel-build.outputs.rapids_sha }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_REF_NAME=${{ needs.wheel-build.outputs.rapids_ref_name }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_NIGHTLY_DATE=${{ needs.wheel-build.outputs.rapids_nightly_date }}" >> "${GITHUB_ENV}"
 
     - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
       run: |
