@@ -3,6 +3,12 @@ name: Build RAPIDS manylinux wheels
 on:
   workflow_call:
     inputs:
+      # repo and branch
+      repo:
+        type: string
+      branch:
+        type: string
+
       # general settings
       package-name:
         required: true
@@ -155,9 +161,9 @@ jobs:
         RAPIDS_PY_WHEEL_CUDA_SUFFIX: ${{ inputs.python-package-cuda-suffix }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
         RAPIDS_PY_VERSION: ${{ matrix.python-version }}
-        RAPIDS_REPOSITORY: ${{ github.repository }}
-        RAPIDS_SHA: ${{ github.sha }}
-        RAPIDS_REF_NAME: ${{ github.ref_name }}
+        RAPIDS_REPOSITORY: ${{ inputs.repo }}
+        RAPIDS_REF_NAME: ${{ inputs.branch }}
+        RAPIDS_SHA: ${{ github.sha }} # keep the sha of the 'actions' repo? whatever...
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
 
@@ -165,6 +171,8 @@ jobs:
     - name: checkout code repo
       uses: actions/checkout@v3
       with:
+        repository: ${{ inputs.repo }}
+        branch: ${{ inputs.branch }}
         fetch-depth: 0 # unshallow fetch for setuptools-scm
         persist-credentials: false
 
@@ -229,9 +237,9 @@ jobs:
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
-        RAPIDS_REPOSITORY: ${{ github.repository }}
-        RAPIDS_SHA: ${{ github.sha }}
-        RAPIDS_REF_NAME: ${{ github.ref_name }}
+        RAPIDS_REPOSITORY: ${{ inputs.repo }}
+        RAPIDS_REF_NAME: ${{ inputs.branch }}
+        RAPIDS_SHA: ${{ github.sha }} # keep the sha of the 'actions' repo? whatever...
         RAPIDS_CPYTHON_VERSION: ${{ matrix.cpython-version }}
         RAPIDS_PY_VERSION: ${{ matrix.python-version }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
@@ -252,6 +260,8 @@ jobs:
       uses: actions/checkout@v3
       if: ${{ inputs.test-checkout-src == 'true' }}
       with:
+        repository: ${{ inputs.repo }}
+        branch: ${{ inputs.branch }}
         fetch-depth: 0 # unshallow fetch for setuptools-scm
         persist-credentials: false
 
@@ -266,10 +276,10 @@ jobs:
       image: rapidsai/cibuildwheel_x86_64
       env:
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
-        RAPIDS_REPOSITORY: ${{ github.repository }}
+        RAPIDS_REPOSITORY: ${{ inputs.repo }}
+        RAPIDS_REF_NAME: ${{ inputs.branch }}
+        RAPIDS_SHA: ${{ github.sha }} # keep the sha of the 'actions' repo? whatever...
         RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.python-package-build-tag }}
-        RAPIDS_SHA: ${{ github.sha }}
-        RAPIDS_REF_NAME: ${{ github.ref_name }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
