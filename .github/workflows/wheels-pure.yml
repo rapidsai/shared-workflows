@@ -67,6 +67,12 @@ jobs:
       env:
         RAPIDS_PY_WHEEL_CUDA_SUFFIX: ${{ inputs.python-package-cuda-suffix }}
 
+    outputs:
+      rapids_repository: ${{ steps.get_repo_info.outputs.rapids_repository }}
+      rapids_sha: ${{ steps.get_repo_info.outputs.rapids_sha }}
+      rapids_ref_name: ${{ steps.get_repo_info.outputs.rapids_ref_name }}
+      rapids_nightly_date: ${{ steps.get_repo_info.outputs.rapids_nightly_date }}
+
     steps:
     - name: checkout code repo
       uses: actions/checkout@v3
@@ -79,15 +85,10 @@ jobs:
     - name: Standardize repository information
       id: get_repo_info
       run: |
-        echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
-        echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
-        echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
-        echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
-
-        echo "rapids_repository=${RAPIDS_REPOSITORY}" >> "${GITHUB_OUTPUT}"
-        echo "rapids_sha=${RAPIDS_SHA}" >> "${GITHUB_OUTPUT}"
-        echo "rapids_ref_name=${RAPIDS_REF_NAME}" >> "${GITHUB_OUTPUT}"
-        echo "rapids_nightly_date=${RAPIDS_NIGHTLY_DATE}" >> "${GITHUB_OUTPUT}"
+        echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+        echo "RAPIDS_SHA=$(git rev-parse HEAD)" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+        echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+        echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
 
     - name: Build pure python wheel with pip wheel
       run: |
@@ -108,12 +109,6 @@ jobs:
         RAPIDS_PY_VERSION: "3.8"
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-
-    outputs:
-      rapids_repository: ${{ steps.get_repo_info.outputs.rapids_repository }}
-      rapids_sha: ${{ steps.get_repo_info.outputs.rapids_sha }}
-      rapids_ref_name: ${{ steps.get_repo_info.outputs.rapids_ref_name }}
-      rapids_nightly_date: ${{ steps.get_repo_info.outputs.rapids_nightly_date }}
 
   wheel-test:
     name: wheel test pure
