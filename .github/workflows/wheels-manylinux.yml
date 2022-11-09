@@ -120,8 +120,6 @@ jobs:
     name: wheel epoch timestamper
     runs-on: ubuntu-latest
     outputs:
-
-    outputs:
       rapids_epoch_timestamp: ${{ steps.get_epoch_time.outputs.rapids_epoch_timestamp }}
 
     steps:
