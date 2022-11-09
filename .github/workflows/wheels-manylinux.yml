@@ -1,0 +1,330 @@
+name: Build RAPIDS manylinux wheels
+
+on:
+  workflow_call:
+    inputs:
+      # repo and branch
+      repo:
+        type: string
+      branch:
+        type: string
+      date:
+        type: string
+      sha:
+        type: string
+      build-type:
+        required: true
+        type: string
+
+      # general settings
+      package-name:
+        required: true
+        type: string
+      package-dir:
+        required: true
+        type: string
+      python-package-cuda-suffix:
+        required: false
+        type: string
+        default: '-cu11'
+
+      # versioneer and twine settings
+      python-package-versioneer-override:
+        required: false
+        type: string
+        default: ''
+      python-package-build-tag:
+        required: false
+        type: string
+        default: ''
+
+      # cibuildwheel settings
+      manylinux-container-amd64:
+        required: false
+        type: string
+        default: "rapidsai/manylinux2014_x86_64"
+      manylinux-container-arm64:
+        required: false
+        type: string
+        default: "rapidsai/manylinux_2_31_aarch64"
+      auditwheel-repair-command-amd64: # hint: use 'cp {wheel} {dest_dir}' to skip repairing
+        required: false
+        type: string
+        default: "auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_17_x86_64 {wheel}"
+      auditwheel-repair-command-arm64:
+        required: false
+        type: string
+        default: "auditwheel --verbose repair -w {dest_dir} --plat manylinux_2_31_aarch64 {wheel}"
+      cibw-environment:
+        type: string
+        required: false
+        default: ''
+      cibw-before-all-amd64:
+        required: false
+        type: string
+        default: 'true'
+      cibw-before-all-arm64:
+        required: false
+        type: string
+        default: 'true'
+      cibw-before-build:
+        required: false
+        type: string
+        default: 'true'
+
+      skbuild-configure-options:
+        required: false
+        type: string
+        default: ''
+      skbuild-build-options:
+        required: false
+        type: string
+        default: ''
+
+      # test settings
+      test-container-amd64:
+        required: false
+        type: string
+        default: "rapidsai/citestwheel_x86_64"
+      test-container-arm64:
+        required: false
+        type: string
+        default: "rapidsai/citestwheel_aarch64"
+      test-docker-options:
+        required: false
+        type: string
+        default: '-e _NOOP'
+      test-checkout-src: # allow one to skip checking out source code to run packaged tests
+        required: false
+        type: string
+        default: 'true'
+      test-extras:
+        required: false
+        type: string
+        default: ''
+      test-unittest: # tests are allowed to be blank because the wheel is installed and pip checked
+        required: false
+        type: string
+        default: ''
+      test-before-amd64:
+        required: false
+        type: string
+        default: 'true'
+      test-before-arm64:
+        required: false
+        type: string
+        default: 'true'
+
+jobs:
+  wheel-epoch-timestamp:
+    name: wheel epoch timestamper
+    runs-on: ubuntu-latest
+    outputs:
+      rapids_epoch_timestamp: ${{ steps.get_epoch_time.outputs.rapids_epoch_timestamp }}
+
+    steps:
+    - name: Get epoch timestamp to use as nightly version
+      id: get_epoch_time
+      run: echo "RAPIDS_EPOCH_TIMESTAMP=$(date +%s)" >> "${GITHUB_OUTPUT}"
+
+  wheel-build:
+    name: cibuildwheel ${{ matrix.linux-arch }} ${{ matrix.cpython-version }}
+    needs: wheel-epoch-timestamp
+    runs-on: ${{ matrix.labels }}
+    strategy:
+      matrix:
+        include:
+          - labels: [self-hosted, linux, amd64, cpu16]
+            linux-arch: x86_64
+            cpython-version: cp38-*
+            python-version: 3.8
+            auditwheel-repair-command: ${{ inputs.auditwheel-repair-command-amd64 }}
+            manylinux-container: ${{ inputs.manylinux-container-amd64 }}
+            cibw-before-all: ${{ inputs.cibw-before-all-amd64 }}
+          - labels: [self-hosted, linux, arm64, cpu16]
+            linux-arch: aarch64
+            cpython-version: cp38-*
+            python-version: 3.8
+            auditwheel-repair-command: ${{ inputs.auditwheel-repair-command-arm64 }}
+            manylinux-container: ${{ inputs.manylinux-container-arm64 }}
+            cibw-before-all: ${{ inputs.cibw-before-all-arm64 }}
+          - labels: [self-hosted, linux, amd64, cpu16]
+            linux-arch: x86_64
+            cpython-version: cp39-*
+            python-version: 3.9
+            auditwheel-repair-command: ${{ inputs.auditwheel-repair-command-amd64 }}
+            manylinux-container: ${{ inputs.manylinux-container-amd64 }}
+            cibw-before-all: ${{ inputs.cibw-before-all-amd64 }}
+          - labels: [self-hosted, linux, arm64, cpu16]
+            linux-arch: aarch64
+            cpython-version: cp39-*
+            python-version: 3.9
+            auditwheel-repair-command: ${{ inputs.auditwheel-repair-command-arm64 }}
+            manylinux-container: ${{ inputs.manylinux-container-arm64 }}
+            cibw-before-all: ${{ inputs.cibw-before-all-arm64 }}
+    container:
+      image: "rapidsai/cibuildwheel_${{ matrix.linux-arch }}"
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+      env:
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        RAPIDS_PY_WHEEL_CUDA_SUFFIX: ${{ inputs.python-package-cuda-suffix }}
+        RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
+        RAPIDS_PY_VERSION: ${{ matrix.python-version }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+
+    outputs:
+      rapids_repository: ${{ steps.get_repo_info.outputs.rapids_repository }}
+      rapids_sha: ${{ steps.get_repo_info.outputs.rapids_sha }}
+      rapids_ref_name: ${{ steps.get_repo_info.outputs.rapids_ref_name }}
+      rapids_nightly_date: ${{ steps.get_repo_info.outputs.rapids_nightly_date }}
+
+    steps:
+    - name: checkout code repo
+      uses: actions/checkout@v3
+      with:
+        repository: ${{ inputs.repo }}
+        ref: ${{ inputs.sha }}
+        fetch-depth: 0 # unshallow fetch for setuptools-scm
+        persist-credentials: false
+
+    - name: Standardize repository information
+      id: get_repo_info
+      run: |
+        echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+        echo "RAPIDS_SHA=$(git rev-parse HEAD)" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+        echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+        echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+
+    - name: Build wheels with cibuildwheel action
+      uses: rapidsai/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions-3
+      with:
+        # hardcoded
+        output-dir: dist
+
+        # matrix settings
+        cpython-version: ${{ matrix.cpython-version }}
+        linux-arch: ${{ matrix.linux-arch }}
+        # matrix settings per-arch
+        cibw-before-all: ${{ matrix.cibw-before-all }}
+        auditwheel-repair-command: ${{ matrix.auditwheel-repair-command }}
+        manylinux-container: ${{ matrix.manylinux-container }}
+
+        # pre-picked epoch timestamp to use for all wheels
+        python-package-epoch-timestamp: ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }}
+
+        # user inputs
+        package-name: ${{ inputs.package-name }}
+        package-dir: ${{ inputs.package-dir }}
+        python-package-versioneer-override: ${{ inputs.python-package-versioneer-override }}
+        python-package-cuda-suffix: ${{ inputs.python-package-cuda-suffix }}
+        cibw-environment: ${{ inputs.cibw-environment }}
+        cibw-before-build: ${{ inputs.cibw-before-build }}
+        skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
+        skbuild-build-options: ${{ inputs.skbuild-build-options }}
+
+        # secrets
+        sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        sccache-aws-secret-access-key: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+        internal-pypi-user: cibuildwheel
+        internal-pypi-pass: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
+
+    - name: Upload wheels to downloads.rapids.ai
+      run: |
+        rapids-upload-wheels-to-s3 dist
+
+  wheel-test:
+    name: wheel test ${{ matrix.cpu-arch }} ${{ matrix.python-version }}
+    needs: wheel-build
+    runs-on: ${{ matrix.labels }}
+    strategy:
+      matrix:
+        include:
+          - labels: [self-hosted, linux, amd64, gpu-v100-495-1]
+            cpu-arch: x86_64
+            image: ${{ inputs.test-container-amd64 }}
+            python-version: "3.8"
+          - labels: [self-hosted, linux, arm64, gpu-a100-495-1]
+            cpu-arch: aarch64
+            image: ${{ inputs.test-container-arm64 }}
+            python-version: "3.8"
+          - labels: [self-hosted, linux, amd64, gpu-v100-495-1]
+            cpu-arch: x86_64
+            image: ${{ inputs.test-container-amd64 }}
+            python-version: "3.9"
+          - labels: [self-hosted, linux, arm64, gpu-a100-495-1]
+            cpu-arch: aarch64
+            image: ${{ inputs.test-container-arm64 }}
+            python-version: "3.9"
+    container:
+      image: ${{ matrix.image }}
+      options: ${{ inputs.test-docker-options }}
+      env:
+        NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        RAPIDS_CPYTHON_VERSION: ${{ matrix.cpython-version }}
+        RAPIDS_PY_VERSION: ${{ matrix.python-version }}
+        RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+        RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.test-before-amd64 }}
+        RAPIDS_BEFORE_TEST_COMMANDS_ARM64: ${{ inputs.test-before-arm64 }}
+        CIBW_TEST_EXTRAS: ${{ inputs.test-extras }}
+        CIBW_TEST_COMMAND: ${{ inputs.test-unittest }}
+    steps:
+    - name: Run nvidia-smi to make sure GPU is working
+      run: nvidia-smi
+
+    - name: Install private index credentials in cibuildwheel container
+      run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
+
+    - name: checkout code repo
+      uses: actions/checkout@v3
+      if: ${{ inputs.test-checkout-src == 'true' }}
+      with:
+        repository: ${{ inputs.repo }}
+        ref: ${{ inputs.sha }}
+        fetch-depth: 0 # unshallow fetch for setuptools-scm
+        persist-credentials: false
+
+    - name: Get repository information from build step
+      run: |
+        echo "RAPIDS_REPOSITORY=${{ needs.wheel-build.outputs.rapids_repository }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_SHA=${{ needs.wheel-build.outputs.rapids_sha }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_REF_NAME=${{ needs.wheel-build.outputs.rapids_ref_name }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_NIGHTLY_DATE=${{ needs.wheel-build.outputs.rapids_nightly_date }}" >> "${GITHUB_ENV}"
+
+    - name: Run citestwheel
+      run: /citestwheel.sh
+
+  wheel-publish:
+    name: wheels publish all wheels
+    needs: [wheel-build, wheel-test]
+    runs-on: [self-hosted, linux, amd64, cpu4]
+    container:
+      image: rapidsai/cibuildwheel_x86_64
+      env:
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.python-package-build-tag }}
+        RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+        TWINE_USERNAME: cibuildwheel
+        TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
+        TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
+    steps:
+    - name: Get repository information from build step
+      run: |
+        echo "RAPIDS_REPOSITORY=${{ needs.wheel-build.outputs.rapids_repository }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_SHA=${{ needs.wheel-build.outputs.rapids_sha }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_REF_NAME=${{ needs.wheel-build.outputs.rapids_ref_name }}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_NIGHTLY_DATE=${{ needs.wheel-build.outputs.rapids_nightly_date }}" >> "${GITHUB_ENV}"
+
+    - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
+      run: |
+        RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
+        RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.9" rapids-download-wheels-from-s3 ./dist
+        RAPIDS_ARCH="aarch64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
+        RAPIDS_ARCH="aarch64" RAPIDS_PY_VERSION="3.9" rapids-download-wheels-from-s3 ./dist
+        rapids-twine ./dist/

@@ -1,0 +1,116 @@
+name: cibuildwheel
+description: 'Runs cibuildwheel with some extra logic to assemble CIBW_ env vars'
+inputs:
+  package-name:
+    description: 'Name of python package'
+    required: true
+  package-dir:
+    description: 'Path to python package'
+    required: true
+  output-dir:
+    description: 'Path to output wheels'
+    required: true
+  cpython-version:
+    description: 'cpython version e.g. cp38'
+    required: true
+  linux-arch:
+    description: 'linux architecture name e.g. x86_64, aarch64'
+    required: true
+  python-package-cuda-suffix:
+    description: 'Add a -cu11-style suffix to wheel name'
+    required: false
+    default: ''
+  python-package-versioneer-override:
+    description: 'Override package version'
+    required: false
+    default: ''
+  python-package-epoch-timestamp:
+    description: 'Epoch timestamp to use as nightly version'
+    required: false
+    default: ''
+  auditwheel-repair-command:
+    description: 'Auditwheel repair command'
+    required: true
+  internal-pypi-user:
+    description: 'Username for pypi.k8s.rapids.ai'
+    required: true
+  internal-pypi-pass:
+    description: 'Password for pypi.k8s.rapids.ai'
+    required: true
+  manylinux-container:
+    description: 'Specify which manylinux container to use'
+    required: true
+  cibw-before-all:
+    description: 'Extra CIBW_BEFORE_ALL_LINUX commands'
+    required: false
+    default: ''
+  cibw-before-build:
+    description: 'Extra CIBW_BEFORE_BUILD_LINUX commands'
+    required: false
+    default: ''
+  cibw-environment:
+    description: 'CIBW_ENVIRONMENT'
+    required: false
+    default: ''
+  skbuild-configure-options:
+    description: 'SKBUILD_CONFIGURE_OPTIONS'
+    required: false
+    default: ''
+  skbuild-build-options:
+    description: 'SKBUILD_BUILD_OPTIONS'
+    required: false
+    default: ''
+  sccache-aws-access-key-id:
+    required: true
+    type: string
+  sccache-aws-secret-access-key:
+    required: true
+    type: string
+
+runs:
+  using: composite
+  steps:
+    - name: Create conditional env vars with bash
+      run: |
+        cibw_before_all="${{ inputs.cibw-before-all }}"
+
+        # set before-all-linux command to:
+        #   1. store internal pypi credentials in .netrc
+        #   2. append `&& cibw_before_all` if it's not empty
+        if [ "${cibw_before_all}" != "" ]; then
+          echo "CIBW_BEFORE_ALL_LINUX=printf 'machine pypi.k8s.rapids.ai\n\tlogin ${{ inputs.internal-pypi-user }}\n\tpassword ${{ inputs.internal-pypi-pass }}\n' > ~/.netrc && ${cibw_before_all}" >> "${GITHUB_ENV}"
+        else
+          echo "CIBW_BEFORE_ALL_LINUX=printf 'machine pypi.k8s.rapids.ai\n\tlogin ${{ inputs.internal-pypi-user }}\n\tpassword ${{ inputs.internal-pypi-pass }}\n' > ~/.netrc" >> "${GITHUB_ENV}"
+        fi
+
+        # enable sccache in skbuild config options
+        skbuild_config_opts="${{ inputs.skbuild-configure-options}}"
+        skbuild_config_opts="${skbuild_config_opts} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
+
+        # use gha-tools rapids-pip-wheel-version to generate next version if unset
+        versioneer_override="${{ inputs.python-package-versioneer-override }}"
+        if [ "${versioneer_override}" == "" ]; then
+          versioneer_override="$(rapids-pip-wheel-version ${{ inputs.python-package-epoch-timestamp }})"
+        fi
+
+        # assemble CIBW_ENVIRONMENT from skbuild configure and build options
+        echo "CIBW_ENVIRONMENT=SKBUILD_CONFIGURE_OPTIONS='${skbuild_config_opts}' SKBUILD_BUILD_OPTIONS='${{ inputs.skbuild-build-options }}' ${{ inputs.cibw-environment }} RAPIDS_PY_WHEEL_CUDA_SUFFIX='${{ inputs.python-package-cuda-suffix }}' PYTHON_PACKAGE_CUDA_SUFFIX='${{ inputs.python-package-cuda-suffix }}' RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE='${versioneer_override}' SCCACHE_S3_KEY_PREFIX=gha-cibw SCCACHE_REGION=us-west-2 SCCACHE_IDLE_TIMEOUT=32768 SCCACHE_BUCKET=rapids-sccache AWS_ACCESS_KEY_ID=${{ inputs.sccache-aws-access-key-id }} AWS_SECRET_ACCESS_KEY=${{ inputs.sccache-aws-secret-access-key }} PIP_INDEX_URL=https://pypi.k8s.rapids.ai/simple" >> "${GITHUB_ENV}"
+      shell: bash
+
+    - name: Invoke cibuildwheel
+      run: >
+        cibuildwheel
+        ${{ inputs.package-dir }}
+        --output-dir ${{ inputs.output-dir }}
+        2>&1
+      shell: bash
+      env:
+        CIBW_SKIP: "*musllinux*"
+        CIBW_MANYLINUX_AARCH64_IMAGE: ${{ inputs.manylinux-container }}
+        CIBW_MANYLINUX_X86_64_IMAGE: ${{ inputs.manylinux-container }}
+        CIBW_BUILD_FRONTEND: "pip"
+        CIBW_BEFORE_BUILD_LINUX: ${{ inputs.cibw-before-build }}
+        CIBW_BUILD_VERBOSITY_LINUX: 3
+        CIBW_ARCHS_LINUX: ${{ inputs.linux-arch }}
+        CIBW_REPAIR_WHEEL_COMMAND_LINUX: ${{ inputs.auditwheel-repair-command }}
+        CIBW_BUILD: ${{ inputs.cpython-version }}
