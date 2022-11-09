@@ -163,7 +163,7 @@ jobs:
         RAPIDS_PY_VERSION: ${{ matrix.python-version }}
         RAPIDS_REPOSITORY: ${{ inputs.repo }}
         RAPIDS_REF_NAME: ${{ inputs.branch }}
-        RAPIDS_WORKFLOW_RUN_ID: ${{ github.run-id }}
+        RAPIDS_WORKFLOW_RUN_ID: ${{ github.run_id }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
 
@@ -242,7 +242,7 @@ jobs:
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
         RAPIDS_REPOSITORY: ${{ inputs.repo }}
         RAPIDS_REF_NAME: ${{ inputs.branch }}
-        RAPIDS_WORKFLOW_RUN_ID: ${{ github.run-id }}
+        RAPIDS_WORKFLOW_RUN_ID: ${{ github.run_id }}
         RAPIDS_CPYTHON_VERSION: ${{ matrix.cpython-version }}
         RAPIDS_PY_VERSION: ${{ matrix.python-version }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
@@ -281,7 +281,7 @@ jobs:
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
         RAPIDS_REPOSITORY: ${{ inputs.repo }}
         RAPIDS_REF_NAME: ${{ inputs.branch }}
-        RAPIDS_WORKFLOW_RUN_ID: ${{ github.run-id }}
+        RAPIDS_WORKFLOW_RUN_ID: ${{ github.run_id }}
         RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.python-package-build-tag }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
