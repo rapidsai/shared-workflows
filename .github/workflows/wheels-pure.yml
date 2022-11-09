@@ -84,10 +84,10 @@ jobs:
         echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
         echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
 
-        echo "::set-output name=rapids_repository::${RAPIDS_REPOSITORY}"
-        echo "::set-output name=rapids_sha::${RAPIDS_SHA}"
-        echo "::set-output name=rapids_ref_name::${RAPIDS_REF_NAME}"
-        echo "::set-output name=rapids_nightly_date::${RAPIDS_NIGHTLY_DATE}"
+        echo "rapids_repository=${RAPIDS_REPOSITORY}" >> "${GITHUB_OUTPUT}"
+        echo "rapids_sha=${RAPIDS_SHA}" >> "${GITHUB_OUTPUT}"
+        echo "rapids_ref_name=${RAPIDS_REF_NAME}" >> "${GITHUB_OUTPUT}"
+        echo "rapids_nightly_date=${RAPIDS_NIGHTLY_DATE}" >> "${GITHUB_OUTPUT}"
 
     - name: Build pure python wheel with pip wheel
       run: |
