@@ -26,10 +26,6 @@ on:
         required: false
         type: string
         default: ''
-      build-type:
-        required: false
-        type: string
-        default: 'nightly-wheel'
 
       # versioneer and twine settings
       python-package-versioneer-override:
