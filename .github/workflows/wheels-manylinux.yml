@@ -198,7 +198,7 @@ jobs:
         echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
 
     - name: Build wheels with cibuildwheel action
-      uses: rapidsai/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions-3
+      uses: rapidsai/shared-action-workflows/cibuildwheel@main
       with:
         # hardcoded
         output-dir: dist
