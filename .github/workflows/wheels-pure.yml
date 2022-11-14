@@ -108,6 +108,7 @@ jobs:
           
         export RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE="${versioneer_override}"
         python -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps
+      shell: bash
 
     - name: Upload wheels to downloads.rapids.ai
       run: rapids-upload-wheels-to-s3 dist
