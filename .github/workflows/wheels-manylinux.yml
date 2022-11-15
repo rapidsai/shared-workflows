@@ -272,6 +272,7 @@ jobs:
         RAPIDS_BEFORE_TEST_COMMANDS_ARM64: ${{ inputs.test-before-arm64 }}
         CIBW_TEST_EXTRAS: ${{ inputs.test-extras }}
         CIBW_TEST_COMMAND: ${{ inputs.test-unittest }}
+        PIP_EXTRA_INDEX_URL: "https://pypi.k8s.rapids.ai/simple"
     steps:
     - name: Run nvidia-smi to make sure GPU is working
       run: nvidia-smi
@@ -297,8 +298,6 @@ jobs:
 
     - name: Run citestwheel
       run: /citestwheel.sh
-      env:
-        PIP_EXTRA_INDEX_URL: "https://pypi.k8s.rapids.ai/simple"
 
   wheel-publish:
     name: wheels publish all wheels
