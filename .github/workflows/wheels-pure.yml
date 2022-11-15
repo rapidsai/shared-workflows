@@ -25,7 +25,7 @@ on:
       python-package-cuda-suffix:
         required: false
         type: string
-        default: ''
+        default: '-cu11'
 
       # versioneer and twine settings
       python-package-versioneer-override:
@@ -160,7 +160,7 @@ jobs:
         echo "RAPIDS_NIGHTLY_DATE=${{ needs.wheel-build.outputs.rapids_nightly_date }}" >> "${GITHUB_ENV}"
 
     - name: Run citestwheel
-      run: /citestwheel.sh
+      run: PIP_EXTRA_INDEX_URL="https://pypi.k8s.rapids.ai/simple" /citestwheel.sh
 
   wheel-publish:
     name: wheel publish pure
