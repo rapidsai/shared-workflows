@@ -296,7 +296,9 @@ jobs:
         echo "RAPIDS_NIGHTLY_DATE=${{ needs.wheel-build.outputs.rapids_nightly_date }}" >> "${GITHUB_ENV}"
 
     - name: Run citestwheel
-      run: PIP_EXTRA_INDEX_URL="https://pypi.k8s.rapids.ai/simple" /citestwheel.sh
+      run: /citestwheel.sh
+      env:
+        PIP_EXTRA_INDEX_URL: "https://pypi.k8s.rapids.ai/simple"
 
   wheel-publish:
     name: wheels publish all wheels
