@@ -18,6 +18,9 @@ on:
       tests_result_dir:
         type: string
         default: "test-results"
+      test_script:
+        type: string
+        default: "ci/test_cpp.sh"
 
 jobs:
   compute-matrix:
@@ -101,7 +104,7 @@ jobs:
           echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
       - name: C++ tests
-        run: ci/test_cpp.sh
+        run: ${{ inputs.test_script }}
       - name: Generate test report
         uses: test-summary/action@v2
         with:
