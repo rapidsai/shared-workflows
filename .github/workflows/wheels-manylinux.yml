@@ -302,7 +302,7 @@ jobs:
   wheel-publish:
     name: wheels publish all wheels
     needs: [wheel-build, wheel-test]
-    runs-on: [self-hosted, linux, amd64, cpu4]
+    runs-on: ubuntu-latest
     container:
       image: rapidsai/cibuildwheel_x86_64
       env:
