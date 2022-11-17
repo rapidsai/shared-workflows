@@ -198,7 +198,7 @@ jobs:
         echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
 
     - name: Build wheels with cibuildwheel action
-      uses: rapidsai/shared-action-workflows/cibuildwheel@feat/wheel-ci-actions-3
+      uses: rapidsai/shared-action-workflows/cibuildwheel@main
       with:
         # hardcoded
         output-dir: dist
@@ -263,7 +263,6 @@ jobs:
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
-        RAPIDS_CPYTHON_VERSION: ${{ matrix.cpython-version }}
         RAPIDS_PY_VERSION: ${{ matrix.python-version }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
@@ -272,6 +271,7 @@ jobs:
         RAPIDS_BEFORE_TEST_COMMANDS_ARM64: ${{ inputs.test-before-arm64 }}
         CIBW_TEST_EXTRAS: ${{ inputs.test-extras }}
         CIBW_TEST_COMMAND: ${{ inputs.test-unittest }}
+        PIP_EXTRA_INDEX_URL: "https://pypi.k8s.rapids.ai/simple"
     steps:
     - name: Run nvidia-smi to make sure GPU is working
       run: nvidia-smi
@@ -301,7 +301,7 @@ jobs:
   wheel-publish:
     name: wheels publish all wheels
     needs: [wheel-build, wheel-test]
-    runs-on: [self-hosted, linux, amd64, cpu4]
+    runs-on: ubuntu-latest
     container:
       image: rapidsai/cibuildwheel_x86_64
       env:
