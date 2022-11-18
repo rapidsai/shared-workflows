@@ -21,12 +21,16 @@ on:
       test_script:
         type: string
         default: "ci/test_python.sh"
+      run_codecov:
+        type: boolean
+        default: true
 
 jobs:
   compute-matrix:
     runs-on: ubuntu-latest
     env:
       BUILD_TYPE: ${{ inputs.build_type }}
+      RAPIDS_COVERAGE_DIR: ${{ github.workspace }}/coverage-results
     outputs:
       MATRIX: ${{ steps.compute-matrix.outputs.MATRIX }}
     steps:
@@ -110,3 +114,9 @@ jobs:
         with:
           paths: "${{ inputs.tests_result_dir }}/*.xml"
         if: always()
+      - uses: codecov/codecov-action@v3
+        if: inputs.run_codecov && inputs.build_type == 'pull-request'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ${{ env.RAPIDS_COVERAGE_DIR }}
+          verbose: true
