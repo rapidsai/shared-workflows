@@ -8,16 +8,16 @@ on:
         type: string
       date:
         type: string
-      repo:
-        type: string
       sha:
         type: string
-      node_type:
+      repo:
         type: string
-        default: "cpu8"
       arch:
         type: string
         default: "amd64"
+      node_type:
+        type: string
+        default: "cpu8"
       container_image:
         type: string
         default: "rapidsai/ci:latest"
@@ -32,8 +32,8 @@ jobs:
     runs-on:
       - self-hosted
       - linux
-      - ${{ inputs.node_type }}
       - ${{ inputs.arch }}
+      - ${{ inputs.node_type }}
     container:
       image: ${{ inputs.container_image }}
       env:
@@ -41,6 +41,7 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}
+        NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
       - uses: actions/checkout@v3
         with:
