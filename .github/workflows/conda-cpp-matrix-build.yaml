@@ -8,9 +8,9 @@ on:
         type: string
       date:
         type: string
-      repo:
-        type: string
       sha:
+        type: string
+      repo:
         type: string
       node_type:
         type: string
