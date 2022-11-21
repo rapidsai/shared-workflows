@@ -205,7 +205,6 @@ jobs:
         echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
 
-	# TODO: Remove this once the container is updated to include ssh.
     - name: install ssh
       run: apt install -y ssh
 
