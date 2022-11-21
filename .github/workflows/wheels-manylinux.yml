@@ -218,6 +218,7 @@ jobs:
       id: preprocess_extras
       run: |
         EXTRA_REPO_PATH=$(echo ${{ inputs.extra-repo }} | cut -d "/"  -f 2)
+        echo "{EXTRA_REPO_PATH}=${{ EXTRA_REPO_PATH }}" >> $GITHUB_OUTPUT
 
     - name: Build wheels with cibuildwheel action
       uses: rapidsai/shared-action-workflows/cibuildwheel@main
