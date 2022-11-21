@@ -207,7 +207,7 @@ jobs:
 
     - name: install ssh
       id: installssh
-      run: apt install ssh
+      run: apt install -y ssh
 
     - name: checkout code repo
       uses: actions/checkout@v3
