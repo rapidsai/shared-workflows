@@ -205,6 +205,10 @@ jobs:
         echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
 
+	# TODO: Remove this once the container is updated to include ssh.
+    - name: install ssh
+      run: apt install -y ssh
+
     - name: checkout code repo
       uses: actions/checkout@v3
       with:
@@ -213,10 +217,6 @@ jobs:
         path: 'cumlprims_mg'
         ssh-key: ${{ secrets.CUMLPRIMS_SSH_PRIVATE_DEPLOY_KEY }}
         persist-credentials: false
-
-    - name: stop here
-      id: ignore
-      run: exit 1
 
     - name: Build wheels with cibuildwheel action
       uses: rapidsai/shared-action-workflows/cibuildwheel@main
