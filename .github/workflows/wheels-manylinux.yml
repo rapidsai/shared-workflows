@@ -209,13 +209,13 @@ jobs:
       id: installssh
       run: apt install -y ssh
 
-   - name: Set up ssh-agent
-     uses: webfactory/ssh-agent@v0.5.4
-     with:
-       ssh-auth-sock: ${{ env.HOME }}/ssh-agent
-       ssh-private-key: |
-         ${{ secrets.CUMLPRIMS_SSH_PRIVATE_DEPLOY_KEY }}
-         ${{ secrets.CUGRAPH_OPS_SSH_PRIVATE_DEPLOY_KEY }}
+    - name: Set up ssh-agent
+      uses: webfactory/ssh-agent@v0.5.4
+      with:
+        ssh-auth-sock: ${{ env.HOME }}/ssh-agent
+        ssh-private-key: |
+          ${{ secrets.CUMLPRIMS_SSH_PRIVATE_DEPLOY_KEY }}
+          ${{ secrets.CUGRAPH_OPS_SSH_PRIVATE_DEPLOY_KEY }}
 
     - name: checkout code repo
       uses: actions/checkout@v3
