@@ -37,6 +37,10 @@ on:
         required: false
         type: string
         default: ''
+      extra-repo-deploy-key:
+        required: false
+        type: string
+        default: ''
 
       # versioneer and twine settings
       python-package-versioneer-override:
@@ -124,10 +128,6 @@ on:
         required: false
         type: string
         default: 'true'
-
-    secrets:
-      extra-repo-deploy-key:
-        required: false
 
 jobs:
   wheel-epoch-timestamp:
