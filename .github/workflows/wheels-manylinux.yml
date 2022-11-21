@@ -211,7 +211,7 @@ jobs:
         repository: ${{ inputs.extra-repo }}
         ref: ${{ inputs.extra-repo-sha }}
         path: 'cumlprims_mg'
-        token: ${{ secrets.CUMLPRIMS_SSH_PRIVATE_DEPLOY_KEY }}
+        ssh-key: ${{ secrets.CUMLPRIMS_SSH_PRIVATE_DEPLOY_KEY }}
         persist-credentials: false
 
     - name: stop here
