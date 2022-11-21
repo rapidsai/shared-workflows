@@ -218,8 +218,8 @@ jobs:
       id: preprocess-extras
       if: ${{ inputs.test-checkout-src == 'true' }}
       run: |
-        EXTRA_REPO_PATH=$(echo ${{ inputs.extra-repo }} | cut -d "/"  -f 2)
-        echo "{EXTRA_REPO_PATH}=${{ EXTRA_REPO_PATH }}" >> $GITHUB_OUTPUT
+        export EXTRA_REPO_PATH=$(echo ${{ inputs.extra-repo }} | cut -d "/"  -f 2)
+        echo "{EXTRA_REPO_PATH}=${{ env.EXTRA_REPO_PATH }}" >> $GITHUB_OUTPUT
 
     - name: checkout extra repos
       uses: actions/checkout@v3
@@ -228,7 +228,7 @@ jobs:
         repository: ${{ inputs.extra-repo }}
         ref: ${{ inputs.extra-repo-sha }}
         path: ${{ steps.preprocess-extras.outputs.EXTRA_REPO_PATH }}
-        ssh-key: ${{ secrets.[inputs.extra-repo-deploy-key] }}
+        ssh-key: ${{ inputs.extra-repo-sha }}
         persist-credentials: false
 
     - name: Build wheels with cibuildwheel action
