@@ -228,7 +228,7 @@ jobs:
         repository: ${{ inputs.extra-repo }}
         ref: ${{ inputs.extra-repo-sha }}
         path: ${{ steps.preprocess-extras.outputs.EXTRA_REPO_PATH }}
-        ssh-key: ${{ secrets[inputs.extra-repo-deploy-key] }} }}
+        ssh-key: ${{ secrets[inputs.extra-repo-deploy-key] }}
         persist-credentials: false
 
     - name: Build wheels with cibuildwheel action
