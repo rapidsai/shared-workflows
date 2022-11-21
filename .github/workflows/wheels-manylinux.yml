@@ -37,7 +37,8 @@ on:
         required: false
         type: string
         default: ''
-      extra-repo-deploy-key:
+      # Note that this is the _name_ of a secret containing the key, not the key itself.
+      extra-repo-deploy-key: 
         required: false
         type: string
         default: ''
