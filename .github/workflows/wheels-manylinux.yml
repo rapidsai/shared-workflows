@@ -30,7 +30,7 @@ on:
       extra-repo:
         required: false
         type: string
-        default: 'git@github.com:rapidsai/cumlprims_mg.git'
+        default: 'rapidsai/cumlprims_mg'
       extra-repo-sha:
         required: false
         type: string
