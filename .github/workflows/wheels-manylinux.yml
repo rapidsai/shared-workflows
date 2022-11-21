@@ -205,18 +205,6 @@ jobs:
         echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
 
-    - name: install ssh
-      id: installssh
-      run: apt install -y ssh
-
-    #- name: Set up ssh-agent
-    #  uses: webfactory/ssh-agent@v0.5.4
-    #  with:
-    #    ssh-auth-sock: ${{ env.HOME }}/ssh-agent
-    #    ssh-private-key: |
-    #      ${{ secrets.CUMLPRIMS_SSH_PRIVATE_DEPLOY_KEY }}
-    #      ${{ secrets.CUGRAPH_OPS_SSH_PRIVATE_DEPLOY_KEY }}
-
     - name: checkout code repo
       uses: actions/checkout@v3
       with:
