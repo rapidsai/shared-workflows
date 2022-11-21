@@ -27,6 +27,14 @@ on:
         required: false
         type: string
         default: '-cu11'
+      extra-repo:
+        required: false
+        type: string
+        default: 'git@github.com:rapidsai/cumlprims_mg.git'
+      extra-repo-sha:
+        required: false
+        type: string
+        default: 'branch-22.12'
 
       # versioneer and twine settings
       python-package-versioneer-override:
@@ -196,6 +204,19 @@ jobs:
         echo "RAPIDS_SHA=$(git rev-parse HEAD)" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+
+    - name: checkout code repo
+      uses: actions/checkout@v3
+      with:
+        repository: ${{ inputs.extra-repo }}
+        ref: ${{ inputs.extra-repo-sha }}
+        path: 'cumlprims_mg'
+        ssh-key: ${{ inputs.cumlprims_mg-private-deploy-key }}
+        persist-credentials: false
+
+    - name: stop here
+      id: ignore
+      run: exit 1
 
     - name: Build wheels with cibuildwheel action
       uses: rapidsai/shared-action-workflows/cibuildwheel@main
