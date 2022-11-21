@@ -215,7 +215,7 @@ jobs:
       run: apt install -y ssh
 
     - name: Preprocess extra repos
-      id: preprocess-extras
+      id: preprocess_extras
 	  if: ${{ inputs.extra-repo != '' }}
       run: |
         EXTRA_REPO_PATH=$(echo ${{ inputs.extra-repo }} | cut -d "/"  -f 2)
@@ -227,7 +227,7 @@ jobs:
       with:
         repository: ${{ inputs.extra-repo }}
         ref: ${{ inputs.extra-repo-sha }}
-        path: ${{ steps.preprocess-extras.outputs.EXTRA_REPO_PATH }}
+        path: ${{ steps.preprocess_extras.outputs.EXTRA_REPO_PATH }}
         ssh-key: ${{ secrets.[inputs.extra-repo-deploy-key] }}
         persist-credentials: false
 
