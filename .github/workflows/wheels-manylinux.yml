@@ -216,14 +216,14 @@ jobs:
 
     - name: Preprocess extra repos
       id: preprocess-extras
-      if: ${{ inputs.extra-repo == '' }}
+      if: ${{ inputs.extra-repo != '' }}
       run: |
         export EXTRA_REPO_PATH=$(echo ${{ inputs.extra-repo }} | cut -d "/"  -f 2)
         echo "{EXTRA_REPO_PATH}=${{ env.EXTRA_REPO_PATH }}" >> $GITHUB_OUTPUT
 
     - name: checkout extra repos
       uses: actions/checkout@v3
-      if: ${{ inputs.extra-repo == '' }}
+      if: ${{ inputs.extra-repo != '' }}
       with:
         repository: ${{ inputs.extra-repo }}
         ref: ${{ inputs.extra-repo-sha }}
