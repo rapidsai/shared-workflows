@@ -212,9 +212,6 @@ jobs:
         echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
 
-    - name: install ssh
-      run: apt install -y ssh
-
     - name: Preprocess extra repos
       id: preprocess-extras
       if: ${{ inputs.extra-repo != '' }}
