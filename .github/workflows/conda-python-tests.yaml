@@ -24,6 +24,9 @@ on:
       run_codecov:
         type: boolean
         default: true
+      codecov_use_token:
+        type: boolean
+        default: false
 
 jobs:
   compute-matrix:
@@ -115,8 +118,13 @@ jobs:
           paths: "${{ inputs.tests_result_dir }}/*.xml"
         if: always()
       - uses: codecov/codecov-action@v3
-        if: inputs.run_codecov && inputs.build_type == 'pull-request'
+        if: inputs.run_codecov && inputs.build_type == 'pull-request' && inputs.codecov_use_token
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ${{ env.RAPIDS_COVERAGE_DIR }}
+          verbose: true
+      - uses: codecov/codecov-action@v3
+        if: inputs.run_codecov && inputs.build_type == 'pull-request' && !inputs.codecov_use_token
+        with:
           directory: ${{ env.RAPIDS_COVERAGE_DIR }}
           verbose: true
