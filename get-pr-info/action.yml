@@ -9,7 +9,6 @@ runs:
     - uses: actions/github-script@v6
       id: get-pull-request
       with:
-        result-encoding: string
         retries: 3
         script: |
           const branch = process.env.GITHUB_REF_NAME;
@@ -24,4 +23,4 @@ runs:
             owner: context.repo.owner,
             repo: context.repo.repo,
           });
-          return JSON.stringify(pullRequest);
+          return pullRequest;
