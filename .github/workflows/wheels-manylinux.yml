@@ -28,6 +28,21 @@ on:
         type: string
         default: '-cu11'
 
+      # Extra repository that will be cloned into the project directory.
+      extra-repo:
+        required: false
+        type: string
+        default: ''
+      extra-repo-sha:
+        required: false
+        type: string
+        default: ''
+      # Note that this is the _name_ of a secret containing the key, not the key itself.
+      extra-repo-deploy-key: 
+        required: false
+        type: string
+        default: ''
+
       # versioneer and twine settings
       python-package-versioneer-override:
         required: false
@@ -196,6 +211,23 @@ jobs:
         echo "RAPIDS_SHA=$(git rev-parse HEAD)" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+
+    - name: Preprocess extra repos
+      id: preprocess-extras
+      if: ${{ inputs.extra-repo != '' }}
+      run: |
+        EXTRA_REPO_PATH=$(echo ${{ inputs.extra-repo }} | cut -d "/"  -f 2)
+        echo "EXTRA_REPO_PATH=${EXTRA_REPO_PATH}" >> $GITHUB_OUTPUT
+
+    - name: checkout extra repos
+      uses: actions/checkout@v3
+      if: ${{ inputs.extra-repo != '' }}
+      with:
+        repository: ${{ inputs.extra-repo }}
+        ref: ${{ inputs.extra-repo-sha }}
+        path: ${{ steps.preprocess-extras.outputs.EXTRA_REPO_PATH }}
+        ssh-key: ${{ secrets[inputs.extra-repo-deploy-key] }}
+        persist-credentials: false
 
     - name: Build wheels with cibuildwheel action
       uses: rapidsai/shared-action-workflows/cibuildwheel@main
