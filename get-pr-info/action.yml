@@ -25,7 +25,3 @@ runs:
             repo: context.repo.repo,
           });
           return JSON.stringify(pullRequest);
-    - name: Save PR Info to Environment Variable
-      shell: bash
-      run: |
-        echo "RAPIDS_PR_INFO=${{steps.get-pull-request.outputs.result}}" | tee --append "$GITHUB_ENV"
