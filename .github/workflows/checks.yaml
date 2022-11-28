@@ -30,8 +30,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      - name: Get PR Info
+        id: get-pr-info
+        uses: rapidsai/shared-action-workflows/get-pr-info@main
       - name: Run rapids-size-checker
         run: rapids-size-checker
+        env:
+          RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
   check-style:
     if: ${{ inputs.enable_check_style }}
     runs-on: ubuntu-latest
@@ -42,12 +47,17 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - name: Get PR Info
+        id: get-pr-info
+        uses: rapidsai/shared-action-workflows/get-pr-info@main
       - uses: actions/cache@v3
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-0|${{ hashFiles('.pre-commit-config.yaml') }}
       - name: Run ci/check_style.sh
         run: ci/check_style.sh
+        env:
+          RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
   check-generated-files:
     if: ${{ inputs.enable_check_generated_files }}
     runs-on: ubuntu-latest
