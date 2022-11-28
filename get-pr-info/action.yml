@@ -14,7 +14,9 @@ runs:
         script: |
           const branch = process.env.GITHUB_REF_NAME;
           const prBranchPattern = new RegExp("^pull-request/[0-9]+$");
-          assert(branch.match(prBranchPattern), `${branch} does not match PR branch pattern.`);
+          if (!branch.match(prBranchPattern)) {
+            throw new Error `${branch} does not match PR branch pattern.`;
+          }
           const prNumber = branch.split("/")[1];
 
           const {data: pullRequest} = await github.rest.pulls.get({
