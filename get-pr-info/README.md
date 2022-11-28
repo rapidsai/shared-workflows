@@ -23,7 +23,6 @@ jobs:
       - id: get-pr-info
         uses: rapidsai/shared-action-workflows/get-pr-info@main
       - run: echo "${RAPIDS_BASE_BRANCH}"
-        shell: bash
         env:
           RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
 ```
