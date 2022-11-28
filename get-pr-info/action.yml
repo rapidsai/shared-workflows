@@ -1,7 +1,7 @@
 name: "Get PR Info"
 outputs:
   pr-info:
-    description: "String encoded JSON object representing pull-request information"
+    description: "String encoded JSON object containing pull-request information"
     value: ${{ steps.get-pull-request.outputs.result }}
 runs:
   using: "composite"
