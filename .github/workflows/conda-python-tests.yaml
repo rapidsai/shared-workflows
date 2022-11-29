@@ -119,7 +119,8 @@ jobs:
         if: inputs.run_codecov && inputs.build_type == 'pull-request'
         run: |
           #!/bin/bash
-          set -euox pipefail
+          set -ex
+          env | sort
           curl https://uploader.codecov.io/verification.gpg --max-time 10 --retry 5 | gpg --no-default-keyring --keyring trustedkeys.gpg --import
           curl -Os --max-time 10 --retry 5 https://uploader.codecov.io/latest/linux/codecov
           curl -Os --max-time 10 --retry 5 https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
@@ -130,5 +131,5 @@ jobs:
 
           ./codecov \
             -s \
-            ${{ env.RAPIDS_COVERAGE_DIR }} \
+            "${RAPIDS_COVERAGE_DIR}" \
             -v
