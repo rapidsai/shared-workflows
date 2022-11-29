@@ -115,8 +115,20 @@ jobs:
         with:
           paths: "${{ inputs.tests_result_dir }}/*.xml"
         if: always()
-      - uses: codecov/codecov-action@v3
+      - name: Run codecov
         if: inputs.run_codecov && inputs.build_type == 'pull-request'
-        with:
-          directory: ${{ env.RAPIDS_COVERAGE_DIR }}
-          verbose: true
+        run: |
+          #!/bin/bash
+          set -euox pipefail
+          curl https://uploader.codecov.io/verification.gpg --max-time 10 --retry 5 | gpg --no-default-keyring --keyring trustedkeys.gpg --import
+          curl -Os --max-time 10 --retry 5 https://uploader.codecov.io/latest/linux/codecov
+          curl -Os --max-time 10 --retry 5 https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          curl -Os --max-time 10 --retry 5 https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          gpgv codecov.SHA256SUM.sig codecov.SHA256SUM
+          shasum -a 256 -c codecov.SHA256SUM
+          chmod +x codecov
+
+          ./codecov \
+            -s \
+            ${{ env.RAPIDS_COVERAGE_DIR }} \
+            -v
