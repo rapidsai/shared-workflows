@@ -30,7 +30,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BUILD_TYPE: ${{ inputs.build_type }}
-      RAPIDS_COVERAGE_DIR: ${{ github.workspace }}/coverage-results
     outputs:
       MATRIX: ${{ steps.compute-matrix.outputs.MATRIX }}
     steps:
@@ -87,6 +86,8 @@ jobs:
       - linux
       - gpu-${{ matrix.includes.GPU }}-${{ matrix.includes.DRIVER }}-1
       - ${{ matrix.includes.ARCH }}
+    env:
+      RAPIDS_COVERAGE_DIR: ${{ github.workspace }}/coverage-results
     container:
       image: rapidsai/ci:cuda${{ matrix.includes.CUDA_VER }}-${{ matrix.includes.LINUX_VER }}-py${{ matrix.includes.PY_VER }}
       env:
