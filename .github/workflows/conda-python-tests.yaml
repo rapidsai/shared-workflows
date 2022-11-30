@@ -116,7 +116,10 @@ jobs:
           paths: "${{ inputs.tests_result_dir }}/*.xml"
         if: always()
       - name: Run codecov
-        if: inputs.run_codecov && inputs.build_type == 'pull-request'
+        if: |
+          inputs.run_codecov &&
+          inputs.build_type == 'pull-request' &&
+          contains(fromJson('["X64", "X86"]'), runner.arch)
         run: |
           codecov \
             -s \
