@@ -15,9 +15,6 @@ on:
       extended_nightly_tests:
         type: boolean
         default: false
-      tests_result_dir:
-        type: string
-        default: "test-results"
       test_script:
         type: string
         default: "ci/test_cpp.sh"
@@ -83,6 +80,8 @@ jobs:
       - linux
       - gpu-${{ matrix.includes.GPU }}-${{ matrix.includes.DRIVER }}-1
       - ${{ matrix.includes.ARCH }}
+    env:
+      RAPIDS_TESTS_DIR: ${{ github.workspace }}/test-results
     container:
       image: rapidsai/ci:cuda${{ matrix.includes.CUDA_VER }}-${{ matrix.includes.LINUX_VER }}-py${{ matrix.includes.PY_VER }}
       env:
@@ -108,5 +107,5 @@ jobs:
       - name: Generate test report
         uses: test-summary/action@v2
         with:
-          paths: "${{ inputs.tests_result_dir }}/*.xml"
+          paths: "${{ env.RAPIDS_TESTS_DIR }}/*.xml"
         if: always()
