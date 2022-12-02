@@ -5,4 +5,5 @@ jobs:
   run:
     runs-on: ubuntu-latest
     steps:
+      # This reusable workflow should depend on all other jobs in the calling workflow.
       - run: exit 0
