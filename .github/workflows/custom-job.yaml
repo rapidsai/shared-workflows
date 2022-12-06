@@ -17,7 +17,7 @@ on:
         default: "amd64"
       node_type:
         type: string
-        default: "cpu8"
+        default: "gpu-v100-495-1"
       container_image:
         type: string
         default: "rapidsai/ci:latest"
