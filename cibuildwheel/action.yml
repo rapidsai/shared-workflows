@@ -31,8 +31,8 @@ inputs:
   internal-pypi-pass:
     description: 'Password for pypi.k8s.rapids.ai'
     required: true
-  manylinux-container:
-    description: 'Specify which manylinux container to use'
+  manylinux-ctk:
+    description: 'Specify which manylinux container ctk tag to use'
     required: true
   cibw-before-all:
     description: 'Extra CIBW_BEFORE_ALL_LINUX commands'
@@ -64,13 +64,16 @@ runs:
   steps:
     - name: Create conditional env vars with bash
       run: |
-        echo "CIBW_ARCHS_LINUX=$(uname -m)" >>  "${GITHUB_ENV}"
+        runner_arch=$(uname -m)
+
+        # set arch based on runner
+        echo "CIBW_ARCHS_LINUX=$runner_arch" >>  "${GITHUB_ENV}"
+
+        # set repair command to append post-repair command
+        echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel repair -w {dest_dir} {wheel} && ${{ inputs.post-repair-command }}" >> "${GITHUB_ENV}"
 
         # set before-all-linux command to store internal pypi credentials before running cibw-before-all
         echo "CIBW_BEFORE_ALL_LINUX=printf 'machine pypi.k8s.rapids.ai\n\tlogin ${{ inputs.internal-pypi-user }}\n\tpassword ${{ inputs.internal-pypi-pass }}\n' > ~/.netrc && ${{ inputs.cibw-before-all }}" >> "${GITHUB_ENV}"
-
-        # set repair command to append post-repair command
-        echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=${{ inputs.repair-command }} && ${{ inputs.post-repair-command }}" >> "${GITHUB_ENV}"
 
         # enable sccache in skbuild config options
         skbuild_config_opts="${{ inputs.skbuild-configure-options}}"
@@ -100,8 +103,8 @@ runs:
       shell: bash
       env:
         CIBW_SKIP: "*musllinux*"
-        CIBW_MANYLINUX_AARCH64_IMAGE: ${{ inputs.manylinux-container }}
-        CIBW_MANYLINUX_X86_64_IMAGE: ${{ inputs.manylinux-container }}
+        CIBW_MANYLINUX_AARCH64_IMAGE: "rapidsai/manylinux_2_31_aarch64:${{ inputs.manylinux-ctk }}"
+        CIBW_MANYLINUX_X86_64_IMAGE: "rapidsai/manylinux2014_x86_64:${{ inputs.manylinux-ctk }}"
         CIBW_BUILD_FRONTEND: "pip"
         CIBW_BEFORE_BUILD_LINUX: ${{ inputs.cibw-before-build }}
         CIBW_BUILD_VERBOSITY_LINUX: 3
