@@ -131,23 +131,8 @@ jobs:
     needs: wheel-epoch-timestamp
     strategy:
       matrix:
-        include:
-          - arch: amd64
-            python: 3.8
-            cibw-before-all: ${{ inputs.cibw-before-all-amd64 }}
-            post-repair: ${{ inputs.post-repair-amd64 }}
-          - arch: arm64
-            python: 3.8
-            cibw-before-all: ${{ inputs.cibw-before-all-arm64 }}
-            post-repair: ${{ inputs.post-repair-arm64 }}
-          - arch: amd64
-            python: 3.9
-            cibw-before-all: ${{ inputs.cibw-before-all-amd64 }}
-            post-repair: ${{ inputs.post-repair-amd64 }}
-          - arch: arm64
-            python: 3.9
-            cibw-before-all: ${{ inputs.cibw-before-all-arm64 }}
-            post-repair: ${{ inputs.post-repair-arm64 }}
+        python: [3.8, 3.9]
+        arch: [amd64, arm64]
     runs-on:
       - self-hosted
       - linux
@@ -213,15 +198,16 @@ jobs:
 
         # matrix settings
         python-version: ${{ matrix.python }}
-        arch: ${{ matrix.arch }}
-        # matrix settings per-arch
-        cibw-before-all: ${{ matrix.cibw-before-all }}
-        post-repair: ${{ matrix.post-repair }}
+        cibw-before-all-amd64: ${{ inputs.cibw-before-all-amd64 }}
+        cibw-before-all-arm64: ${{ inputs.cibw-before-all-arm64 }}
+        post-repair-amd64: ${{ inputs.post-repair-amd64 }}
+        post-repair-arm64: ${{ inputs.post-repair-arm64 }}
 
         # pre-picked epoch timestamp to use for all wheels
         python-package-epoch-timestamp: ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }}
 
         # user inputs
+        manylinux-ctk: ${{ inputs.manylinux-ctk }}
         package-name: ${{ inputs.package-name }}
         package-dir: ${{ inputs.package-dir }}
         python-package-versioneer-override: ${{ inputs.python-package-versioneer-override }}

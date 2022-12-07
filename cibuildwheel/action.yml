@@ -22,8 +22,11 @@ inputs:
   python-package-epoch-timestamp:
     description: 'Epoch timestamp to use as nightly version'
     required: true
-  repair-command:
-    description: 'Auditwheel repair command'
+  post-repair-amd64:
+    description: 'Command to run after auditwheel repair for amd64'
+    required: true
+  post-repair-arm64:
+    description: 'Command to run after auditwheel repair for arm64'
     required: true
   internal-pypi-user:
     description: 'Username for pypi.k8s.rapids.ai'
@@ -34,11 +37,11 @@ inputs:
   manylinux-ctk:
     description: 'Specify which manylinux container ctk tag to use'
     required: true
-  cibw-before-all:
-    description: 'Extra CIBW_BEFORE_ALL_LINUX commands'
+  cibw-before-all-amd64:
+    description: 'Extra CIBW_BEFORE_ALL_LINUX commands for amd64'
     required: true
-  post-repair-command:
-    description: 'Command to run after the repair command'
+  cibw-before-all-arm64:
+    description: 'Extra CIBW_BEFORE_ALL_LINUX commands for arm64'
     required: true
   cibw-before-build:
     description: 'Extra CIBW_BEFORE_BUILD_LINUX commands'
@@ -66,14 +69,21 @@ runs:
       run: |
         runner_arch=$(uname -m)
 
+        post_repair="${{ inputs.post-repair-amd64 }}"
+        before_all="${{ inputs.cibw-before-all-amd64 }}"
+        if [[ "${runner_arch}" == "aarch64" ]]; then
+          post_repair="${{ inputs.post-repair-arm64 }}"
+          before_all="${{ inputs.cibw-before-all-arm64 }}"
+        fi
+
         # set arch based on runner
         echo "CIBW_ARCHS_LINUX=$runner_arch" >>  "${GITHUB_ENV}"
 
         # set repair command to append post-repair command
-        echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel repair -w {dest_dir} {wheel} && ${{ inputs.post-repair-command }}" >> "${GITHUB_ENV}"
+        echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=auditwheel repair -w {dest_dir} {wheel} && ${post_repair}" >> "${GITHUB_ENV}"
 
         # set before-all-linux command to store internal pypi credentials before running cibw-before-all
-        echo "CIBW_BEFORE_ALL_LINUX=printf 'machine pypi.k8s.rapids.ai\n\tlogin ${{ inputs.internal-pypi-user }}\n\tpassword ${{ inputs.internal-pypi-pass }}\n' > ~/.netrc && ${{ inputs.cibw-before-all }}" >> "${GITHUB_ENV}"
+        echo "CIBW_BEFORE_ALL_LINUX=printf 'machine pypi.k8s.rapids.ai\n\tlogin ${{ inputs.internal-pypi-user }}\n\tpassword ${{ inputs.internal-pypi-pass }}\n' > ~/.netrc && ${before_all}" >> "${GITHUB_ENV}"
 
         # enable sccache in skbuild config options
         skbuild_config_opts="${{ inputs.skbuild-configure-options}}"
