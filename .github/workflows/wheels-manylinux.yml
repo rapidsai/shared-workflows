@@ -214,7 +214,7 @@ jobs:
         persist-credentials: false
 
     - name: Build wheels with cibuildwheel action
-      uses: rapidsai/shared-action-workflows/cibuildwheel@main
+      uses: rapidsai/shared-action-workflows/cibuildwheel@upkeep/manylinux-improvements
       with:
         # hardcoded
         output-dir: dist
