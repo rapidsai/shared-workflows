@@ -143,7 +143,11 @@ jobs:
             cibw-before-all: ${{ inputs.cibw-before-all-arm64 }}
             repair-command: "auditwheel repair -w {dest_dir} --plat manylinux_2_31_aarch64 {wheel}"
             post-repair-command: ${{ inputs.post-repair-command-arm64 }}
-    runs-on: [self-hosted, linux, ${{ matrix.arch }}, cpu16]
+    runs-on:
+      - self-hosted
+      - linux
+      - ${{ matrix.arch }}
+      - cpu16
     container:
       image: "rapidsai/cibuildwheel_${{ matrix.arch }}"
       volumes:
@@ -253,7 +257,11 @@ jobs:
           - arch: arm64
             gpu: gpu-a100-495-1
             image: "rapidsai/citestwheel_arm64"
-    runs-on: [self-hosted, linux, ${{ matrix.arch }}, ${{ matrix.gpu }}]
+    runs-on:
+      - self-hosted
+      - linux
+      - ${{ matrix.arch }}
+      - ${{ matrix.gpu }}
     container:
       image: ${{ matrix.image }}
       options: ${{ inputs.test-docker-options }}
