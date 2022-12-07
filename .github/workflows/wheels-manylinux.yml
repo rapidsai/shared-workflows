@@ -131,14 +131,27 @@ jobs:
     needs: wheel-epoch-timestamp
     strategy:
       matrix:
-        python: [3.8, 3.9]
         include:
           - arch: amd64
+            python: 3.8
             manylinux-container: "rapidsai/manylinux2014_x86_64:${{ inputs.manylinux-ctk }}"
             cibw-before-all: ${{ inputs.cibw-before-all-amd64 }}
             repair-command: "auditwheel repair -w {dest_dir} --plat manylinux_2_17_x86_64 {wheel}"
             post-repair-command: ${{ inputs.post-repair-command-amd64 }}
           - arch: arm64
+            python: 3.8
+            manylinux-container: "rapidsai/manylinux_2_31_aarch64:${{ inputs.manylinux-ctk }}"
+            cibw-before-all: ${{ inputs.cibw-before-all-arm64 }}
+            repair-command: "auditwheel repair -w {dest_dir} --plat manylinux_2_31_aarch64 {wheel}"
+            post-repair-command: ${{ inputs.post-repair-command-arm64 }}
+          - arch: amd64
+            python: 3.9
+            manylinux-container: "rapidsai/manylinux2014_x86_64:${{ inputs.manylinux-ctk }}"
+            cibw-before-all: ${{ inputs.cibw-before-all-amd64 }}
+            repair-command: "auditwheel repair -w {dest_dir} --plat manylinux_2_17_x86_64 {wheel}"
+            post-repair-command: ${{ inputs.post-repair-command-amd64 }}
+          - arch: arm64
+            python: 3.9
             manylinux-container: "rapidsai/manylinux_2_31_aarch64:${{ inputs.manylinux-ctk }}"
             cibw-before-all: ${{ inputs.cibw-before-all-arm64 }}
             repair-command: "auditwheel repair -w {dest_dir} --plat manylinux_2_31_aarch64 {wheel}"
@@ -243,18 +256,21 @@ jobs:
     needs: wheel-build
     strategy:
       matrix:
-        python: [3.8, 3.9]
         include:
           - arch: amd64
+            python: 3.8
             gpu: gpu-v100-495-1
             image: "rapidsai/citestwheel_amd64"
           - arch: arm64
+            python: 3.8
             gpu: gpu-a100-495-1
             image: "rapidsai/citestwheel_arm64"
           - arch: amd64
+            python: 3.9
             gpu: gpu-v100-495-1
             image: "rapidsai/citestwheel_amd64"
           - arch: arm64
+            python: 3.9
             gpu: gpu-a100-495-1
             image: "rapidsai/citestwheel_arm64"
     runs-on:

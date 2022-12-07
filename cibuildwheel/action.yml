@@ -69,7 +69,6 @@ runs:
         # set before-all-linux command to store internal pypi credentials before running cibw-before-all
         echo "CIBW_BEFORE_ALL_LINUX=printf 'machine pypi.k8s.rapids.ai\n\tlogin ${{ inputs.internal-pypi-user }}\n\tpassword ${{ inputs.internal-pypi-pass }}\n' > ~/.netrc && ${{ inputs.cibw-before-all }}" >> "${GITHUB_ENV}"
 
-        #CIBW_REPAIR_WHEEL_COMMAND_LINUX: ${{ inputs.repair-command }}
         # set repair command to append post-repair command
         echo "CIBW_REPAIR_WHEEL_COMMAND_LINUX=${{ inputs.repair-command }} && ${{ inputs.post-repair-command }}" >> "${GITHUB_ENV}"
 
