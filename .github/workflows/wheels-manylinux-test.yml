@@ -20,23 +20,6 @@ on:
       package-name:
         required: true
         type: string
-      package-dir:
-        required: true
-        type: string
-      python-package-cuda-suffix:
-        required: false
-        type: string
-        default: '-cu11'
-
-      # versioneer and twine settings
-      python-package-versioneer-override:
-        required: false
-        type: string
-        default: ''
-      python-package-build-tag:
-        required: false
-        type: string
-        default: ''
 
       # test settings
       test-docker-options:
@@ -74,8 +57,8 @@ jobs:
     steps:
       - name: Validate test type
         run: |
-          if [[ "$BUILD_TYPE" != "pull-request" ]] && [[ "$BUILD_TYPE" != "nightly" ]] && [[ "$BUILD_TYPE" != "branch" ]]; then
-              echo "Invalid build type! Must be 'nightly', 'pull-request', or 'branch'."
+          if [[ "$BUILD_TYPE" != "pull-request" ]] && [[ "$BUILD_TYPE" != "nightly" ]]; then
+              echo "Invalid build type! Must be 'nightly' or 'pull-request'."
               exit 1
           fi
       - name: Compute test matrix

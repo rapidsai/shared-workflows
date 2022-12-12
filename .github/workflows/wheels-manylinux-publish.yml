@@ -20,19 +20,8 @@ on:
       package-name:
         required: true
         type: string
-      package-dir:
-        required: true
-        type: string
-      python-package-cuda-suffix:
-        required: false
-        type: string
-        default: '-cu11'
 
       # versioneer and twine settings
-      python-package-versioneer-override:
-        required: false
-        type: string
-        default: ''
       python-package-build-tag:
         required: false
         type: string

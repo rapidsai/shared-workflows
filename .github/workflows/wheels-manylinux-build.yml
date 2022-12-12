@@ -48,10 +48,6 @@ on:
         required: false
         type: string
         default: ''
-      python-package-build-tag:
-        required: false
-        type: string
-        default: ''
 
       # cibw settings
       manylinux-ctk:
