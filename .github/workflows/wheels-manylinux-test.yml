@@ -84,7 +84,7 @@ jobs:
     name: wheel test ${{ matrix.arch }} ${{ matrix.python }}
     needs: wheel-test-compute-matrix
     strategy:
-      matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
+      matrix: ${{ fromJSON(needs.wheel-test-compute-matrix.outputs.MATRIX) }}
     runs-on:
       - self-hosted
       - linux
