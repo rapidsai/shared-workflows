@@ -1,0 +1,66 @@
+name: Build RAPIDS project wheels
+
+on:
+  workflow_call:
+    inputs:
+      # repo and branch
+      repo:
+        type: string
+      branch:
+        type: string
+      date:
+        type: string
+      sha:
+        type: string
+      build-type:
+        required: true
+        type: string
+
+      package-name:
+        required: true
+        type: string
+      package-dir:
+        required: true
+        type: string
+      python-package-cuda-suffix:
+        required: false
+        type: string
+        default: '-cu11'
+
+      # versioneer and twine settings
+      python-package-versioneer-override:
+        required: false
+        type: string
+        default: ''
+      python-package-build-tag:
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  wheel-publish:
+    name: wheel publish pure
+    runs-on: ubuntu-latest
+    container:
+      image: rapidsai/cibuildwheel_x86_64
+      env:
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.python-package-build-tag }}
+        RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+        TWINE_USERNAME: cibuildwheel
+        TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
+        TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
+    steps:
+    - name: Standardize repository information
+      run: |
+        echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+        echo "RAPIDS_SHA=$(git rev-parse HEAD)" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+        echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+        echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+
+    - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
+      run: |
+        RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
+        rapids-twine ./dist/

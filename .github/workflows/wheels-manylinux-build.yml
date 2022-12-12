@@ -92,28 +92,6 @@ on:
         type: string
         default: ''
 
-      # test settings
-      test-docker-options:
-        required: false
-        type: string
-        default: '-e _NOOP'
-      test-checkout-src: # allow one to skip checking out source code to run packaged tests
-        required: false
-        type: string
-        default: 'true'
-      test-unittest: # tests are allowed to be blank because the wheel is installed and pip checked
-        required: false
-        type: string
-        default: ''
-      test-before-amd64:
-        required: false
-        type: string
-        default: 'true'
-      test-before-arm64:
-        required: false
-        type: string
-        default: 'true'
-
 jobs:
   wheel-epoch-timestamp:
     name: wheel epoch timestamper
@@ -150,12 +128,6 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
 
-    outputs:
-      rapids_repository: ${{ steps.get_repo_info.outputs.rapids_repository }}
-      rapids_sha: ${{ steps.get_repo_info.outputs.rapids_sha }}
-      rapids_ref_name: ${{ steps.get_repo_info.outputs.rapids_ref_name }}
-      rapids_nightly_date: ${{ steps.get_repo_info.outputs.rapids_nightly_date }}
-
     steps:
     - name: checkout code repo
       uses: actions/checkout@v3
@@ -166,7 +138,6 @@ jobs:
         persist-credentials: false
 
     - name: Standardize repository information
-      id: get_repo_info
       run: |
         echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         echo "RAPIDS_SHA=$(git rev-parse HEAD)" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
@@ -226,90 +197,3 @@ jobs:
     - name: Upload wheels to downloads.rapids.ai
       run: |
         rapids-upload-wheels-to-s3 dist
-
-  wheel-test:
-    name: wheel test ${{ matrix.arch }} ${{ matrix.python }}
-    needs: wheel-build
-    strategy:
-      matrix:
-        include:
-          - { arch: amd64, python: 3.8, gpu: gpu-v100-495-1 }
-          - { arch: arm64, python: 3.8, gpu: gpu-a100-495-1 }
-          - { arch: amd64, python: 3.9, gpu: gpu-v100-495-1 }
-          - { arch: arm64, python: 3.9, gpu: gpu-a100-495-1 }
-    runs-on:
-      - self-hosted
-      - linux
-      - ${{ matrix.arch }}
-      - ${{ matrix.gpu }}
-    container:
-      image: "rapidsai/citestwheel_${{ matrix.arch }}"
-      options: ${{ inputs.test-docker-options }}
-      env:
-        NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
-        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
-        RAPIDS_PY_VERSION: ${{ matrix.python }}
-        RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-        RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.test-before-amd64 }}
-        RAPIDS_BEFORE_TEST_COMMANDS_ARM64: ${{ inputs.test-before-arm64 }}
-        CIBW_TEST_EXTRAS: "test"
-        CIBW_TEST_COMMAND: ${{ inputs.test-unittest }}
-        PIP_EXTRA_INDEX_URL: "https://pypi.k8s.rapids.ai/simple"
-    steps:
-    - name: Run nvidia-smi to make sure GPU is working
-      run: nvidia-smi
-
-    - name: Install private index credentials in cibuildwheel container
-      run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
-
-    - name: checkout code repo
-      uses: actions/checkout@v3
-      if: ${{ inputs.test-checkout-src == 'true' }}
-      with:
-        repository: ${{ inputs.repo }}
-        ref: ${{ inputs.sha }}
-        fetch-depth: 0 # unshallow fetch for setuptools-scm
-        persist-credentials: false
-
-    - name: Get repository information from build step
-      run: |
-        echo "RAPIDS_REPOSITORY=${{ needs.wheel-build.outputs.rapids_repository }}" >> "${GITHUB_ENV}"
-        echo "RAPIDS_SHA=${{ needs.wheel-build.outputs.rapids_sha }}" >> "${GITHUB_ENV}"
-        echo "RAPIDS_REF_NAME=${{ needs.wheel-build.outputs.rapids_ref_name }}" >> "${GITHUB_ENV}"
-        echo "RAPIDS_NIGHTLY_DATE=${{ needs.wheel-build.outputs.rapids_nightly_date }}" >> "${GITHUB_ENV}"
-
-    - name: Run citestwheel
-      run: /citestwheel.sh
-
-  wheel-publish:
-    name: wheels publish all wheels
-    needs: [wheel-build, wheel-test]
-    runs-on: ubuntu-latest
-    container:
-      image: rapidsai/cibuildwheel_x86_64
-      env:
-        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
-        RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.python-package-build-tag }}
-        RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
-        TWINE_USERNAME: cibuildwheel
-        TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
-        TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
-    steps:
-    - name: Get repository information from build step
-      run: |
-        echo "RAPIDS_REPOSITORY=${{ needs.wheel-build.outputs.rapids_repository }}" >> "${GITHUB_ENV}"
-        echo "RAPIDS_SHA=${{ needs.wheel-build.outputs.rapids_sha }}" >> "${GITHUB_ENV}"
-        echo "RAPIDS_REF_NAME=${{ needs.wheel-build.outputs.rapids_ref_name }}" >> "${GITHUB_ENV}"
-        echo "RAPIDS_NIGHTLY_DATE=${{ needs.wheel-build.outputs.rapids_nightly_date }}" >> "${GITHUB_ENV}"
-
-    - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
-      run: |
-        RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
-        RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.9" rapids-download-wheels-from-s3 ./dist
-        RAPIDS_ARCH="aarch64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
-        RAPIDS_ARCH="aarch64" RAPIDS_PY_VERSION="3.9" rapids-download-wheels-from-s3 ./dist
-        rapids-twine ./dist/
