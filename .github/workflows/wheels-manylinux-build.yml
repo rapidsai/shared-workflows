@@ -23,10 +23,6 @@ on:
       package-dir:
         required: true
         type: string
-      python-package-cuda-suffix:
-        required: false
-        type: string
-        default: '-cu11'
 
       # Extra repository that will be cloned into the project directory.
       extra-repo:
@@ -50,10 +46,14 @@ on:
         default: ''
 
       # cibw settings
-      manylinux-ctk:
+      manylinux-ctk-11:
         type: string
         required: false
         default: '115'
+      manylinux-ctk-12:
+        type: string
+        required: false
+        default: '120'
       cibw-environment:
         type: string
         required: false
@@ -107,6 +107,9 @@ jobs:
       matrix:
         python: [3.8, 3.9]
         arch: [amd64, arm64]
+        ctk:
+          - ${{ inputs.manylinux-ctk-11 }}
+          - ${{ inputs.manylinux-ctk-12 }}
     runs-on:
       - self-hosted
       - linux
@@ -118,7 +121,6 @@ jobs:
         - /var/run/docker.sock:/var/run/docker.sock
       env:
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
-        RAPIDS_PY_WHEEL_CUDA_SUFFIX: ${{ inputs.python-package-cuda-suffix }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
         RAPIDS_PY_VERSION: ${{ matrix.python }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
@@ -157,6 +159,17 @@ jobs:
         ssh-key: ${{ secrets[inputs.extra-repo-deploy-key] }}
         persist-credentials: false
 
+    - name: Set CUDA_SUFFIX env var from CTK version
+      run: |
+        cuda_ver="${{ matrix.ctk }}" # 11.8, 12.0
+
+        manylinux_ctk_tag="${cuda_ver//./}" # 118, 120
+        cuda_ver="${manylinux_ctk_tag::-1}" # 11, 12
+        cuda_suffix="-cu${cuda_ver}"
+
+        echo "MANYLINUX_CTK_TAG=${manylinux_ctk_tag}" >> "${GITHUB_ENV}"
+        echo "RAPIDS_PY_WHEEL_CUDA_SUFFIX=${cuda_suffix}" >> "${GITHUB_ENV}"
+
     - name: Build wheels with cibuildwheel action
       uses: rapidsai/shared-action-workflows/cibuildwheel@upkeep/manylinux-improvements
       with:
@@ -174,10 +187,10 @@ jobs:
         python-package-epoch-timestamp: ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }}
 
         # user inputs
-        manylinux-ctk: ${{ inputs.manylinux-ctk }}
+        manylinux-ctk: ${MANYLINUX_CTK_TAG}
         package-dir: ${{ inputs.package-dir }}
         python-package-versioneer-override: ${{ inputs.python-package-versioneer-override }}
-        python-package-cuda-suffix: ${{ inputs.python-package-cuda-suffix }}
+        python-package-cuda-suffix: ${RAPIDS_PY_WHEEL_CUDA_SUFFIX}
         cibw-environment: ${{ inputs.cibw-environment }}
         cibw-before-build: ${{ inputs.cibw-before-build }}
         skbuild-configure-options: ${{ inputs.skbuild-configure-options }}

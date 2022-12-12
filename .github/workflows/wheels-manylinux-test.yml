@@ -78,25 +78,25 @@ jobs:
           }'
 
           export TEST_MATRIX=$(jq -nc 'env.MATRICES | fromjson | .[env.BUILD_TYPE]')
-          echo "MATRIX=$(jq -nc 'env.TEST_MATRIX | fromjson')" >> ${GITHUB_OUTPUT}
+          echo "MATRIX=$(jq -nc 'env.TEST_MATRIX | fromjson | {includes: .}')" >> ${GITHUB_OUTPUT}
 
   wheel-test:
-    name: wheel test ${{ matrix.arch }} ${{ matrix.python }}
+    name: wheel test ${{ matrix.includes.arch }} ${{ matrix.includes.python }}
     needs: wheel-test-compute-matrix
     strategy:
       matrix: ${{ fromJSON(needs.wheel-test-compute-matrix.outputs.MATRIX) }}
     runs-on:
       - self-hosted
       - linux
-      - ${{ matrix.arch }}
-      - ${{ matrix.runner-type }}
+      - ${{ matrix.includes.arch }}
+      - ${{ matrix.includes.runner-type }}
     container:
-      image: "rapidsai/citestwheel_${{ matrix.arch }}"
+      image: "rapidsai/citestwheel_${{ matrix.includes.arch }}"
       options: ${{ inputs.test-docker-options }}
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
-        RAPIDS_PY_VERSION: ${{ matrix.python }}
+        RAPIDS_PY_VERSION: ${{ matrix.includes.python }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
@@ -129,10 +129,10 @@ jobs:
     - name: Choose between unit tests and smoke tests for test command
       run: |
         test_cmd=""
-        if [[ "${{ matrix.test-type }}" == "unit" ]]; then
+        if [[ "${{ matrix.includes.test-type }}" == "unit" ]]; then
           test_cmd="${{ inputs.test-unittest }}"
           echo "CIBW_TEST_EXTRAS=test" >> "${GITHUB_ENV}"
-        elif [[ "${{ matrix.test-type }}" == "smoke" ]]; then
+        elif [[ "${{ matrix.includes.test-type }}" == "smoke" ]]; then
           test_cmd="${{ inputs.test-smoketest }}"
           echo "CIBW_TEST_EXTRAS=test" >> "${GITHUB_ENV}"
         fi
