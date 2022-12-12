@@ -32,10 +32,6 @@ on:
         required: false
         type: string
         default: ''
-      python-package-build-tag:
-        required: false
-        type: string
-        default: ''
 
 jobs:
   wheel-epoch-timestamp:

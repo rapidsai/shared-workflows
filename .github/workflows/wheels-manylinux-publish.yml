@@ -21,7 +21,7 @@ on:
         required: true
         type: string
 
-      # versioneer and twine settings
+      # twine settings
       python-package-build-tag:
         required: false
         type: string
