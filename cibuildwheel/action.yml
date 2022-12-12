@@ -1,9 +1,6 @@
 name: cibuildwheel
 description: 'Runs cibuildwheel with some extra logic to assemble CIBW_ env vars'
 inputs:
-  package-name:
-    description: 'Name of python package'
-    required: true
   package-dir:
     description: 'Path to python package'
     required: true
