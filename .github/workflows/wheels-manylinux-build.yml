@@ -164,11 +164,12 @@ jobs:
         cuda_ver="${{ matrix.ctk }}" # XY.Z
 
         manylinux_ctk_tag="${cuda_ver//./}" # XYZ
-        cuda_ver="${manylinux_ctk_tag%?}" # 11, 12
+        cuda_ver="${manylinux_ctk_tag::-1}" # 11, 12
         cuda_suffix="-cu${cuda_ver}"
 
         echo "MANYLINUX_CTK_TAG=${manylinux_ctk_tag}" >> "${GITHUB_ENV}"
         echo "RAPIDS_PY_WHEEL_CUDA_SUFFIX=${cuda_suffix}" >> "${GITHUB_ENV}"
+      shell: bash
 
     - name: Build wheels with cibuildwheel action
       uses: rapidsai/shared-action-workflows/cibuildwheel@upkeep/manylinux-improvements
