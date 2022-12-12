@@ -101,7 +101,7 @@ jobs:
       run: echo "RAPIDS_EPOCH_TIMESTAMP=$(date +%s)" >> "${GITHUB_OUTPUT}"
 
   wheel-build:
-    name: cibuildwheel ${{ matrix.arch }} ${{ matrix.python }}
+    name: cibuildwheel ${{ matrix.arch }} ${{ matrix.python }} ${{ matrix.ctk }}
     needs: wheel-epoch-timestamp
     strategy:
       matrix:
@@ -188,10 +188,10 @@ jobs:
         python-package-epoch-timestamp: ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }}
 
         # user inputs
-        manylinux-ctk: ${MANYLINUX_CTK_TAG}
+        manylinux-ctk: ${{ env.MANYLINUX_CTK_TAG }}
         package-dir: ${{ inputs.package-dir }}
         python-package-versioneer-override: ${{ inputs.python-package-versioneer-override }}
-        python-package-cuda-suffix: ${RAPIDS_PY_WHEEL_CUDA_SUFFIX}
+        python-package-cuda-suffix: ${{ env.RAPIDS_PY_WHEEL_CUDA_SUFFIX }}
         cibw-environment: ${{ inputs.cibw-environment }}
         cibw-before-build: ${{ inputs.cibw-before-build }}
         skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
