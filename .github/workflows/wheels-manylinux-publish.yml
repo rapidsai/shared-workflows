@@ -22,7 +22,7 @@ on:
         type: string
 
       # twine settings
-      python-package-build-tag:
+      build-tag:
         required: false
         type: string
         default: ''
@@ -35,7 +35,7 @@ jobs:
       image: rapidsai/cibuildwheel_x86_64
       env:
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
-        RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.python-package-build-tag }}
+        RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.build-tag }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
