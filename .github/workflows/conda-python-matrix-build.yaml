@@ -21,6 +21,7 @@ on:
 
 jobs:
   build:
+    if: ${{ github.repository_owner == 'rapidsai' }}
     strategy:
       fail-fast: false
       matrix:

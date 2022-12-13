@@ -21,6 +21,7 @@ on:
 
 jobs:
   compute-matrix:
+    if: ${{ github.repository_owner == 'rapidsai' }}
     runs-on: ubuntu-latest
     env:
       BUILD_TYPE: ${{ inputs.build_type }}
@@ -70,6 +71,7 @@ jobs:
 
           echo "MATRIX=$(jq -nc 'env.TEST_MATRIX | fromjson | {includes: .}')" >> ${GITHUB_OUTPUT}
   tests:
+    if: ${{ github.repository_owner == 'rapidsai' }}
     needs: compute-matrix
     strategy:
       fail-fast: false

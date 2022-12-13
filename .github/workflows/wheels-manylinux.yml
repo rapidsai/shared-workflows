@@ -38,7 +38,7 @@ on:
         type: string
         default: ''
       # Note that this is the _name_ of a secret containing the key, not the key itself.
-      extra-repo-deploy-key: 
+      extra-repo-deploy-key:
         required: false
         type: string
         default: ''
@@ -132,6 +132,7 @@ on:
 
 jobs:
   wheel-epoch-timestamp:
+    if: ${{ github.repository_owner == 'rapidsai' }}
     name: wheel epoch timestamper
     runs-on: ubuntu-latest
     outputs:
@@ -143,6 +144,7 @@ jobs:
       run: echo "RAPIDS_EPOCH_TIMESTAMP=$(date +%s)" >> "${GITHUB_OUTPUT}"
 
   wheel-build:
+    if: ${{ github.repository_owner == 'rapidsai' }}
     name: cibuildwheel ${{ matrix.linux-arch }} ${{ matrix.cpython-version }}
     needs: wheel-epoch-timestamp
     runs-on: ${{ matrix.labels }}
@@ -267,6 +269,7 @@ jobs:
         rapids-upload-wheels-to-s3 dist
 
   wheel-test:
+    if: ${{ github.repository_owner == 'rapidsai' }}
     name: wheel test ${{ matrix.cpu-arch }} ${{ matrix.python-version }}
     needs: wheel-build
     runs-on: ${{ matrix.labels }}
@@ -331,6 +334,7 @@ jobs:
       run: /citestwheel.sh
 
   wheel-publish:
+    if: ${{ github.repository_owner == 'rapidsai' }}
     name: wheels publish all wheels
     needs: [wheel-build, wheel-test]
     runs-on: ubuntu-latest

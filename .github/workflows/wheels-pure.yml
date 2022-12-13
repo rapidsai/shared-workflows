@@ -56,6 +56,7 @@ on:
 
 jobs:
   wheel-epoch-timestamp:
+    if: ${{ github.repository_owner == 'rapidsai' }}
     name: wheel epoch timestamper
     runs-on: ubuntu-latest
     outputs:
@@ -67,6 +68,7 @@ jobs:
       run: echo "RAPIDS_EPOCH_TIMESTAMP=$(date +%s)" >> "${GITHUB_OUTPUT}"
 
   wheel-build:
+    if: ${{ github.repository_owner == 'rapidsai' }}
     name: wheel build pure
     needs: wheel-epoch-timestamp
     runs-on: ubuntu-latest
@@ -105,7 +107,7 @@ jobs:
         if [ "${versioneer_override}" == "" ]; then
           versioneer_override="$(rapids-pip-wheel-version ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }})"
         fi
-          
+
         export RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE="${versioneer_override}"
         python -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps
       shell: bash
@@ -120,6 +122,7 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
 
   wheel-test:
+    if: ${{ github.repository_owner == 'rapidsai' }}
     name: wheel test pure
     runs-on: [self-hosted, linux, amd64, gpu-v100-495-1]
     needs: wheel-build
