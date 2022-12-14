@@ -46,14 +46,14 @@ on:
         default: ''
 
       # cibw settings
-      manylinux-ctk-11:
+      ctk-11-image-tag:
         type: string
         required: false
-        default: '11.5'
-      manylinux-ctk-12:
+        default: '118'
+      ctk-12-image-tag:
         type: string
         required: false
-        default: '12.0'
+        default: '120'
       cibw-environment:
         type: string
         required: false
@@ -108,19 +108,21 @@ jobs:
         python: [3.8, 3.9]
         arch: [amd64, arm64]
         ctk:
-          - ${{ inputs.manylinux-ctk-11 }}
-          - ${{ inputs.manylinux-ctk-12 }}
+          - ${{ inputs.ctk-11-image-tag }}
+          - ${{ inputs.ctk-12-image-tag }}
     runs-on:
       - self-hosted
       - linux
       - ${{ matrix.arch }}
       - cpu16
     container:
-      image: "rapidsai/cibuildwheel_${{ matrix.arch }}"
+      # run in a ctk-dependent cibuildwheel launcher container, even though its sorta irrelevant
+      # since the inner manylinux container is the one that will build the wheel
+      image: "rapidsai/cibuildwheel_${{ matrix.arch }}:${{ matrix.ctk }}"
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock
       env:
-        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}_${{ matrix.ctk }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
         RAPIDS_PY_VERSION: ${{ matrix.python }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
@@ -159,15 +161,10 @@ jobs:
         ssh-key: ${{ secrets[inputs.extra-repo-deploy-key] }}
         persist-credentials: false
 
-    - name: Set CUDA_SUFFIX env var from CTK version
+    - name: Set CUDA_SUFFIX env var from CTK image tag
       run: |
-        cuda_ver="${{ matrix.ctk }}" # XY.Z
-
-        manylinux_ctk_tag="${cuda_ver//./}" # XYZ
-        cuda_ver="${manylinux_ctk_tag::-1}" # 11, 12
-        cuda_suffix="-cu${cuda_ver}"
-
-        echo "MANYLINUX_CTK_TAG=${manylinux_ctk_tag}" >> "${GITHUB_ENV}"
+        ctk_tag="${{ matrix.ctk }}" # XYZ
+        cuda_suffix="-cu${ctk_tag::-1}" # XY
         echo "RAPIDS_PY_WHEEL_CUDA_SUFFIX=${cuda_suffix}" >> "${GITHUB_ENV}"
       shell: bash
 
@@ -188,7 +185,7 @@ jobs:
         python-package-epoch-timestamp: ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }}
 
         # user inputs
-        manylinux-ctk: ${{ env.MANYLINUX_CTK_TAG }}
+        manylinux-ctk: ${{ matrix.ctk }}
         package-dir: ${{ inputs.package-dir }}
         python-package-versioneer-override: ${{ inputs.python-package-versioneer-override }}
         python-package-cuda-suffix: ${{ env.RAPIDS_PY_WHEEL_CUDA_SUFFIX }}

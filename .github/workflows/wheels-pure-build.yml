@@ -22,10 +22,16 @@ on:
       package-dir:
         required: true
         type: string
-      python-package-cuda-suffix:
-        required: false
+
+      # ctk settings
+      ctk-11-image-tag:
         type: string
-        default: '-cu11'
+        required: false
+        default: '118'
+      ctk-12-image-tag:
+        type: string
+        required: false
+        default: '120'
 
       # versioneer and twine settings
       python-package-versioneer-override:
@@ -46,13 +52,16 @@ jobs:
       run: echo "RAPIDS_EPOCH_TIMESTAMP=$(date +%s)" >> "${GITHUB_OUTPUT}"
 
   wheel-build:
-    name: wheel build pure
+    name: wheel build pure ${{ matrix.ctk }}
     needs: wheel-epoch-timestamp
+    strategy:
+      matrix:
+        ctk:
+          - ${{ inputs.ctk-11-image-tag }}
+          - ${{ inputs.ctk-12-image-tag }}
     runs-on: ubuntu-latest
     container:
-      image: "rapidsai/cibuildwheel_x86_64"
-      env:
-        RAPIDS_PY_WHEEL_CUDA_SUFFIX: ${{ inputs.python-package-cuda-suffix }}
+      image: "rapidsai/cibuildwheel_x86_64:${{ matrix.ctk }}"
     steps:
     - name: checkout code repo
       uses: actions/checkout@v3
@@ -69,6 +78,13 @@ jobs:
         echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
 
+    - name: Set CUDA_SUFFIX env var from CTK image tag
+      run: |
+        ctk_tag="${{ matrix.ctk }}" # XYZ
+        cuda_suffix="-cu${ctk_tag::-1}" # XY
+        echo "RAPIDS_PY_WHEEL_CUDA_SUFFIX=${cuda_suffix}" >> "${GITHUB_ENV}"
+      shell: bash
+
     - name: Build pure python wheel with pip wheel
       run: |
         versioneer_override="${{ inputs.python-package-versioneer-override }}"
@@ -84,7 +100,7 @@ jobs:
     - name: Upload wheels to downloads.rapids.ai
       run: rapids-upload-wheels-to-s3 dist
       env:
-        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}_${{ matrix.ctk }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
         RAPIDS_PY_VERSION: "3.8"
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}

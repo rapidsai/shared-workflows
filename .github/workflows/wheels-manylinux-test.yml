@@ -21,6 +21,16 @@ on:
         required: true
         type: string
 
+      # for ctk matrix
+      ctk-11:
+        type: string
+        required: false
+        default: '11.5'
+      ctk-12:
+        type: string
+        required: false
+        default: '12.0'
+
       # test settings
       test-docker-options:
         required: false
@@ -66,14 +76,20 @@ jobs:
         run: |
           export MATRICES='{
             "pull-request": [
-              { "arch": "amd64", "python": "3.8", "runner-type": "gpu-v100-495-1", "test-type": "unit" },
-              { "arch": "arm64", "python": "3.8", "runner-type": "gpu-a100-495-1", "test-type": "smoke" }
+              { "arch": "amd64", "python": "3.8", "ctk": "${{ inputs.ctk-11 }}", "test-type": "unit" },
+              { "arch": "amd64", "python": "3.8", "ctk": "${{ inputs.ctk-12 }}", "test-type": "unit" },
+              { "arch": "arm64", "python": "3.8", "ctk": "${{ inputs.ctk-11 }}", "test-type": "smoke" }
+              { "arch": "arm64", "python": "3.8", "ctk": "${{ inputs.ctk-12 }}", "test-type": "smoke" }
             ],
             "nightly": [
-              { "arch": "amd64", "python": "3.8", "runner-type": "gpu-v100-495-1", "test-type": "unit" },
-              { "arch": "arm64", "python": "3.8", "runner-type": "gpu-a100-495-1", "test-type": "unit" },
-              { "arch": "amd64", "python": "3.9", "runner-type": "gpu-v100-495-1", "test-type": "unit" },
-              { "arch": "arm64", "python": "3.9", "runner-type": "gpu-a100-495-1", "test-type": "unit" }
+              { "arch": "amd64", "python": "3.8", "ctk": "${{ inputs.ctk-11 }}", "test-type": "unit" },
+              { "arch": "amd64", "python": "3.8", "ctk": "${{ inputs.ctk-12 }}", "test-type": "unit" },
+              { "arch": "arm64", "python": "3.8", "ctk": "${{ inputs.ctk-11 }}", "test-type": "unit" },
+              { "arch": "arm64", "python": "3.8", "ctk": "${{ inputs.ctk-12 }}", "test-type": "unit" },
+              { "arch": "amd64", "python": "3.9", "ctk": "${{ inputs.ctk-11 }}", "test-type": "unit" },
+              { "arch": "amd64", "python": "3.9", "ctk": "${{ inputs.ctk-12 }}", "test-type": "unit" },
+              { "arch": "arm64", "python": "3.9", "ctk": "${{ inputs.ctk-11 }}", "test-type": "unit" }
+              { "arch": "arm64", "python": "3.9", "ctk": "${{ inputs.ctk-12 }}", "test-type": "unit" }
             ]
           }'
 
@@ -89,13 +105,13 @@ jobs:
       - self-hosted
       - linux
       - ${{ matrix.includes.arch }}
-      - ${{ matrix.includes.runner-type }}
+      - gpu-latest
     container:
       image: "rapidsai/citestwheel_${{ matrix.includes.arch }}"
       options: ${{ inputs.test-docker-options }}
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
-        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}_${{ matrix.includes.ctk }}
         RAPIDS_PY_VERSION: ${{ matrix.includes.python }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
