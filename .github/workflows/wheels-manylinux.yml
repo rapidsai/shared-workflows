@@ -57,11 +57,11 @@ on:
       manylinux-container-amd64:
         required: false
         type: string
-        default: "rapidsai/manylinux2014_x86_64"
+        default: "rapidsai/manylinux2014:cuda-devel-11.5.1-centos7"
       manylinux-container-arm64:
         required: false
         type: string
-        default: "rapidsai/manylinux_2_31_aarch64"
+        default: "rapidsai/manylinux_2_31:cuda-devel-11.5.1-ubuntu20.04"
       auditwheel-repair-command-amd64: # hint: use 'cp {wheel} {dest_dir}' to skip repairing
         required: false
         type: string
@@ -100,11 +100,11 @@ on:
       test-container-amd64:
         required: false
         type: string
-        default: "rapidsai/citestwheel_x86_64"
+        default: "rapidsai/citestwheel:cuda-devel-11.5.1-ubuntu18.04"
       test-container-arm64:
         required: false
         type: string
-        default: "rapidsai/citestwheel_aarch64"
+        default: "rapidsai/citestwheel:cuda-devel-11.5.1-ubuntu20.04"
       test-docker-options:
         required: false
         type: string
@@ -155,6 +155,7 @@ jobs:
             python-version: 3.8
             auditwheel-repair-command: ${{ inputs.auditwheel-repair-command-amd64 }}
             manylinux-container: ${{ inputs.manylinux-container-amd64 }}
+            cibw-container: "rapidsai/cibuildwheel:cuda-runtime-11.5.1-ubuntu18.04"
             cibw-before-all: ${{ inputs.cibw-before-all-amd64 }}
           - labels: [self-hosted, linux, arm64, cpu16]
             linux-arch: aarch64
@@ -162,6 +163,7 @@ jobs:
             python-version: 3.8
             auditwheel-repair-command: ${{ inputs.auditwheel-repair-command-arm64 }}
             manylinux-container: ${{ inputs.manylinux-container-arm64 }}
+            cibw-container: "rapidsai/cibuildwheel:cuda-runtime-11.5.1-ubuntu20.04"
             cibw-before-all: ${{ inputs.cibw-before-all-arm64 }}
           - labels: [self-hosted, linux, amd64, cpu16]
             linux-arch: x86_64
@@ -169,6 +171,7 @@ jobs:
             python-version: 3.9
             auditwheel-repair-command: ${{ inputs.auditwheel-repair-command-amd64 }}
             manylinux-container: ${{ inputs.manylinux-container-amd64 }}
+            cibw-container: "rapidsai/cibuildwheel:cuda-runtime-11.5.1-ubuntu18.04"
             cibw-before-all: ${{ inputs.cibw-before-all-amd64 }}
           - labels: [self-hosted, linux, arm64, cpu16]
             linux-arch: aarch64
@@ -176,9 +179,10 @@ jobs:
             python-version: 3.9
             auditwheel-repair-command: ${{ inputs.auditwheel-repair-command-arm64 }}
             manylinux-container: ${{ inputs.manylinux-container-arm64 }}
+            cibw-container: "rapidsai/cibuildwheel:cuda-runtime-11.5.1-ubuntu20.04"
             cibw-before-all: ${{ inputs.cibw-before-all-arm64 }}
     container:
-      image: "rapidsai/cibuildwheel_${{ matrix.linux-arch }}"
+      image: "${{ matrix.cibw-container }}"
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock
       env:
@@ -335,7 +339,7 @@ jobs:
     needs: [wheel-build, wheel-test]
     runs-on: ubuntu-latest
     container:
-      image: rapidsai/cibuildwheel_x86_64
+      image: "rapidsai/cibuildwheel:cuda-runtime-11.5.1-ubuntu18.04"
       env:
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
         RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.python-package-build-tag }}
