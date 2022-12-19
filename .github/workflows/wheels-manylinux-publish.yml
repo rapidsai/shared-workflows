@@ -32,9 +32,10 @@ jobs:
     name: wheels publish all wheels
     runs-on: ubuntu-latest
     container:
-      image: rapidsai/cibuildwheel_x86_64
+      # ctk version of the cibw container is irrelevant in the publish step
+      # it's simply a launcher for twine
+      image: "rapidsai/cibuildwheel:cuda-runtime-11.8.0-ubuntu20.04"
       env:
-        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
         RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.build-tag }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
@@ -52,8 +53,12 @@ jobs:
 
     - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
       run: |
-        RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
-        RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.9" rapids-download-wheels-from-s3 ./dist
-        RAPIDS_ARCH="aarch64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
-        RAPIDS_ARCH="aarch64" RAPIDS_PY_VERSION="3.9" rapids-download-wheels-from-s3 ./dist
+        RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_11" RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
+        RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_11" RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.9" rapids-download-wheels-from-s3 ./dist
+        RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_11" RAPIDS_ARCH="aarch64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
+        RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_11" RAPIDS_ARCH="aarch64" RAPIDS_PY_VERSION="3.9" rapids-download-wheels-from-s3 ./dist
+        RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_12" RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
+        RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_12" RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.9" rapids-download-wheels-from-s3 ./dist
+        RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_12" RAPIDS_ARCH="aarch64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
+        RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_12" RAPIDS_ARCH="aarch64" RAPIDS_PY_VERSION="3.9" rapids-download-wheels-from-s3 ./dist
         rapids-twine ./dist/

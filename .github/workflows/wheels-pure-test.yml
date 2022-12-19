@@ -41,9 +41,12 @@ jobs:
   wheel-test:
     name: wheel test pure
     runs-on: [self-hosted, linux, amd64, gpu-v100-495-1]
+    strategy:
+      matrix:
+        ctk: [11.8.0, 12.0.0]
     needs: wheel-build
     container:
-      image: "rapidsai/citestwheel_x86_64"
+      image: "rapidsai/citestwheel:cuda-devel-${{ matrix.ctk }}-ubuntu18.04"
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}

@@ -31,8 +31,8 @@ inputs:
   internal-pypi-pass:
     description: 'Password for pypi.k8s.rapids.ai'
     required: true
-  manylinux-ctk:
-    description: 'Specify which manylinux container ctk tag to use'
+  manylinux-ctk-version:
+    description: 'Specify which version ctk manylinux image to use'
     required: true
   cibw-before-all-amd64:
     description: 'Extra CIBW_BEFORE_ALL_LINUX commands for amd64'
@@ -110,8 +110,8 @@ runs:
       shell: bash
       env:
         CIBW_SKIP: "*musllinux*"
-        CIBW_MANYLINUX_AARCH64_IMAGE: "rapidsai/manylinux_2_31_aarch64:${{ inputs.manylinux-ctk }}"
-        CIBW_MANYLINUX_X86_64_IMAGE: "rapidsai/manylinux2014_x86_64:${{ inputs.manylinux-ctk }}"
+        CIBW_MANYLINUX_AARCH64_IMAGE: "rapidsai/manylinux_2_31:cuda-devel-${{ inputs.manylinux-ctk-verison }}-ubuntu20.04"
+        CIBW_MANYLINUX_X86_64_IMAGE: "rapidsai/manylinux2014:cuda-devel-${{ inputs.manylinux-ctk-version }}-centos7"
         CIBW_BUILD_FRONTEND: "pip"
         CIBW_BEFORE_BUILD_LINUX: ${{ inputs.cibw-before-build }}
         CIBW_BUILD_VERBOSITY_LINUX: 3
