@@ -71,7 +71,7 @@ jobs:
     needs: wheel-epoch-timestamp
     runs-on: ubuntu-latest
     container:
-      image: "rapidsai/cibuildwheel_x86_64"
+      image: "rapidsai/cibuildwheel:cuda-runtime-11.5.1-ubuntu18.04"
       env:
         RAPIDS_PY_WHEEL_CUDA_SUFFIX: ${{ inputs.python-package-cuda-suffix }}
 
@@ -124,7 +124,7 @@ jobs:
     runs-on: [self-hosted, linux, amd64, gpu-v100-495-1]
     needs: wheel-build
     container:
-      image: "rapidsai/citestwheel_x86_64"
+      image: "rapidsai/citestwheel:cuda-devel-11.5.1-ubuntu18.04"
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
@@ -167,7 +167,7 @@ jobs:
     needs: [wheel-build, wheel-test]
     runs-on: ubuntu-latest
     container:
-      image: rapidsai/cibuildwheel_x86_64
+      image: "rapidsai/cibuildwheel:cuda-runtime-11.5.1-ubuntu18.04"
       env:
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
         RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.python-package-build-tag }}
