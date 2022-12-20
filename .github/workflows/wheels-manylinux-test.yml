@@ -81,7 +81,7 @@ jobs:
           echo "MATRIX=$(jq -nc 'env.TEST_MATRIX | fromjson | {includes: .}')" >> ${GITHUB_OUTPUT}
 
   wheel-test:
-    name: wheel test ${{ matrix.includes.arch }} ${{ matrix.includes.python }}
+    name: wheel ${{ matrix.includes.test-type }} test ${{ matrix.includes.arch }} ${{ matrix.includes.python }} ${{ matrix.includes.ctk }}
     needs: wheel-test-compute-matrix
     strategy:
       matrix: ${{ fromJSON(needs.wheel-test-compute-matrix.outputs.MATRIX) }}
