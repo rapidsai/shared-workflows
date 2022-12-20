@@ -53,12 +53,12 @@ jobs:
 
     - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
       run: |
-        RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_11" RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
         RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_11" RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.9" rapids-download-wheels-from-s3 ./dist
-        RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_11" RAPIDS_ARCH="aarch64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
+        RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_11" RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.10" rapids-download-wheels-from-s3 ./dist
         RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_11" RAPIDS_ARCH="aarch64" RAPIDS_PY_VERSION="3.9" rapids-download-wheels-from-s3 ./dist
-        RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_12" RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
+        RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_11" RAPIDS_ARCH="aarch64" RAPIDS_PY_VERSION="3.10" rapids-download-wheels-from-s3 ./dist
         RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_12" RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.9" rapids-download-wheels-from-s3 ./dist
-        RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_12" RAPIDS_ARCH="aarch64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
+        RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_12" RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.10" rapids-download-wheels-from-s3 ./dist
         RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_12" RAPIDS_ARCH="aarch64" RAPIDS_PY_VERSION="3.9" rapids-download-wheels-from-s3 ./dist
+        RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_12" RAPIDS_ARCH="aarch64" RAPIDS_PY_VERSION="3.10" rapids-download-wheels-from-s3 ./dist
         rapids-twine ./dist/

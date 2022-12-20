@@ -94,6 +94,6 @@ jobs:
       run: rapids-upload-wheels-to-s3 dist
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
-        RAPIDS_PY_VERSION: "3.8"
+        RAPIDS_PY_VERSION: "3.9"
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
