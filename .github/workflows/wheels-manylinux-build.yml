@@ -96,9 +96,9 @@ jobs:
     needs: wheel-epoch-timestamp
     strategy:
       matrix:
-        python: [3.8, 3.10]
+        python: ['3.8', '3.10']
         arch: [amd64, arm64]
-        ctk: [11.8.0, 12.0.0]
+        ctk: ['11.8.0', '12.0.0']
     runs-on:
       - self-hosted
       - linux
@@ -128,7 +128,11 @@ jobs:
     - name: Standardize repository information
       run: |
         echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
-        echo "RAPIDS_SHA=${{ inputs.sha }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+        sha="${{ inputs.sha }}"
+        if [[ "${sha}" == "" ]]; then
+          sha=$(git rev-parse HEAD)
+        fi
+        echo "RAPIDS_SHA=${sha}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
 

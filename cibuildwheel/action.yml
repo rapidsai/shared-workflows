@@ -110,7 +110,7 @@ runs:
       shell: bash
       env:
         CIBW_SKIP: "*musllinux*"
-        CIBW_MANYLINUX_AARCH64_IMAGE: "rapidsai/manylinux_2_31:cuda-devel-${{ inputs.manylinux-ctk-verison }}-ubuntu20.04"
+        CIBW_MANYLINUX_AARCH64_IMAGE: "rapidsai/manylinux_2_31:cuda-devel-${{ inputs.manylinux-ctk-version }}-ubuntu20.04"
         CIBW_MANYLINUX_X86_64_IMAGE: "rapidsai/manylinux2014:cuda-devel-${{ inputs.manylinux-ctk-version }}-centos7"
         CIBW_BUILD_FRONTEND: "pip"
         CIBW_BEFORE_BUILD_LINUX: ${{ inputs.cibw-before-build }}

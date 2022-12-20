@@ -47,7 +47,11 @@ jobs:
     - name: Standardize repository information
       run: |
         echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
-        echo "RAPIDS_SHA=${{ inputs.sha }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+        sha="${{ inputs.sha }}"
+        if [[ "${sha}" == "" ]]; then
+          sha=$(git rev-parse HEAD)
+        fi
+        echo "RAPIDS_SHA=${sha}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
 
