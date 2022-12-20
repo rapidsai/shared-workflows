@@ -12,7 +12,7 @@ on:
         type: string
       sha:
         type: string
-      build-type:
+      build_type:
         required: true
         type: string
 
@@ -111,7 +111,7 @@ jobs:
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock
       env:
-        RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
+        RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         RAPIDS_PY_VERSION: ${{ matrix.python }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}

@@ -12,7 +12,7 @@ on:
         type: string
       sha:
         type: string
-      build-type:
+      build_type:
         required: true
         type: string
 
@@ -37,7 +37,7 @@ jobs:
       image: "rapidsai/cibuildwheel:cuda-runtime-11.8.0-ubuntu20.04"
       env:
         RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.build-tag }}
-        RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
+        RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         TWINE_USERNAME: cibuildwheel

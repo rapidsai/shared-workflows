@@ -12,7 +12,7 @@ on:
         type: string
       sha:
         type: string
-      build-type:
+      build_type:
         required: true
         type: string
 
@@ -51,7 +51,7 @@ jobs:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
         RAPIDS_PY_VERSION: "3.8"
-        RAPIDS_BUILD_TYPE: ${{ inputs.build-type }}
+        RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.test-before }}
