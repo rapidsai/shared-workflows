@@ -138,7 +138,7 @@ jobs:
     - name: Set CTK-related vars from input CTK versions
       uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@upkeep/manylinux-improvements
       with:
-        ctk: ${{ matrix.ctk }}
+        ctk: ${{ matrix.includes.ctk }}
         package-name: ${{ inputs.package-name }}
 
     - name: Run citestwheel
