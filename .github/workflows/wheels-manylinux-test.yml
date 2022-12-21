@@ -136,6 +136,7 @@ jobs:
         echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
 
     - name: Choose between unit tests and smoke tests for test command
+      shell: bash
       run: |
         test_cmd=""
         if [[ "${{ matrix.includes.test-type }}" == "unit" ]]; then
