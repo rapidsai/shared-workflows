@@ -1,4 +1,4 @@
-name: Build RAPIDS wheels
+name: Publish RAPIDS manylinux wheels
 
 on:
   workflow_call:
@@ -31,6 +31,11 @@ jobs:
   wheel-publish:
     name: wheels publish
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.8', '3.9']
+        linux-arch: ["x86_64", "aarch64"]
+        ctk: ['11.5.1']
     container:
       # ctk version of the cibw container is irrelevant in the publish step
       # it's simply a launcher for twine
@@ -38,6 +43,8 @@ jobs:
       env:
         RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.build-tag }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
+        RAPIDS_ARCH: ${{ matrix.linux-arch }}
+        RAPIDS_PY_VERSION: ${{ matrix.python }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         TWINE_USERNAME: cibuildwheel
@@ -52,20 +59,13 @@ jobs:
         date: ${{ inputs.date }}
         sha: ${{ inputs.sha }}
 
-    - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
-      shell: bash
+    - name: Set CTK-related vars from input CTK versions
+      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@upkeep/manylinux-improvements
+      with:
+        ctk: ${{ matrix.ctk }}
+        package-name: ${{ inputs.package-name }}
+
+    - name: Download wheel from downloads.rapids.ai and publish to internal PyPI
       run: |
-        export RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_cu11"
-
-        # for pure or manylinux wheels, the [x86_64, 3.8] pair is always published
-        RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
-
-        dl_wheel_is_manylinux=$(ls dist/*manylinux*.whl || echo "")
-        if [[ "${dl_wheel_is_manylinux}" != "" ]]; then
-          # this is a manylinux upload, upload them all
-          RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.9" rapids-download-wheels-from-s3 ./dist
-          RAPIDS_ARCH="aarch64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
-          RAPIDS_ARCH="aarch64" RAPIDS_PY_VERSION="3.9" rapids-download-wheels-from-s3 ./dist
-        fi
-
+        rapids-download-wheels-from-s3 ./dist
         rapids-twine ./dist/

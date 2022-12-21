@@ -1,4 +1,4 @@
-name: Build RAPIDS project wheels
+name: Build RAPIDS pure-python wheels
 
 on:
   workflow_call:

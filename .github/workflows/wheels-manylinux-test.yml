@@ -1,4 +1,4 @@
-name: Build RAPIDS manylinux wheels
+name: Test RAPIDS manylinux wheels
 
 on:
   workflow_call:
