@@ -71,20 +71,14 @@ jobs:
 
           export MATRICES='{
             "pull-request": [
-              { "arch": "amd64", "python": "3.8", "ctk": "11.8.0", "image": "ubuntu18.04", "test-type": "unit" },
-              { "arch": "arm64", "python": "3.8", "ctk": "11.8.0", "image": "ubuntu20.04", "test-type": "smoke" },
-              { "arch": "amd64", "python": "3.8", "ctk": "12.0.0", "image": "ubuntu18.04", "test-type": "unit" },
-              { "arch": "arm64", "python": "3.8", "ctk": "12.0.0", "image": "ubuntu20.04", "test-type": "smoke" },
+              { "arch": "amd64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu18.04", "test-type": "unit" },
+              { "arch": "arm64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu20.04", "test-type": "smoke" }
             ],
             "nightly": [
-              { "arch": "amd64", "python": "3.8", "ctk": "11.8.0", "image": "ubuntu18.04", "test-type": "unit" },
-              { "arch": "amd64", "python": "3.8", "ctk": "12.0.0", "image": "ubuntu18.04", "test-type": "unit" },
-              { "arch": "amd64", "python": "3.10", "ctk": "11.8.0", "image": "ubuntu18.04", "test-type": "unit" },
-              { "arch": "amd64", "python": "3.10", "ctk": "12.0.0", "image": "ubuntu18.04", "test-type": "unit" },
-              { "arch": "arm64", "python": "3.8", "ctk": "11.8.0", "image": "ubuntu20.04", "test-type": "unit" },
-              { "arch": "arm64", "python": "3.8", "ctk": "12.0.0", "image": "ubuntu20.04", "test-type": "unit" },
-              { "arch": "arm64", "python": "3.10", "ctk": "11.8.0", "image": "ubuntu20.04", "test-type": "unit" },
-              { "arch": "arm64", "python": "3.10", "ctk": "12.0.0", "image": "ubuntu20.04", "test-type": "unit" }
+              { "arch": "amd64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu18.04", "test-type": "unit" },
+              { "arch": "amd64", "python": "3.9", "ctk": "11.5.1", "image": "ubuntu18.04", "test-type": "unit" },
+              { "arch": "arm64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu20.04", "test-type": "unit" },
+              { "arch": "arm64", "python": "3.9", "ctk": "11.5.1", "image": "ubuntu20.04", "test-type": "unit" }
             ]
           }'
 
@@ -130,6 +124,7 @@ jobs:
         persist-credentials: false
 
     - name: Standardize repository information
+      shell: bash
       run: |
         echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         sha="${{ inputs.sha }}"
@@ -155,9 +150,9 @@ jobs:
 
     - name: Set CTK-related vars from input CTK versions
       run: |
-        ctk_tag="${{ matrix.ctk }}"                # 11.8.0, 12.0.0
-        ctk_major=$(echo $ctk_tag | cut -d'.' -f1) # 11/12
-        wheelname="${{ inputs.package-name }}_${ctk_major}"
+        ctk_tag="${{ matrix.ctk }}"
+        ctk_major=$(echo $ctk_tag | cut -d'.' -f1)
+        wheelname="${{ inputs.package-name }}_cu${ctk_major}"
         echo "RAPIDS_PY_WHEEL_NAME=${wheelname}" >> "${GITHUB_ENV}"
       shell: bash
 

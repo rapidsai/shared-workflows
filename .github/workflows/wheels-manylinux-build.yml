@@ -40,7 +40,7 @@ on:
         default: ''
 
       # versioneer and twine settings
-      python-package-versioneer-override:
+      versioneer-override:
         required: false
         type: string
         default: ''
@@ -96,9 +96,9 @@ jobs:
     needs: wheel-epoch-timestamp
     strategy:
       matrix:
-        python: ['3.8', '3.10']
+        python: ['3.8', '3.9']
         arch: [amd64, arm64]
-        ctk: ['11.8.0', '12.0.0']
+        ctk: ['11.5.1']
     runs-on:
       - self-hosted
       - linux
@@ -107,7 +107,7 @@ jobs:
     container:
       # ctk version of the cibw container is irrelevant in the manylinux case
       # it's simply a launcher for cibuildwheel
-      image: "rapidsai/cibuildwheel:cuda-runtime-11.8.0-ubuntu20.04"
+      image: "rapidsai/cibuildwheel:cuda-runtime-${{ matrix.ctk }}-ubuntu20.04"
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock
       env:
@@ -126,6 +126,7 @@ jobs:
         persist-credentials: false
 
     - name: Standardize repository information
+      shell: bash
       run: |
         echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         sha="${{ inputs.sha }}"
@@ -155,13 +156,13 @@ jobs:
 
     - name: Set CTK-related vars from input CTK versions
       run: |
-        ctk_tag="${{ matrix.ctk }}"                # 11.8.0, 12.0.0
-        ctk_major=$(echo $ctk_tag | cut -d'.' -f1) # 11/12
-        cuda_suffix="-cu${ctk_major}"              # -cu11/-cu12
+        ctk_tag="${{ matrix.ctk }}"
+        ctk_major=$(echo $ctk_tag | cut -d'.' -f1)
+        cuda_suffix="-cu${ctk_major}"
 
         echo "RAPIDS_PY_WHEEL_CUDA_SUFFIX=${cuda_suffix}" >> "${GITHUB_ENV}"
 
-        wheelname="${{ inputs.package-name }}_${ctk_major}"
+        wheelname="${{ inputs.package-name }}_cu${ctk_major}"
         echo "RAPIDS_PY_WHEEL_NAME=${wheelname}" >> "${GITHUB_ENV}"
       shell: bash
 

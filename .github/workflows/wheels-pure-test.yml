@@ -43,12 +43,12 @@ jobs:
     runs-on: [self-hosted, linux, amd64, gpu-latest]
     strategy:
       matrix:
-        ctk: ["11.8.0", "12.0.0"]
+        ctk: ["11.5.1"]
     container:
       image: "rapidsai/citestwheel:cuda-devel-${{ matrix.ctk }}-ubuntu18.04"
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
-        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}
+        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}_cu11
         RAPIDS_PY_VERSION: "3.8"
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
@@ -74,6 +74,7 @@ jobs:
         persist-credentials: false
 
     - name: Standardize repository information
+      shell: bash
       run: |
         echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         sha="${{ inputs.sha }}"
