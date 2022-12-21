@@ -49,7 +49,7 @@ jobs:
         ctk: ["11.5.1"]
     runs-on: ubuntu-latest
     container:
-      image: "rapidsai/cibuildwheel:cuda-runtime-${{ matrix.ctk }}-ubuntu20.04"
+      image: "rapidsai/cibuildwheel:cuda-runtime-${{ matrix.ctk }}-ubuntu18.04"
     steps:
     - name: checkout code repo
       uses: actions/checkout@v3
