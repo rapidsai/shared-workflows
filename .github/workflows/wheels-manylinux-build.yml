@@ -180,13 +180,13 @@ jobs:
         post-repair-arm64: ${{ inputs.post-repair-arm64 }}
 
         # pre-picked epoch timestamp to use for all wheels
-        python-package-epoch-timestamp: ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }}
+        epoch-timestamp: ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }}
 
         # user inputs
         manylinux-ctk-version: ${{ matrix.ctk }}
         package-dir: ${{ inputs.package-dir }}
-        python-package-versioneer-override: ${{ inputs.python-package-versioneer-override }}
-        python-package-cuda-suffix: ${{ env.RAPIDS_PY_WHEEL_CUDA_SUFFIX }}
+        versioneer-override: ${{ inputs.versioneer-override }}
+        cuda-suffix: ${{ env.RAPIDS_PY_WHEEL_CUDA_SUFFIX }}
         cibw-environment: ${{ inputs.cibw-environment }}
         cibw-before-build: ${{ inputs.cibw-before-build }}
         skbuild-configure-options: ${{ inputs.skbuild-configure-options }}

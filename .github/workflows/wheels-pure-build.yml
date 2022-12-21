@@ -85,7 +85,7 @@ jobs:
 
     - name: Build pure python wheel with pip wheel
       run: |
-        versioneer_override="${{ inputs.python-package-versioneer-override }}"
+        versioneer_override="${{ inputs.versioneer-override }}"
 
         if [ "${versioneer_override}" == "" ]; then
           versioneer_override="$(rapids-pip-wheel-version ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }})"
