@@ -69,7 +69,8 @@ jobs:
           set -euExo pipefail
           shopt -s inherit_errexit
 
-          export MATRICES='{
+          export MATRICES=$(cat <<EOF
+          {
             "pull-request": [
               { "arch": "amd64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu18.04", "test-type": "unit", "test-command": "${{ inputs.test-unittest }}" },
               { "arch": "arm64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu20.04", "test-type": "smoke", "test-command": "${{ inputs.test-smoketest }}" }
@@ -80,7 +81,8 @@ jobs:
               { "arch": "arm64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu20.04", "test-type": "unit", "test-command": "${{ inputs.test-unittest }}" },
               { "arch": "arm64", "python": "3.9", "ctk": "11.5.1", "image": "ubuntu20.04", "test-type": "unit", "test-command": "${{ inputs.test-unittest }}" }
             ]
-          }'
+          }
+          EOF)
 
           export TEST_MATRIX=$(jq -nc 'env.MATRICES | fromjson | .[env.BUILD_TYPE]')
           echo "MATRIX=$(jq -nc 'env.TEST_MATRIX | fromjson | {includes: .}')" >> ${GITHUB_OUTPUT}
