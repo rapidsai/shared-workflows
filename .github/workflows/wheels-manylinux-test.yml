@@ -71,14 +71,14 @@ jobs:
 
           export MATRICES='{
             "pull-request": [
-              { "arch": "amd64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu18.04", "test-type": "unit" },
-              { "arch": "arm64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu20.04", "test-type": "smoke" }
+              { "arch": "amd64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu18.04", "test-type": "unit", "test-command": "${{ inputs.test-unittest }}" },
+              { "arch": "arm64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu20.04", "test-type": "smoke", "test-command": "${{ inputs.test-smoketest }}" }
             ],
             "nightly": [
-              { "arch": "amd64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu18.04", "test-type": "unit" },
-              { "arch": "amd64", "python": "3.9", "ctk": "11.5.1", "image": "ubuntu18.04", "test-type": "unit" },
-              { "arch": "arm64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu20.04", "test-type": "unit" },
-              { "arch": "arm64", "python": "3.9", "ctk": "11.5.1", "image": "ubuntu20.04", "test-type": "unit" }
+              { "arch": "amd64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu18.04", "test-type": "unit", "test-command": "${{ inputs.test-unittest }}" },
+              { "arch": "amd64", "python": "3.9", "ctk": "11.5.1", "image": "ubuntu18.04", "test-type": "unit", "test-command": "${{ inputs.test-unittest }}" },
+              { "arch": "arm64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu20.04", "test-type": "unit", "test-command": "${{ inputs.test-unittest }}" },
+              { "arch": "arm64", "python": "3.9", "ctk": "11.5.1", "image": "ubuntu20.04", "test-type": "unit", "test-command": "${{ inputs.test-unittest }}" }
             ]
           }'
 
@@ -107,6 +107,8 @@ jobs:
         RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.test-before-amd64 }}
         RAPIDS_BEFORE_TEST_COMMANDS_ARM64: ${{ inputs.test-before-arm64 }}
         PIP_EXTRA_INDEX_URL: "https://pypi.k8s.rapids.ai/simple"
+        CIBW_TEST_EXTRAS: "test"
+        CIBW_TEST_COMMAND: ${{ matrix.includes.test-command }}
     steps:
     - name: Run nvidia-smi to make sure GPU is working
       run: nvidia-smi
@@ -134,20 +136,6 @@ jobs:
         echo "RAPIDS_SHA=${sha}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
         echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
-
-    - name: Choose between unit tests and smoke tests for test command
-      shell: bash
-      run: |
-        test_cmd=""
-        if [[ "${{ matrix.includes.test-type }}" == "unit" ]]; then
-          test_cmd="${{ inputs.test-unittest }}"
-          echo "CIBW_TEST_EXTRAS=test" >> "${GITHUB_ENV}"
-        elif [[ "${{ matrix.includes.test-type }}" == "smoke" ]]; then
-          test_cmd="${{ inputs.test-smoketest }}"
-          echo "CIBW_TEST_EXTRAS=test" >> "${GITHUB_ENV}"
-        fi
-
-        echo "CIBW_TEST_COMMAND=${test_cmd}" >> "${GITHUB_ENV}"
 
     - name: Set CTK-related vars from input CTK versions
       run: |
