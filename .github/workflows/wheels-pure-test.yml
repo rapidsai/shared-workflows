@@ -24,10 +24,6 @@ on:
         required: false
         type: string
         default: 'true'
-      test-extras:
-        required: false
-        type: string
-        default: ''
       test-unittest:
         required: false
         type: string
@@ -53,7 +49,7 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.test-before }}
-        CIBW_TEST_EXTRAS: ${{ inputs.test-extras }}
+        CIBW_TEST_EXTRAS: "test"
         CIBW_TEST_COMMAND: ${{ inputs.test-unittest }}
         PIP_EXTRA_INDEX_URL: "https://pypi.k8s.rapids.ai/simple"
     steps:
