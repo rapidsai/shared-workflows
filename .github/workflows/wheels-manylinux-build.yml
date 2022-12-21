@@ -107,7 +107,7 @@ jobs:
     container:
       # ctk version of the cibw container is irrelevant in the manylinux case
       # it's simply a launcher for cibuildwheel
-      image: "rapidsai/cibuildwheel:cuda-runtime-${{ matrix.ctk }}-ubuntu20.04"
+      image: "rapidsai/cibuildwheel:cuda-runtime-11.8.0-ubuntu20.04"
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock
       env:
