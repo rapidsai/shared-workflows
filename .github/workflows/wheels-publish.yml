@@ -63,7 +63,7 @@ jobs:
         # for pure or manylinux wheels, the [x86_64, 3.8] pair is always published
         RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
 
-        dl_wheel_is_manylinux=$(ls dist/*manylinux*.whl >&2 || echo "")
+        dl_wheel_is_manylinux=$(ls dist/*manylinux*.whl || echo "")
         if [[ "${dl_wheel_is_manylinux}" != "" ]]; then
           # this is a manylinux upload, upload them all
           RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.9" rapids-download-wheels-from-s3 ./dist
