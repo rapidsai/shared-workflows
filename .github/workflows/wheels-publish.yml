@@ -36,7 +36,6 @@ jobs:
       # it's simply a launcher for twine
       image: "rapidsai/cibuildwheel:cuda-runtime-11.8.0-ubuntu20.04"
       env:
-        RAPIDS_PY_WHEEL_NAME: ${{ inputs.package-name }}_cu11
         RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.build-tag }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
@@ -56,6 +55,8 @@ jobs:
     - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
       shell: bash
       run: |
+        export RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_cu11"
+
         # for pure or manylinux wheels, the [x86_64, 3.8] pair is always published
         RAPIDS_ARCH="x86_64" RAPIDS_PY_VERSION="3.8" rapids-download-wheels-from-s3 ./dist
 

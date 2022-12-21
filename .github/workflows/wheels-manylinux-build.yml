@@ -151,16 +151,10 @@ jobs:
         persist-credentials: false
 
     - name: Set CTK-related vars from input CTK versions
-      run: |
-        ctk_tag="${{ matrix.ctk }}"
-        ctk_major=$(echo $ctk_tag | cut -d'.' -f1)
-        cuda_suffix="-cu${ctk_major}"
-
-        echo "RAPIDS_PY_WHEEL_CUDA_SUFFIX=${cuda_suffix}" >> "${GITHUB_ENV}"
-
-        wheelname="${{ inputs.package-name }}_cu${ctk_major}"
-        echo "RAPIDS_PY_WHEEL_NAME=${wheelname}" >> "${GITHUB_ENV}"
-      shell: bash
+      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@upkeep/manylinux-improvements
+      with:
+        ctk: ${{ matrix.ctk }}
+        package-name: ${{ inputs.package-name }}
 
     - name: Build wheels with cibuildwheel action
       uses: rapidsai/shared-action-workflows/cibuildwheel@upkeep/manylinux-improvements
