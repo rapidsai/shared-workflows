@@ -126,16 +126,12 @@ jobs:
         persist-credentials: false
 
     - name: Standardize repository information
-      shell: bash
-      run: |
-        echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
-        sha="${{ inputs.sha }}"
-        if [[ "${sha}" == "" ]]; then
-          sha=$(git rev-parse HEAD)
-        fi
-        echo "RAPIDS_SHA=${sha}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
-        echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
-        echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+      uses: rapidsai/shared-action-workflows/rapids-github-info@upkeep/manylinux-improvements
+      with:
+        repo: ${{ inputs.repo }}
+        branch: ${{ inputs.branch }}
+        date: ${{ inputs.date }}
+        sha: ${{ inputs.sha }}
 
     - name: Preprocess extra repos
       id: preprocess-extras
