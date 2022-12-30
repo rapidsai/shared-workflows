@@ -25,8 +25,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { CUDA_VER: "11.5.1", LINUX_VER: "ubuntu20.04", ARCH: "amd64", PY_VER: "3.8" }
-          - { CUDA_VER: "11.5.1", LINUX_VER: "ubuntu20.04", ARCH: "arm64", PY_VER: "3.8" }
+          - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu20.04", ARCH: "amd64", PY_VER: "3.8" }
+          - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu20.04", ARCH: "arm64", PY_VER: "3.8" }
     runs-on:
       - self-hosted
       - linux
