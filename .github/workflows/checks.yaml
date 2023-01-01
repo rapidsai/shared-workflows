@@ -18,10 +18,13 @@ on:
         default: true
         type: boolean
         required: false
+      enable_check_pr_job_dependencies:
+        default: true
+        type: boolean
+        required: false
 
 jobs:
-  check-size:
-    if: ${{ inputs.enable_check_size }}
+  other-checks:
     runs-on: ubuntu-latest
     container:
       image: rapidsai/ci:latest
@@ -34,9 +37,13 @@ jobs:
         id: get-pr-info
         uses: rapidsai/shared-action-workflows/get-pr-info@main
       - name: Run rapids-size-checker
+        if: ${{ inputs.enable_check_size }}
         run: rapids-size-checker
         env:
           RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
+      - name: Check workflow file dependencies
+        if: ${{ inputs.enable_check_pr_job_dependencies }}
+        run: rapids-check-pr-job-dependencies
   check-style:
     if: ${{ inputs.enable_check_style }}
     runs-on: ubuntu-latest
