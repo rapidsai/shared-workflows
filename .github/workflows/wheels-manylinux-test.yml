@@ -66,9 +66,6 @@ jobs:
         # use bash to support inherit_errexit so that $(jq) subshell failures can propagate
         shell: bash 
         run: |
-          set -euExo pipefail
-          shopt -s inherit_errexit
-
           export MATRICES=$(cat <<EOF
           {
             "pull-request": [
