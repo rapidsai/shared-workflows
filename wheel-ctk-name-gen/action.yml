@@ -11,7 +11,7 @@ outputs:
     value: ${{ steps.ctk-gen.outputs.RAPIDS_PY_WHEEL_NAME }}
 
 runs:
-  using: "composite"
+  using: composite
   steps:
     - name: Set CTK-related vars from input CTK versions
       id: ctk-gen

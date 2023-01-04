@@ -19,7 +19,7 @@ outputs:
     value: ${{ steps.standardize-repo-info.outputs.RAPIDS_NIGHTLY_DATE }}
 
 runs:
-  using: "composite"
+  using: composite
   steps:
     - name: Standardize repository information
       id: standardize-repo-info
