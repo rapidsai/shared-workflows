@@ -44,6 +44,14 @@ jobs:
         TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
         TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
     steps:
+    - name: checkout code repo
+      uses: actions/checkout@v3
+      with:
+        repository: ${{ inputs.repo }}
+        ref: ${{ inputs.sha }}
+        fetch-depth: 0 # unshallow fetch for setuptools-scm
+        persist-credentials: false
+
     - name: Standardize repository information
       uses: rapidsai/shared-action-workflows/rapids-github-info@main
       with:

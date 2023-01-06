@@ -20,10 +20,6 @@ on:
         required: true
         type: string
 
-      test-checkout-src:
-        required: false
-        type: string
-        default: 'true'
       test-unittest:
         required: false
         type: string
@@ -61,7 +57,6 @@ jobs:
 
     - name: checkout code repo
       uses: actions/checkout@v3
-      if: ${{ inputs.test-checkout-src == 'true' }}
       with:
         repository: ${{ inputs.repo }}
         ref: ${{ inputs.sha }}
