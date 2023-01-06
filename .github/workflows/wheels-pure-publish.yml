@@ -21,12 +21,6 @@ on:
         required: true
         type: string
 
-      # twine settings
-      build-tag:
-        required: false
-        type: string
-        default: ''
-
 jobs:
   wheel-publish:
     name: wheels publish
@@ -41,7 +35,6 @@ jobs:
       # it's simply a launcher for twine
       image: "rapidsai/cibuildwheel:cuda-runtime-11.8.0-ubuntu20.04"
       env:
-        RAPIDS_PY_WHEEL_BUILD_TAG: ${{ inputs.build-tag }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         RAPIDS_ARCH: ${{ matrix.linux-arch }}
         RAPIDS_PY_VERSION: ${{ matrix.python }}

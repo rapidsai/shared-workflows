@@ -23,12 +23,6 @@ on:
         required: true
         type: string
 
-      # versioneer and twine settings
-      versioneer-override:
-        required: false
-        type: string
-        default: ''
-
 jobs:
   wheel-epoch-timestamp:
     name: wheel epoch timestamper
@@ -75,12 +69,7 @@ jobs:
 
     - name: Build pure python wheel with pip wheel
       run: |
-        versioneer_override="${{ inputs.versioneer-override }}"
-
-        if [ "${versioneer_override}" == "" ]; then
-          versioneer_override="$(rapids-pip-wheel-version ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }})"
-        fi
-          
+        versioneer_override="$(rapids-pip-wheel-version ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }})"
         export RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE="${versioneer_override}"
         python -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps
       shell: bash

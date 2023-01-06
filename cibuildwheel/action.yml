@@ -13,9 +13,6 @@ inputs:
   cuda-suffix:
     description: 'Add a -cu11-style suffix to wheel name'
     required: true
-  versioneer-override:
-    description: 'Override package version'
-    required: true
   epoch-timestamp:
     description: 'Epoch timestamp to use as nightly version'
     required: true
@@ -86,11 +83,8 @@ runs:
         skbuild_config_opts="${{ inputs.skbuild-configure-options}}"
         skbuild_config_opts="${skbuild_config_opts} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
 
-        # use gha-tools rapids-pip-wheel-version to generate next version if unset
-        versioneer_override="${{ inputs.versioneer-override }}"
-        if [ "${versioneer_override}" == "" ]; then
-          versioneer_override="$(rapids-pip-wheel-version ${{ inputs.epoch-timestamp }})"
-        fi
+        # use gha-tools rapids-pip-wheel-version to generate wheel version
+        versioneer_override="$(rapids-pip-wheel-version ${{ inputs.epoch-timestamp }})"
 
         # convert 3.x to cp3x-*
         python_ver=${{ inputs.python-version }}

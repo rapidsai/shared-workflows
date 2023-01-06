@@ -39,12 +39,7 @@ on:
         type: string
         default: ''
 
-      # versioneer and twine settings
-      versioneer-override:
-        required: false
-        type: string
-        default: ''
-
+      # cibw settings
       cibw-environment:
         type: string
         required: false
@@ -178,7 +173,6 @@ jobs:
         # user inputs
         manylinux-ctk-version: ${{ matrix.ctk }}
         package-dir: ${{ inputs.package-dir }}
-        versioneer-override: ${{ inputs.versioneer-override }}
         cuda-suffix: ${{ env.RAPIDS_PY_WHEEL_CUDA_SUFFIX }}
         cibw-environment: ${{ inputs.cibw-environment }}
         cibw-before-build: ${{ inputs.cibw-before-build }}
