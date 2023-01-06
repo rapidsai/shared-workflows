@@ -1,0 +1,86 @@
+name: Test RAPIDS pure-python wheels
+
+on:
+  workflow_call:
+    inputs:
+      # repo and branch
+      repo:
+        type: string
+      branch:
+        type: string
+      date:
+        type: string
+      sha:
+        type: string
+      build_type:
+        required: true
+        type: string
+
+      package-name:
+        required: true
+        type: string
+
+      test-checkout-src:
+        required: false
+        type: string
+        default: 'true'
+      test-unittest:
+        required: false
+        type: string
+        default: ''
+      test-before:
+        required: false
+        type: string
+        default: 'true'
+
+jobs:
+  wheel-test:
+    name: wheel test pure
+    runs-on: [self-hosted, linux, amd64, gpu-v100-495-1]
+    strategy:
+      matrix:
+        ctk: ["11.5.1"]
+    container:
+      image: "rapidsai/citestwheel:cuda-devel-${{ matrix.ctk }}-ubuntu18.04"
+      env:
+        NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
+        RAPIDS_PY_VERSION: "3.8"
+        RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+        RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.test-before }}
+        CIBW_TEST_EXTRAS: "test"
+        CIBW_TEST_COMMAND: ${{ inputs.test-unittest }}
+        PIP_EXTRA_INDEX_URL: "https://pypi.k8s.rapids.ai/simple"
+    steps:
+    - name: Run nvidia-smi to make sure GPU is working
+      run: nvidia-smi
+
+    - name: Install private index credentials in cibuildwheel container
+      run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
+
+    - name: checkout code repo
+      uses: actions/checkout@v3
+      if: ${{ inputs.test-checkout-src == 'true' }}
+      with:
+        repository: ${{ inputs.repo }}
+        ref: ${{ inputs.sha }}
+        fetch-depth: 0 # unshallow fetch for setuptools-scm
+        persist-credentials: false
+
+    - name: Standardize repository information
+      uses: rapidsai/shared-action-workflows/rapids-github-info@main
+      with:
+        repo: ${{ inputs.repo }}
+        branch: ${{ inputs.branch }}
+        date: ${{ inputs.date }}
+        sha: ${{ inputs.sha }}
+
+    - name: Set CTK-related vars from input CTK versions
+      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@main
+      with:
+        ctk: ${{ matrix.ctk }}
+        package-name: ${{ inputs.package-name }}
+
+    - name: Run citestwheel
+      run: /citestwheel.sh

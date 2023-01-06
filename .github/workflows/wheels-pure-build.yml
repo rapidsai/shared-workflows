@@ -1,0 +1,83 @@
+name: Build RAPIDS pure-python wheels
+
+on:
+  workflow_call:
+    inputs:
+      # repo and branch
+      repo:
+        type: string
+      branch:
+        type: string
+      date:
+        type: string
+      sha:
+        type: string
+      build_type:
+        required: true
+        type: string
+
+      package-name:
+        required: true
+        type: string
+      package-dir:
+        required: true
+        type: string
+
+jobs:
+  wheel-epoch-timestamp:
+    name: wheel epoch timestamper
+    runs-on: ubuntu-latest
+    outputs:
+      rapids_epoch_timestamp: ${{ steps.get_epoch_time.outputs.rapids_epoch_timestamp }}
+
+    steps:
+    - name: Get epoch timestamp to use as nightly version
+      id: get_epoch_time
+      run: echo "RAPIDS_EPOCH_TIMESTAMP=$(date +%s)" >> "${GITHUB_OUTPUT}"
+
+  wheel-build:
+    name: wheel build pure ${{ matrix.ctk }}
+    needs: wheel-epoch-timestamp
+    strategy:
+      matrix:
+        ctk: ["11.5.1"]
+    runs-on: ubuntu-latest
+    container:
+      image: "rapidsai/cibuildwheel:cuda-runtime-${{ matrix.ctk }}-ubuntu18.04"
+    steps:
+    - name: checkout code repo
+      uses: actions/checkout@v3
+      with:
+        repository: ${{ inputs.repo }}
+        ref: ${{ inputs.sha }}
+        fetch-depth: 0 # unshallow fetch for setuptools-scm
+        persist-credentials: false
+
+    - name: Standardize repository information
+      uses: rapidsai/shared-action-workflows/rapids-github-info@main
+      with:
+        repo: ${{ inputs.repo }}
+        branch: ${{ inputs.branch }}
+        date: ${{ inputs.date }}
+        sha: ${{ inputs.sha }}
+
+    - name: Set CTK-related vars from input CTK versions
+      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@main
+      with:
+        ctk: ${{ matrix.ctk }}
+        package-name: ${{ inputs.package-name }}
+
+    - name: Build pure python wheel with pip wheel
+      run: |
+        versioneer_override="$(rapids-pip-wheel-version ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }})"
+        export RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE="${versioneer_override}"
+        python -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps
+      shell: bash
+
+    - name: Upload wheels to downloads.rapids.ai
+      run: rapids-upload-wheels-to-s3 dist
+      env:
+        RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
+        RAPIDS_PY_VERSION: "3.8"
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}

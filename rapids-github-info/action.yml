@@ -1,0 +1,35 @@
+name: "RAPIDS GitHub info"
+inputs:
+  repo:
+    type: string
+  branch:
+    type: string
+  date:
+    type: string
+  sha:
+    type: string
+outputs:
+  rapids_repository:
+    value: ${{ steps.standardize-repo-info.outputs.RAPIDS_REPOSITORY }}
+  rapids_sha:
+    value: ${{ steps.standardize-repo-info.outputs.RAPIDS_SHA }}
+  rapids_ref_name:
+    value: ${{ steps.standardize-repo-info.outputs.RAPIDS_REF_NAME }}
+  rapids_nightly_date:
+    value: ${{ steps.standardize-repo-info.outputs.RAPIDS_NIGHTLY_DATE }}
+
+runs:
+  using: composite
+  steps:
+    - name: Standardize repository information
+      id: standardize-repo-info
+      shell: bash
+      run: |
+        echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+        sha="${{ inputs.sha }}"
+        if [[ "${sha}" == "" ]]; then
+          sha=$(git rev-parse HEAD)
+        fi
+        echo "RAPIDS_SHA=${sha}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+        echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"
+        echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" | tee --append "${GITHUB_ENV}" "${GITHUB_OUTPUT}"

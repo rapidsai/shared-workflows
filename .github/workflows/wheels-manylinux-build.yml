@@ -1,0 +1,189 @@
+name: Build RAPIDS manylinux wheels
+
+on:
+  workflow_call:
+    inputs:
+      # repo and branch
+      repo:
+        type: string
+      branch:
+        type: string
+      date:
+        type: string
+      sha:
+        type: string
+      build_type:
+        required: true
+        type: string
+
+      # general settings
+      package-name:
+        required: true
+        type: string
+      package-dir:
+        required: true
+        type: string
+
+      # Extra repository that will be cloned into the project directory.
+      extra-repo:
+        required: false
+        type: string
+        default: ''
+      extra-repo-sha:
+        required: false
+        type: string
+        default: ''
+      # Note that this is the _name_ of a secret containing the key, not the key itself.
+      extra-repo-deploy-key: 
+        required: false
+        type: string
+        default: ''
+
+      # cibw settings
+      cibw-environment:
+        type: string
+        required: false
+        default: ''
+      cibw-before-all-amd64:
+        required: false
+        type: string
+        default: 'true'
+      cibw-before-all-arm64:
+        required: false
+        type: string
+        default: 'true'
+      cibw-before-build:
+        required: false
+        type: string
+        default: 'true'
+      post-repair-amd64:
+        required: false
+        type: string
+        default: 'true'
+      post-repair-arm64:
+        required: false
+        type: string
+        default: 'true'
+
+      skbuild-configure-options:
+        required: false
+        type: string
+        default: ''
+      skbuild-build-options:
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  wheel-epoch-timestamp:
+    name: wheel epoch timestamper
+    runs-on: ubuntu-latest
+    outputs:
+      rapids_epoch_timestamp: ${{ steps.get_epoch_time.outputs.rapids_epoch_timestamp }}
+
+    steps:
+    - name: Get epoch timestamp to use as nightly version
+      id: get_epoch_time
+      run: echo "RAPIDS_EPOCH_TIMESTAMP=$(date +%s)" >> "${GITHUB_OUTPUT}"
+
+  wheel-build:
+    name: cibuildwheel ${{ matrix.arch }} ${{ matrix.python }} ${{ matrix.ctk }}
+    needs: wheel-epoch-timestamp
+    strategy:
+      matrix:
+        python: ['3.8', '3.9']
+        arch: [amd64, arm64]
+        ctk: ['11.5.1']
+    runs-on:
+      - self-hosted
+      - linux
+      - ${{ matrix.arch }}
+      - cpu16
+    container:
+      # ctk version of the cibw container is irrelevant in the manylinux case
+      # it's simply a launcher for cibuildwheel
+      image: "rapidsai/cibuildwheel:cuda-runtime-11.8.0-ubuntu20.04"
+
+      # we need the below for docker-in-docker
+      # cibuildwheel images launch manylinux images
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+      env:
+        RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
+        RAPIDS_PY_VERSION: ${{ matrix.python }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+
+    steps:
+    - name: checkout code repo
+      uses: actions/checkout@v3
+      with:
+        repository: ${{ inputs.repo }}
+        ref: ${{ inputs.sha }}
+        fetch-depth: 0 # unshallow fetch for setuptools-scm
+        persist-credentials: false
+
+    - name: Standardize repository information
+      uses: rapidsai/shared-action-workflows/rapids-github-info@main
+      with:
+        repo: ${{ inputs.repo }}
+        branch: ${{ inputs.branch }}
+        date: ${{ inputs.date }}
+        sha: ${{ inputs.sha }}
+
+    - name: Preprocess extra repos
+      id: preprocess-extras
+      if: ${{ inputs.extra-repo != '' }}
+      run: |
+        EXTRA_REPO_PATH=$(echo ${{ inputs.extra-repo }} | cut -d "/"  -f 2)
+        echo "EXTRA_REPO_PATH=${EXTRA_REPO_PATH}" >> $GITHUB_OUTPUT
+
+    - name: checkout extra repos
+      uses: actions/checkout@v3
+      if: ${{ inputs.extra-repo != '' }}
+      with:
+        repository: ${{ inputs.extra-repo }}
+        ref: ${{ inputs.extra-repo-sha }}
+        path: ${{ steps.preprocess-extras.outputs.EXTRA_REPO_PATH }}
+        ssh-key: ${{ secrets[inputs.extra-repo-deploy-key] }}
+        persist-credentials: false
+
+    - name: Set CTK-related vars from input CTK versions
+      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@main
+      with:
+        ctk: ${{ matrix.ctk }}
+        package-name: ${{ inputs.package-name }}
+
+    - name: Build wheels with cibuildwheel action
+      uses: rapidsai/shared-action-workflows/cibuildwheel@main
+      with:
+        # hardcoded
+        output-dir: dist
+
+        # matrix settings
+        python-version: ${{ matrix.python }}
+        cibw-before-all-amd64: ${{ inputs.cibw-before-all-amd64 }}
+        cibw-before-all-arm64: ${{ inputs.cibw-before-all-arm64 }}
+        post-repair-amd64: ${{ inputs.post-repair-amd64 }}
+        post-repair-arm64: ${{ inputs.post-repair-arm64 }}
+
+        # pre-picked epoch timestamp to use for all wheels
+        epoch-timestamp: ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }}
+
+        # user inputs
+        manylinux-ctk-version: ${{ matrix.ctk }}
+        package-dir: ${{ inputs.package-dir }}
+        cuda-suffix: ${{ env.RAPIDS_PY_WHEEL_CUDA_SUFFIX }}
+        cibw-environment: ${{ inputs.cibw-environment }}
+        cibw-before-build: ${{ inputs.cibw-before-build }}
+        skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
+        skbuild-build-options: ${{ inputs.skbuild-build-options }}
+
+        # secrets
+        sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        sccache-aws-secret-access-key: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+        internal-pypi-user: cibuildwheel
+        internal-pypi-pass: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
+
+    - name: Upload wheels to downloads.rapids.ai
+      run: rapids-upload-wheels-to-s3 dist
