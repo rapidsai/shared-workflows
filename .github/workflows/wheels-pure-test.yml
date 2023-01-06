@@ -36,7 +36,7 @@ on:
 jobs:
   wheel-test:
     name: wheel test pure
-    runs-on: [self-hosted, linux, amd64, gpu-latest]
+    runs-on: [self-hosted, linux, amd64, gpu-v100-495-1]
     strategy:
       matrix:
         ctk: ["11.5.1"]

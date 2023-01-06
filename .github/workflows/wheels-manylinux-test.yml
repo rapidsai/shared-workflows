@@ -69,14 +69,14 @@ jobs:
           export MATRICES=$(cat <<EOF
           {
             "pull-request": [
-              { "arch": "amd64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu18.04", "test-type": "unit", "test-command": "${{ inputs.test-unittest }}" },
-              { "arch": "arm64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu20.04", "test-type": "smoke", "test-command": "${{ inputs.test-smoketest }}" }
+              { "arch": "amd64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu18.04", "test-type": "unit", "test-command": "${{ inputs.test-unittest }}", "gpu": "v100", "driver": "495"  },
+              { "arch": "arm64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu20.04", "test-type": "smoke", "test-command": "${{ inputs.test-smoketest }}", "gpu": "a100", "driver": "495"  }
             ],
             "nightly": [
-              { "arch": "amd64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu18.04", "test-type": "unit", "test-command": "${{ inputs.test-unittest }}" },
-              { "arch": "amd64", "python": "3.9", "ctk": "11.5.1", "image": "ubuntu18.04", "test-type": "unit", "test-command": "${{ inputs.test-unittest }}" },
-              { "arch": "arm64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu20.04", "test-type": "unit", "test-command": "${{ inputs.test-unittest }}" },
-              { "arch": "arm64", "python": "3.9", "ctk": "11.5.1", "image": "ubuntu20.04", "test-type": "unit", "test-command": "${{ inputs.test-unittest }}" }
+              { "arch": "amd64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu18.04", "test-type": "unit", "test-command": "${{ inputs.test-unittest }}", "gpu": "v100", "driver": "495" },
+              { "arch": "amd64", "python": "3.9", "ctk": "11.5.1", "image": "ubuntu18.04", "test-type": "unit", "test-command": "${{ inputs.test-unittest }}", "gpu": "v100", "driver": "495" },
+              { "arch": "arm64", "python": "3.8", "ctk": "11.5.1", "image": "ubuntu20.04", "test-type": "unit", "test-command": "${{ inputs.test-unittest }}", "gpu": "a100", "driver": "495" },
+              { "arch": "arm64", "python": "3.9", "ctk": "11.5.1", "image": "ubuntu20.04", "test-type": "unit", "test-command": "${{ inputs.test-unittest }}", "gpu": "a100", "driver": "495" }
             ]
           }
           EOF)
@@ -93,7 +93,7 @@ jobs:
       - self-hosted
       - linux
       - ${{ matrix.includes.arch }}
-      - gpu-latest
+      - gpu-${{ matrix.includes.gpu }}-${{ matrix.includes.driver }}-1
     container:
       image: "rapidsai/citestwheel:cuda-devel-${{ matrix.includes.ctk }}-${{ matrix.includes.image }}"
       options: ${{ inputs.test-docker-options }}
