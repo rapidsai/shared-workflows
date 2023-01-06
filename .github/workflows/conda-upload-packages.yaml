@@ -12,6 +12,8 @@ on:
         type: string
       repo:
         type: string
+      skip_upload_pkgs:
+        type: string
 
 jobs:
   upload:
@@ -43,3 +45,5 @@ jobs:
           echo "RAPIDS_CONDA_TOKEN=${RAPIDS_CONDA_TOKEN}" >> "${GITHUB_ENV}"
       - name: Upload packages
         run: rapids-upload-to-anaconda
+        env:
+          SKIP_UPLOAD_PKGS: ${{ inputs.skip_upload_pkgs }}
