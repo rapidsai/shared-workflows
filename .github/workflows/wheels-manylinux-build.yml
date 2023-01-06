@@ -124,7 +124,7 @@ jobs:
         persist-credentials: false
 
     - name: Standardize repository information
-      uses: rapidsai/shared-action-workflows/rapids-github-info@upkeep/manylinux-improvements
+      uses: rapidsai/shared-action-workflows/rapids-github-info@main
       with:
         repo: ${{ inputs.repo }}
         branch: ${{ inputs.branch }}
@@ -149,13 +149,13 @@ jobs:
         persist-credentials: false
 
     - name: Set CTK-related vars from input CTK versions
-      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@upkeep/manylinux-improvements
+      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@main
       with:
         ctk: ${{ matrix.ctk }}
         package-name: ${{ inputs.package-name }}
 
     - name: Build wheels with cibuildwheel action
-      uses: rapidsai/shared-action-workflows/cibuildwheel@upkeep/manylinux-improvements
+      uses: rapidsai/shared-action-workflows/cibuildwheel@main
       with:
         # hardcoded
         output-dir: dist
