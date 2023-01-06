@@ -26,10 +26,6 @@ on:
         required: false
         type: string
         default: '-e _NOOP'
-      test-checkout-src: # allow one to skip checking out source code to run packaged tests
-        required: false
-        type: string
-        default: 'true'
       test-unittest: # tests are allowed to be blank because the wheel is installed and pip checked
         required: false
         type: string
@@ -117,7 +113,6 @@ jobs:
 
     - name: checkout code repo
       uses: actions/checkout@v3
-      if: ${{ inputs.test-checkout-src == 'true' }}
       with:
         repository: ${{ inputs.repo }}
         ref: ${{ inputs.sha }}
