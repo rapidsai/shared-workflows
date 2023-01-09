@@ -23,6 +23,12 @@ on:
         required: true
         type: string
 
+      # run command before pure wheel build
+      before-wheel:
+        type: string
+        required: false
+        default: 'true'
+
 jobs:
   wheel-epoch-timestamp:
     name: wheel epoch timestamper
@@ -66,6 +72,9 @@ jobs:
       with:
         ctk: ${{ matrix.ctk }}
         package-name: ${{ inputs.package-name }}
+
+    - name: Run before-wheel command
+      run: "${{ inputs.before-wheel }}"
 
     - name: Build pure python wheel with pip wheel
       run: |
