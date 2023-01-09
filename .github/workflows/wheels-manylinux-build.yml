@@ -39,6 +39,12 @@ on:
         type: string
         default: ''
 
+      # run command before cibw
+      before-wheel:
+        type: string
+        required: false
+        default: 'true'
+
       # cibw settings
       cibw-environment:
         type: string
@@ -153,6 +159,9 @@ jobs:
       with:
         ctk: ${{ matrix.ctk }}
         package-name: ${{ inputs.package-name }}
+
+    - name: Run before-wheel command
+      run: "${{ inputs.before-wheel }}"
 
     - name: Build wheels with cibuildwheel action
       uses: rapidsai/shared-action-workflows/cibuildwheel@main

@@ -23,6 +23,12 @@ on:
         required: true
         type: string
 
+      # run command before pure wheel build
+      before-wheel:
+        type: string
+        required: false
+        default: 'true'
+
 jobs:
   wheel-epoch-timestamp:
     name: wheel epoch timestamper
@@ -44,6 +50,12 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: "rapidsai/cibuildwheel:cuda-runtime-${{ matrix.ctk }}-ubuntu18.04"
+      env:
+        RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
+        RAPIDS_PY_VERSION: "3.8"
+        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+
     steps:
     - name: checkout code repo
       uses: actions/checkout@v3
@@ -67,17 +79,15 @@ jobs:
         ctk: ${{ matrix.ctk }}
         package-name: ${{ inputs.package-name }}
 
+    - name: Run before-wheel command
+      run: "${{ inputs.before-wheel }}"
+
     - name: Build pure python wheel with pip wheel
       run: |
         versioneer_override="$(rapids-pip-wheel-version ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }})"
         export RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE="${versioneer_override}"
-        python -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps
+        python -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps -vvv
       shell: bash
 
     - name: Upload wheels to downloads.rapids.ai
       run: rapids-upload-wheels-to-s3 dist
-      env:
-        RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
-        RAPIDS_PY_VERSION: "3.8"
-        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
