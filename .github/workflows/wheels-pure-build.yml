@@ -86,7 +86,7 @@ jobs:
       run: |
         versioneer_override="$(rapids-pip-wheel-version ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }})"
         export RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE="${versioneer_override}"
-        python -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps
+        python -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps -vvv
       shell: bash
 
     - name: Upload wheels to downloads.rapids.ai
