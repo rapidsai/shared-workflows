@@ -51,4 +51,4 @@ jobs:
         run: rapids-upload-to-anaconda
         env:
           SKIP_UPLOAD_PKGS: ${{ inputs.skip_upload_pkgs }}
-          RAPIDS_CONDA_UPLOAD_LABEL: $${{ inputs.upload_to_label }}
+          RAPIDS_CONDA_UPLOAD_LABEL: ${{ inputs.upload_to_label }}
