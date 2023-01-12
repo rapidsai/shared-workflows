@@ -14,6 +14,10 @@ on:
         type: string
       skip_upload_pkgs:
         type: string
+      upload_to_label:
+        description: The label that should be applied to packages uploaded to Anaconda.org
+        type: string
+        default: main
 
 jobs:
   upload:
@@ -47,3 +51,4 @@ jobs:
         run: rapids-upload-to-anaconda
         env:
           SKIP_UPLOAD_PKGS: ${{ inputs.skip_upload_pkgs }}
+          RAPIDS_CONDA_UPLOAD_LABEL: $${{ inputs.upload_to_label }}
