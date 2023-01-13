@@ -83,7 +83,6 @@ runs:
         skbuild_config_opts="${{ inputs.skbuild-configure-options}}"
         skbuild_config_opts="${skbuild_config_opts} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
 
-
         # convert 3.x to cp3x-*
         python_ver=${{ inputs.python-version }}
         python_ver="${python_ver//./}"
@@ -93,6 +92,8 @@ runs:
         versioneer_override="$(rapids-pip-wheel-version ${{ inputs.epoch-timestamp }})"
         pushd ${{ inputs.package-dir }}
         bash modify_wheel_build_version.sh ${versioneer_override}
+        echo "The git diff after modifying the versions is:"
+        git diff
         popd
 
         # assemble CIBW_ENVIRONMENT from skbuild configure and build options
