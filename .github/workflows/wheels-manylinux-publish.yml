@@ -27,9 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: ['3.8', '3.9']
+        python: ['3.8', '3.10']
         linux-arch: ["x86_64", "aarch64"]
-        ctk: ['11.5.1']
+        ctk: ['11.8.0']
     container:
       # ctk version of the cibw container is irrelevant in the publish step
       # it's simply a launcher for twine

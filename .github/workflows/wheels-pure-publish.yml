@@ -29,7 +29,7 @@ jobs:
       matrix:
         python: ['3.8']
         linux-arch: ["x86_64"]
-        ctk: ['11.5.1']
+        ctk: ['11.8.0']
     container:
       # ctk version of the cibw container is irrelevant in the publish step
       # it's simply a launcher for twine
