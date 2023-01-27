@@ -109,4 +109,3 @@ runs:
         CIBW_BUILD_FRONTEND: "pip"
         CIBW_BEFORE_BUILD_LINUX: ${{ inputs.cibw-before-build }}
         CIBW_BUILD_VERBOSITY_LINUX: 3
-        CIBW_CONFIG_SETTINGS: "--find-links /project/local-wheelhouse"
