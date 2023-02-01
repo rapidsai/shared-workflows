@@ -92,7 +92,7 @@ runs:
         echo "CIBW_BUILD=cp${python_ver}-*" >> "${GITHUB_ENV}"
 
         # assemble CIBW_ENVIRONMENT from skbuild configure and build options
-        echo "CIBW_ENVIRONMENT=SKBUILD_CONFIGURE_OPTIONS='${skbuild_config_opts}' SKBUILD_BUILD_OPTIONS='${{ inputs.skbuild-build-options }}' ${{ inputs.cibw-environment }} RAPIDS_PY_WHEEL_CUDA_SUFFIX='${{ inputs.cuda-suffix }}' RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE='${versioneer_override}' SCCACHE_S3_KEY_PREFIX=gha-cibw SCCACHE_REGION=us-west-2 SCCACHE_IDLE_TIMEOUT=32768 SCCACHE_BUCKET=rapids-sccache AWS_ACCESS_KEY_ID=${{ inputs.sccache-aws-access-key-id }} AWS_SECRET_ACCESS_KEY=${{ inputs.sccache-aws-secret-access-key }} PIP_INDEX_URL=https://pypi.k8s.rapids.ai/simple" >> "${GITHUB_ENV}"
+        echo "CIBW_ENVIRONMENT=SKBUILD_CONFIGURE_OPTIONS='${skbuild_config_opts}' SKBUILD_BUILD_OPTIONS='${{ inputs.skbuild-build-options }}' ${{ inputs.cibw-environment }} RAPIDS_PY_WHEEL_CUDA_SUFFIX='${{ inputs.cuda-suffix }}' RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE='${versioneer_override}' SCCACHE_S3_KEY_PREFIX=gha-cibw SCCACHE_REGION=us-west-2 SCCACHE_IDLE_TIMEOUT=32768 SCCACHE_BUCKET=rapids-sccache SCCACHE_S3_USE_SSL=true AWS_ACCESS_KEY_ID=${{ inputs.sccache-aws-access-key-id }} AWS_SECRET_ACCESS_KEY=${{ inputs.sccache-aws-secret-access-key }} PIP_INDEX_URL=https://pypi.k8s.rapids.ai/simple PIP_FIND_LINKS=/project/local-wheelhouse" >> "${GITHUB_ENV}"
       shell: bash
 
     - name: Invoke cibuildwheel
