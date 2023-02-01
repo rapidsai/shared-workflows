@@ -170,7 +170,7 @@ jobs:
       run: "${{ inputs.before-wheel }}"
 
     - name: Build wheels with cibuildwheel action
-      uses: rapidsai/shared-action-workflows/cibuildwheel@cuda-118
+      uses: rapidsai/shared-action-workflows/cibuildwheel@cuda-118-sccache-disable
       with:
         # hardcoded
         output-dir: dist
