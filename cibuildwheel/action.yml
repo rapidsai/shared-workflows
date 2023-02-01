@@ -55,6 +55,10 @@ inputs:
   sccache-aws-secret-access-key:
     required: true
     type: string
+  sccache-enabled:
+    required: false
+    type: string
+    default: yes
 
 runs:
   using: composite
@@ -81,7 +85,9 @@ runs:
 
         # enable sccache in skbuild config options
         skbuild_config_opts="${{ inputs.skbuild-configure-options}}"
-        skbuild_config_opts="${skbuild_config_opts} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
+        if [[ "${{ inputs.sccache-enabled }}" == "yes" ]]; then
+          skbuild_config_opts="${skbuild_config_opts} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
+        fi
 
         # use gha-tools rapids-pip-wheel-version to generate wheel version
         versioneer_override="$(rapids-pip-wheel-version ${{ inputs.epoch-timestamp }})"

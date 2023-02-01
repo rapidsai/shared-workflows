@@ -80,6 +80,12 @@ on:
         type: string
         default: ''
 
+      # disable sccache for cugraph
+      sccache-enabled:
+        required: false
+        type: string
+        default: "yes"
+
 jobs:
   wheel-epoch-timestamp:
     name: wheel epoch timestamper
@@ -164,7 +170,7 @@ jobs:
       run: "${{ inputs.before-wheel }}"
 
     - name: Build wheels with cibuildwheel action
-      uses: rapidsai/shared-action-workflows/cibuildwheel@main
+      uses: rapidsai/shared-action-workflows/cibuildwheel@cuda-118
       with:
         # hardcoded
         output-dir: dist
@@ -187,6 +193,9 @@ jobs:
         cibw-before-build: ${{ inputs.cibw-before-build }}
         skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
         skbuild-build-options: ${{ inputs.skbuild-build-options }}
+
+        # allow sccache to be disabled
+        sccache-enabled: ${{ inputs.sccache-enabled }}
 
         # secrets
         sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
