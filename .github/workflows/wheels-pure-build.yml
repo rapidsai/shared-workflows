@@ -46,10 +46,10 @@ jobs:
     needs: wheel-epoch-timestamp
     strategy:
       matrix:
-        ctk: ["11.5.1"]
+        ctk: ["11.8.0"]
     runs-on: ubuntu-latest
     container:
-      image: "rapidsai/cibuildwheel:cuda-runtime-${{ matrix.ctk }}-ubuntu18.04"
+      image: "rapidsai/cibuildwheel:cuda-runtime-${{ matrix.ctk }}-ubuntu20.04"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         RAPIDS_PY_VERSION: "3.8"

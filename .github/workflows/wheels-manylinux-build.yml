@@ -16,6 +16,12 @@ on:
         required: true
         type: string
 
+      # allow a bigger runner instance
+      node_type:
+        required: false
+        type: string
+        default: "cpu16"
+
       # general settings
       package-name:
         required: true
@@ -97,14 +103,14 @@ jobs:
     needs: wheel-epoch-timestamp
     strategy:
       matrix:
-        python: ['3.8', '3.9']
+        python: ['3.8', '3.10']
         arch: [amd64, arm64]
-        ctk: ['11.5.1']
+        ctk: ['11.8.0']
     runs-on:
       - self-hosted
       - linux
       - ${{ matrix.arch }}
-      - cpu16
+      - ${{ inputs.node_type }}
     container:
       # ctk version of the cibw container is irrelevant in the manylinux case
       # it's simply a launcher for cibuildwheel
