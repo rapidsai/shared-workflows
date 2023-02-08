@@ -61,7 +61,7 @@ jobs:
               { "CUDA_VER": "11.8.0", "LINUX_VER": "rockylinux8", "ARCH": "arm64", "PY_VER": "3.10", "GPU": "a100", "DRIVER": "520" }
             ],
             "ext_nightly": [
-              { "CUDA_VER": "11.2.2", "LINUX_VER": "ubuntu18.04", "ARCH": "amd64", "PY_VER": "3.10", "GPU": "t4", "DRIVER": "495" }
+              { "CUDA_VER": "11.2.2", "LINUX_VER": "ubuntu22.04", "ARCH": "amd64", "PY_VER": "3.10", "GPU": "t4", "DRIVER": "520" }
             ]
           }'
 
