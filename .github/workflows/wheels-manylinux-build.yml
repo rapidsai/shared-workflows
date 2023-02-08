@@ -136,7 +136,7 @@ jobs:
         persist-credentials: false
 
     - name: Standardize repository information
-      uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.02
+      uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.04
       with:
         repo: ${{ inputs.repo }}
         branch: ${{ inputs.branch }}
@@ -161,7 +161,7 @@ jobs:
         persist-credentials: false
 
     - name: Set CTK-related vars from input CTK versions
-      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@branch-23.02
+      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@branch-23.04
       with:
         ctk: ${{ matrix.ctk }}
         package-name: ${{ inputs.package-name }}
@@ -170,7 +170,7 @@ jobs:
       run: "${{ inputs.before-wheel }}"
 
     - name: Build wheels with cibuildwheel action
-      uses: rapidsai/shared-action-workflows/cibuildwheel@branch-23.02
+      uses: rapidsai/shared-action-workflows/cibuildwheel@branch-23.04
       with:
         # hardcoded
         output-dir: dist
