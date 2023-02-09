@@ -90,7 +90,7 @@ runs:
 
         # Use gha-tools rapids-pip-wheel-version to generate wheel version then update the necessary files
         versioneer_override="$(rapids-pip-wheel-version ${{ inputs.epoch-timestamp }})"
-        bash ci/release/modify_wheel_build_version.sh ${versioneer_override}
+        bash ci/release/apply_wheel_modifications.sh ${versioneer_override}
         echo "The git diff after modifying the versions is:"
         git diff
 
