@@ -17,7 +17,7 @@ on:
         default: "cpu8"
       build_script:
         type: string
-        default: "ci/build_cpp.sh"
+        default: "ci/build_python.sh"
 
 jobs:
   build:
@@ -25,8 +25,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { CUDA_VER: "11.5.1", LINUX_VER: "ubuntu20.04", ARCH: "amd64", PY_VER: "3.8" }
-          - { CUDA_VER: "11.5.1", LINUX_VER: "ubuntu20.04", ARCH: "arm64", PY_VER: "3.8" }
+          - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "amd64", PY_VER: "3.8" }
+          - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "arm64", PY_VER: "3.8" }
+          - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "amd64", PY_VER: "3.10" }
+          - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "arm64", PY_VER: "3.10" }
     runs-on:
       - self-hosted
       - linux
@@ -51,5 +53,5 @@ jobs:
           echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
           echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
-      - name: C++ build
+      - name: Python build
         run: ${{ inputs.build_script }}

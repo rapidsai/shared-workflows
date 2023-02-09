@@ -16,6 +16,12 @@ on:
         required: true
         type: string
 
+      # allow a bigger runner instance
+      node_type:
+        required: false
+        type: string
+        default: "cpu16"
+
       # general settings
       package-name:
         required: true
@@ -97,14 +103,14 @@ jobs:
     needs: wheel-epoch-timestamp
     strategy:
       matrix:
-        python: ['3.8', '3.9']
+        python: ['3.8', '3.10']
         arch: [amd64, arm64]
-        ctk: ['11.5.1']
+        ctk: ['11.8.0']
     runs-on:
       - self-hosted
       - linux
       - ${{ matrix.arch }}
-      - cpu16
+      - ${{ inputs.node_type }}
     container:
       # ctk version of the cibw container is irrelevant in the manylinux case
       # it's simply a launcher for cibuildwheel
@@ -130,7 +136,7 @@ jobs:
         persist-credentials: false
 
     - name: Standardize repository information
-      uses: rapidsai/shared-action-workflows/rapids-github-info@main
+      uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.04
       with:
         repo: ${{ inputs.repo }}
         branch: ${{ inputs.branch }}
@@ -155,7 +161,7 @@ jobs:
         persist-credentials: false
 
     - name: Set CTK-related vars from input CTK versions
-      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@main
+      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@branch-23.04
       with:
         ctk: ${{ matrix.ctk }}
         package-name: ${{ inputs.package-name }}

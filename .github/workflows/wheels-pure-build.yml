@@ -46,10 +46,10 @@ jobs:
     needs: wheel-epoch-timestamp
     strategy:
       matrix:
-        ctk: ["11.5.1"]
+        ctk: ["11.8.0"]
     runs-on: ubuntu-latest
     container:
-      image: "rapidsai/cibuildwheel:cuda-runtime-${{ matrix.ctk }}-ubuntu18.04"
+      image: "rapidsai/cibuildwheel:cuda-runtime-${{ matrix.ctk }}-ubuntu20.04"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         RAPIDS_PY_VERSION: "3.8"
@@ -66,7 +66,7 @@ jobs:
         persist-credentials: false
 
     - name: Standardize repository information
-      uses: rapidsai/shared-action-workflows/rapids-github-info@main
+      uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.04
       with:
         repo: ${{ inputs.repo }}
         branch: ${{ inputs.branch }}
@@ -74,7 +74,7 @@ jobs:
         sha: ${{ inputs.sha }}
 
     - name: Set CTK-related vars from input CTK versions
-      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@main
+      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@branch-23.04
       with:
         ctk: ${{ matrix.ctk }}
         package-name: ${{ inputs.package-name }}
