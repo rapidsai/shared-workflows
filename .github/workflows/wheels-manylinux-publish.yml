@@ -30,6 +30,8 @@ jobs:
         python: ['3.8', '3.10']
         linux-arch: ["x86_64", "aarch64"]
         ctk: ['11.8.0']
+    permissions:
+      id-token: write
     container:
       # ctk version of the cibw container is irrelevant in the publish step
       # it's simply a launcher for twine
@@ -38,12 +40,14 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         RAPIDS_ARCH: ${{ matrix.linux-arch }}
         RAPIDS_PY_VERSION: ${{ matrix.python }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         TWINE_USERNAME: cibuildwheel
         TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
         TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
     steps:
+    - uses: aws-actions/configure-aws-credentials@v1-node16
+      with:
+        role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+        aws-region: ${{ vars.AWS_REGION }}
     - name: checkout code repo
       uses: actions/checkout@v3
       with:

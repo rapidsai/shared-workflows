@@ -106,6 +106,8 @@ jobs:
         python: ['3.8', '3.10']
         arch: [amd64, arm64]
         ctk: ['11.8.0']
+    permissions:
+      id-token: write
     runs-on:
       - self-hosted
       - linux
@@ -123,10 +125,12 @@ jobs:
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         RAPIDS_PY_VERSION: ${{ matrix.python }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
 
     steps:
+    - uses: aws-actions/configure-aws-credentials@v1-node16
+      with:
+        role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+        aws-region: ${{ vars.AWS_REGION }}
     - name: checkout code repo
       uses: actions/checkout@v3
       with:
@@ -195,8 +199,8 @@ jobs:
         skbuild-build-options: ${{ inputs.skbuild-build-options }}
 
         # secrets
-        sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
-        sccache-aws-secret-access-key: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
+        sccache-aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+        sccache-aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
         internal-pypi-user: cibuildwheel
         internal-pypi-pass: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
 
