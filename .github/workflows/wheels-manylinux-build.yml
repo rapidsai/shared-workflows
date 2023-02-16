@@ -86,6 +86,12 @@ on:
         type: string
         default: ''
 
+      # Enable libraries that aren't using versioneer
+      uses-versioneer:
+        required: false
+        type: boolean
+        default: true
+
 jobs:
   wheel-epoch-timestamp:
     name: wheel epoch timestamper
@@ -193,6 +199,9 @@ jobs:
         cibw-before-build: ${{ inputs.cibw-before-build }}
         skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
         skbuild-build-options: ${{ inputs.skbuild-build-options }}
+
+        # versioneer
+        uses-versioneer: ${{ inputs.uses-versioneer }}
 
         # secrets
         sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}

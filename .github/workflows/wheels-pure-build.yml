@@ -29,6 +29,12 @@ on:
         required: false
         default: 'true'
 
+      # Enable libraries that aren't using versioneer
+      uses-versioneer:
+        required: false
+        type: boolean
+        default: true
+
 jobs:
   wheel-epoch-timestamp:
     name: wheel epoch timestamper
@@ -85,7 +91,15 @@ jobs:
     - name: Build pure python wheel with pip wheel
       run: |
         versioneer_override="$(rapids-pip-wheel-version ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }})"
-        export RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE="${versioneer_override}"
+
+        if [ "${{ inputs.uses-versioneer }}" = true ]; then
+          export RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE="${versioneer_override}"
+        else
+          bash ci/release/apply_wheel_modifications.sh ${versioneer_override}
+          echo "The git diff after modifying the versions is:"
+          git diff
+        fi
+
         python -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps -vvv
       shell: bash
 
