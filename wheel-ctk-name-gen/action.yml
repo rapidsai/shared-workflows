@@ -5,8 +5,6 @@ inputs:
   package-name:
     type: string
 outputs:
-  # TODO: We should remove RAPIDS_PY_WHEEL_CUDA_SUFFIX once no repo leverages
-  # it in setup.py.
   rapids_py_cuda_suffix:
     value: ${{ steps.ctk-gen.outputs.RAPIDS_PY_WHEEL_CUDA_SUFFIX }}
   rapids_py_wheel_name:

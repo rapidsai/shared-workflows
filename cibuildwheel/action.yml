@@ -112,7 +112,7 @@ runs:
         fi
 
         if [ "${{ inputs.uses-versioneer }}" = false ] || [ "${{ inputs.uses-dynamic-name }}" = false ]; then
-          bash ci/release/apply_wheel_modifications.sh ${versioneer_override} ${RAPIDS_PY_WHEEL_NAME}
+          bash ci/release/apply_wheel_modifications.sh ${versioneer_override} ${RAPIDS_PY_WHEEL_CUDA_SUFFIX}
           echo "The package name and/or version was modified in the package source. The git diff is:"
           git diff
         fi
