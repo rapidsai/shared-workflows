@@ -86,16 +86,12 @@ on:
         type: string
         default: ''
 
-      # TODO: The below flags are to support the older packaging structure. We can
-      # remove them once all packages building wheels have migrated away from the
-      # old structure.
-      # Enable libraries that aren't using versioneer
-      uses-versioneer:
-        required: false
-        type: boolean
-        default: true
-      # Enable libraries that don't use RAPIDS_PY_WHEEL_CUDA_SUFFIX in setup.py
-      uses-dynamic-name:
+      # TODO: The below flag is to support the older packaging structure. We
+      # can remove it once all packages building wheels have migrated away from
+      # the old structure.
+      # Enable libraries that aren't using versioneer or
+      # RAPIDS_PY_WHEEL_CUDA_SUFFIX in setup.py
+      uses-setup-env-vars:
         required: false
         type: boolean
         default: true
@@ -209,8 +205,7 @@ jobs:
         skbuild-build-options: ${{ inputs.skbuild-build-options }}
 
         # versioneer
-        uses-versioneer: ${{ inputs.uses-versioneer }}
-        uses-dynamic-name: ${{ inputs.uses-dynamic-name }}
+        uses-setup-env_vars: ${{ inputs.uses-setup-env-vars }}
 
         # secrets
         sccache-aws-access-key-id: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}

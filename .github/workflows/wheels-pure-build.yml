@@ -29,16 +29,12 @@ on:
         required: false
         default: 'true'
 
-      # TODO: The below flags are to support the older packaging structure. We can
-      # remove them once all packages building wheels have migrated away from the
-      # old structure.
-      # Enable libraries that aren't using versioneer
-      uses-versioneer:
-        required: false
-        type: boolean
-        default: true
-      # Enable libraries that don't use RAPIDS_PY_WHEEL_CUDA_SUFFIX in setup.py
-      uses-dynamic-name:
+      # TODO: The below flag is to support the older packaging structure. We
+      # can remove it once all packages building wheels have migrated away from
+      # the old structure.
+      # Enable libraries that aren't using versioneer or
+      # RAPIDS_PY_WHEEL_CUDA_SUFFIX in setup.py
+      uses-setup-env-vars:
         required: false
         type: boolean
         default: true
@@ -87,10 +83,6 @@ jobs:
         date: ${{ inputs.date }}
         sha: ${{ inputs.sha }}
 
-    # TODO: When all libraries are not using dynamic names and we remove the
-    # uses-dynamic-name option, we can move this step to after the build stage
-    # to make it clear exactly where the name gets used. At that point we can
-    # also remove the suffix setting in the composite action.
     - name: Set CTK-related vars from input CTK versions
       uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@branch-23.04
       with:
@@ -104,11 +96,8 @@ jobs:
       run: |
         versioneer_override="$(rapids-pip-wheel-version ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }})"
 
-        if [ "${{ inputs.uses-versioneer }}" = true ]; then
+        if [ "${{ inputs.uses-setup-env-vars }}" = true ]; then
           export RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE="${versioneer_override}"
-        fi
-
-        if [ "${{ inputs.uses-versioneer }}" = false ] || [ "${{ inputs.uses-dynamic-name }}" = false ]; then
           bash ci/release/apply_wheel_modifications.sh ${versioneer_override} ${RAPIDS_PY_WHEEL_CUDA_SUFFIX}
           echo "The package name and/or version was modified in the package source. The git diff is:"
           git diff
