@@ -85,6 +85,7 @@ jobs:
     env:
       RAPIDS_COVERAGE_DIR: ${{ github.workspace }}/coverage-results
       RAPIDS_TESTS_DIR: ${{ github.workspace }}/test-results
+      RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     container:
       image: rapidsai/ci:cuda${{ matrix.includes.CUDA_VER }}-${{ matrix.includes.LINUX_VER }}-py${{ matrix.includes.PY_VER }}
       env:
