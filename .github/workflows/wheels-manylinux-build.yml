@@ -180,7 +180,7 @@ jobs:
       run: "${{ inputs.before-wheel }}"
 
     - name: Build wheels with cibuildwheel action
-      uses: rapidsai/shared-action-workflows/cibuildwheel@static_wheel_name
+      uses: rapidsai/shared-action-workflows/cibuildwheel@branch-23.04
       with:
         # hardcoded
         output-dir: dist
