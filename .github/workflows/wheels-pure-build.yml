@@ -29,8 +29,12 @@ on:
         required: false
         default: 'true'
 
-      # Enable libraries that aren't using versioneer
-      uses-versioneer:
+      # TODO: The below flag is to support the older packaging structure. We
+      # can remove it once all packages building wheels have migrated away from
+      # the old structure.
+      # Enable libraries that aren't using versioneer or
+      # RAPIDS_PY_WHEEL_CUDA_SUFFIX in setup.py
+      uses-setup-env-vars:
         required: false
         type: boolean
         default: true
@@ -92,11 +96,11 @@ jobs:
       run: |
         versioneer_override="$(rapids-pip-wheel-version ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }})"
 
-        if [ "${{ inputs.uses-versioneer }}" = true ]; then
+        if [ "${{ inputs.uses-setup-env-vars }}" = true ]; then
           export RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE="${versioneer_override}"
         else
-          bash ci/release/apply_wheel_modifications.sh ${versioneer_override}
-          echo "The git diff after modifying the versions is:"
+          bash ci/release/apply_wheel_modifications.sh ${versioneer_override} ${RAPIDS_PY_WHEEL_CUDA_SUFFIX}
+          echo "The package name and/or version was modified in the package source. The git diff is:"
           git diff
         fi
 

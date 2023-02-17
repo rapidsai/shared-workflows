@@ -55,7 +55,12 @@ inputs:
   sccache-aws-secret-access-key:
     required: true
     type: string
-  uses-versioneer:
+  # TODO: The below flag is to support the older packaging structure. We
+  # can remove it once all packages building wheels have migrated away from
+  # the old structure.
+  # Enable libraries that aren't using versioneer or
+  # RAPIDS_PY_WHEEL_CUDA_SUFFIX in setup.py
+  uses-setup-env-vars:
     required: false
     type: boolean
     default: true
@@ -94,13 +99,13 @@ runs:
 
         # Use gha-tools rapids-pip-wheel-version to generate wheel version then update the necessary files
         versioneer_override="$(rapids-pip-wheel-version ${{ inputs.epoch-timestamp }})"
-        env_var="CIBW_ENVIRONMENT=SKBUILD_CONFIGURE_OPTIONS='${skbuild_config_opts}' SKBUILD_BUILD_OPTIONS='${{ inputs.skbuild-build-options }}' ${{ inputs.cibw-environment }} RAPIDS_PY_WHEEL_CUDA_SUFFIX='${{ inputs.cuda-suffix }}' SCCACHE_S3_KEY_PREFIX=gha-cibw SCCACHE_REGION=us-east-2 SCCACHE_IDLE_TIMEOUT=32768 SCCACHE_BUCKET=rapids-sccache-east SCCACHE_S3_USE_SSL=true AWS_ACCESS_KEY_ID=${{ inputs.sccache-aws-access-key-id }} AWS_SECRET_ACCESS_KEY=${{ inputs.sccache-aws-secret-access-key }} PIP_INDEX_URL=https://pypi.k8s.rapids.ai/simple PIP_FIND_LINKS=/project/local-wheelhouse"
+        env_var="CIBW_ENVIRONMENT=SKBUILD_CONFIGURE_OPTIONS='${skbuild_config_opts}' SKBUILD_BUILD_OPTIONS='${{ inputs.skbuild-build-options }}' ${{ inputs.cibw-environment }} SCCACHE_S3_KEY_PREFIX=gha-cibw SCCACHE_REGION=us-east-2 SCCACHE_IDLE_TIMEOUT=32768 SCCACHE_BUCKET=rapids-sccache-east SCCACHE_S3_USE_SSL=true AWS_ACCESS_KEY_ID=${{ inputs.sccache-aws-access-key-id }} AWS_SECRET_ACCESS_KEY=${{ inputs.sccache-aws-secret-access-key }} PIP_INDEX_URL=https://pypi.k8s.rapids.ai/simple PIP_FIND_LINKS=/project/local-wheelhouse"
 
-        if [ "${{ inputs.uses-versioneer }}" = true ]; then
-          env_var="${env_var} RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE='${versioneer_override}'"
+        if [ "${{ inputs.uses-setup-env-vars }}" = true ]; then
+          env_var="${env_var} RAPIDS_PY_WHEEL_VERSIONEER_OVERRIDE='${versioneer_override}' RAPIDS_PY_WHEEL_CUDA_SUFFIX='${{ inputs.cuda-suffix }}'"
         else
-          bash ci/release/apply_wheel_modifications.sh ${versioneer_override}
-          echo "The git diff after modifying the versions is:"
+          bash ci/release/apply_wheel_modifications.sh ${versioneer_override} ${RAPIDS_PY_WHEEL_CUDA_SUFFIX}
+          echo "The package name and/or version was modified in the package source. The git diff is:"
           git diff
         fi
 
