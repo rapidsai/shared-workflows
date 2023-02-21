@@ -56,7 +56,7 @@ jobs:
     needs: wheel-epoch-timestamp
     strategy:
       matrix:
-        ctk: ["11.8.0"]
+        ctk: ["11.8.0", "12.0.0"]
     runs-on: ubuntu-latest
     container:
       image: "rapidsai/cibuildwheel:cuda-runtime-${{ matrix.ctk }}-ubuntu20.04"
