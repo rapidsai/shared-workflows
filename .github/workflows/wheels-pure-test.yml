@@ -35,7 +35,7 @@ jobs:
     runs-on: [self-hosted, linux, amd64, gpu-v100-520-1]
     strategy:
       matrix:
-        ctk: ["11.8.0", "12.0.0"]
+        ctk: ["11.8.0", "12.0.1"]
     container:
       image: "rapidsai/citestwheel:cuda-devel-${{ matrix.ctk }}-ubuntu18.04"
       env:
