@@ -56,4 +56,4 @@ jobs:
     - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
       run: |
         wget "https://raw.githubusercontent.com/sevagh/gha-tools/feat/rapids-twine-bulk-upload/tools/rapids-twine" -O ./rapids-twine-pr-45 && chmod +x ./rapids-twine-pr-45
-        ./rapids-twine-pr-45
+        ./rapids-twine-pr-45 "${{ inputs.package-name }}"
