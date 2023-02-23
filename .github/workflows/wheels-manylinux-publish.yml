@@ -55,9 +55,5 @@ jobs:
 
     - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
       run: |
-        for arch in x86_64 aarch64; do
-          for pyver in 3.8 3.10; do
-            RAPIDS_ARCH="${arch}" RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_cu11" RAPIDS_PY_VERSION="${pyver}" rapids-download-wheels-from-s3 ./dist
-          done
-        done
-        rapids-twine ./dist/
+        wget "https://raw.githubusercontent.com/sevagh/gha-tools/feat/rapids-twine-bulk-upload/tools/rapids-twine" -O ./rapids-twine-pr-45 && chmod +x ./rapids-twine-pr-45
+        ./rapids-twine-pr-45
