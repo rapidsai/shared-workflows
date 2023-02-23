@@ -25,19 +25,12 @@ jobs:
   wheel-publish:
     name: wheels publish
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: ['3.8']
-        linux-arch: ["x86_64"]
-        ctk: ['11.8.0', '12.0.1']
     container:
       # ctk version of the cibw container is irrelevant in the publish step
       # it's simply a launcher for twine
       image: "rapidsai/cibuildwheel:cuda-runtime-11.8.0-ubuntu20.04"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
-        RAPIDS_ARCH: ${{ matrix.linux-arch }}
-        RAPIDS_PY_VERSION: ${{ matrix.python }}
         AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         TWINE_USERNAME: cibuildwheel
@@ -60,13 +53,5 @@ jobs:
         date: ${{ inputs.date }}
         sha: ${{ inputs.sha }}
 
-    - name: Set CTK-related vars from input CTK versions
-      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@branch-23.04
-      with:
-        ctk: ${{ matrix.ctk }}
-        package-name: ${{ inputs.package-name }}
-
     - name: Download wheel from downloads.rapids.ai and publish to internal PyPI
-      run: |
-        rapids-download-wheels-from-s3 ./dist
-        rapids-twine ./dist/
+      run: rapids-twine "${{ inputs.package-name }}"
