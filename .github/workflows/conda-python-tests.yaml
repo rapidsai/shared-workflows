@@ -44,7 +44,7 @@ jobs:
               { "CUDA_VER": "11.2.2", "LINUX_VER": "centos7", "ARCH": "amd64", "PY_VER": "3.8", "GPU": "v100", "DRIVER": "450" },
               { "CUDA_VER": "11.4.1", "LINUX_VER": "ubuntu20.04", "ARCH": "amd64", "PY_VER": "3.8", "GPU": "v100", "DRIVER": "520" },
               { "CUDA_VER": "11.8.0", "LINUX_VER": "ubuntu22.04", "ARCH": "amd64", "PY_VER": "3.10", "GPU": "v100", "DRIVER": "520" },
-              { "CUDA_VER": "11.8.0", "LINUX_VER": "ubuntu22.04", "ARCH": "arm64", "PY_VER": "3.10", "GPU": "a100", "DRIVER": "525" },
+              { "CUDA_VER": "12.0.0", "LINUX_VER": "ubuntu22.04", "ARCH": "arm64", "PY_VER": "3.10", "GPU": "a100", "DRIVER": "525" },
               { "CUDA_VER": "12.0.0", "LINUX_VER": "ubuntu22.04", "ARCH": "amd64", "PY_VER": "3.10", "GPU": "v100", "DRIVER": "525" }
             ],
             "nightly": [
