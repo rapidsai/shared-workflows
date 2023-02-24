@@ -65,7 +65,7 @@ jobs:
     needs: wheel-epoch-timestamp
     strategy:
       matrix:
-        ctk: ["11.8.0"]
+        ctk: ["11.8.0", "12.0.1"]
     runs-on: ubuntu-latest
     container:
       # Always use the manylinux container built on x86 to match the runner arch
