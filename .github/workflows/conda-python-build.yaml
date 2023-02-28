@@ -59,4 +59,4 @@ jobs:
         run: ${{ inputs.build_script }}
       - name: Upload artifacts
         if: '!cancelled()'
-        run: rapids-upload-artifacts-dir
+        run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION/.}
