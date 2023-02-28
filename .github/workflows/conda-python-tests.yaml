@@ -120,3 +120,6 @@ jobs:
             -s \
             "${RAPIDS_COVERAGE_DIR}" \
             -v
+      - name: Upload artifacts
+        if: '!cancelled()'
+        run: rapids-upload-artifacts-dir

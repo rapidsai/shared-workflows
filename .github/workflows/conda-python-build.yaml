@@ -57,3 +57,6 @@ jobs:
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
       - name: Python build
         run: ${{ inputs.build_script }}
+      - name: Upload artifacts
+        if: '!cancelled()'
+        run: rapids-upload-artifacts-dir

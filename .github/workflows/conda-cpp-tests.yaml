@@ -109,3 +109,6 @@ jobs:
         with:
           paths: "${{ env.RAPIDS_TESTS_DIR }}/*.xml"
         if: always()
+      - name: Upload artifacts
+        if: '!cancelled()'
+        run: rapids-upload-artifacts-dir
