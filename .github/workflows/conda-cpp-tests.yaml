@@ -19,6 +19,10 @@ on:
         type: string
         default: "ci/test_cpp.sh"
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   compute-matrix:
     runs-on: ubuntu-latest

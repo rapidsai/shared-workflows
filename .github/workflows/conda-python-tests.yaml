@@ -22,6 +22,10 @@ on:
         type: boolean
         default: true
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   compute-matrix:
     runs-on: ubuntu-latest
