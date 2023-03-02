@@ -86,6 +86,16 @@ on:
         type: string
         default: ''
 
+      # TODO: The below flag is to support the older packaging structure. We
+      # can remove it once all packages building wheels have migrated away from
+      # the old structure.
+      # Enable libraries that aren't using versioneer or
+      # RAPIDS_PY_WHEEL_CUDA_SUFFIX in setup.py
+      uses-setup-env-vars:
+        required: false
+        type: boolean
+        default: true
+
 jobs:
   wheel-epoch-timestamp:
     name: wheel epoch timestamper
@@ -197,6 +207,9 @@ jobs:
         cibw-before-build: ${{ inputs.cibw-before-build }}
         skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
         skbuild-build-options: ${{ inputs.skbuild-build-options }}
+
+        # versioneer
+        uses-setup-env-vars: ${{ inputs.uses-setup-env-vars }}
 
         # secrets
         sccache-aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}

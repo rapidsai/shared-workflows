@@ -36,6 +36,8 @@ jobs:
       - linux
       - ${{ inputs.node_type }}
       - ${{ matrix.ARCH }}
+    env:
+      RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     container:
       image: rapidsai/ci:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
       env:
