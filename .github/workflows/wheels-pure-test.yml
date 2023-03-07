@@ -29,6 +29,21 @@ on:
         type: string
         default: 'true'
 
+permissions:
+  actions: none
+  checks: none
+  contents: read
+  deployments: none
+  discussions: none
+  id-token: write
+  issues: none
+  packages: read
+  pages: none
+  pull-requests: none
+  repository-projects: none
+  security-events: none
+  statuses: none
+
 jobs:
   wheel-test:
     name: wheel test pure
@@ -36,8 +51,6 @@ jobs:
     strategy:
       matrix:
         ctk: ["11.8.0"]
-    permissions:
-      id-token: write
     container:
       image: "rapidsai/citestwheel:cuda-devel-${{ matrix.ctk }}-ubuntu18.04"
       env:
