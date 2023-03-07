@@ -19,6 +19,21 @@ on:
         type: string
         default: "ci/build_cpp.sh"
 
+permissions:
+  actions: none
+  checks: none
+  contents: read
+  deployments: none
+  discussions: none
+  id-token: write
+  issues: none
+  packages: read
+  pages: none
+  pull-requests: none
+  repository-projects: none
+  security-events: none
+  statuses: none
+
 jobs:
   build:
     timeout-minutes: 480
@@ -28,8 +43,6 @@ jobs:
         include:
           - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "amd64", PY_VER: "3.10" }
           - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "arm64", PY_VER: "3.10" }
-    permissions:
-      id-token: write
     runs-on:
       - self-hosted
       - linux

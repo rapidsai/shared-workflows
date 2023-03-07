@@ -19,10 +19,23 @@ on:
         type: string
         default: main
 
+permissions:
+  actions: none
+  checks: none
+  contents: read
+  deployments: none
+  discussions: none
+  id-token: write
+  issues: none
+  packages: read
+  pages: none
+  pull-requests: none
+  repository-projects: none
+  security-events: none
+  statuses: none
+
 jobs:
   upload:
-    permissions:
-      id-token: write
     runs-on: ubuntu-latest
     container:
       image: rapidsai/ci:latest

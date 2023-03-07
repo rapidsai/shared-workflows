@@ -96,6 +96,21 @@ on:
         type: boolean
         default: true
 
+permissions:
+  actions: none
+  checks: none
+  contents: read
+  deployments: none
+  discussions: none
+  id-token: write
+  issues: none
+  packages: read
+  pages: none
+  pull-requests: none
+  repository-projects: none
+  security-events: none
+  statuses: none
+
 jobs:
   wheel-epoch-timestamp:
     name: wheel epoch timestamper
@@ -116,8 +131,6 @@ jobs:
         python: ['3.8', '3.10']
         arch: [amd64, arm64]
         ctk: ['11.8.0']
-    permissions:
-      id-token: write
     runs-on:
       - self-hosted
       - linux
