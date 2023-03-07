@@ -214,6 +214,7 @@ jobs:
         # secrets
         sccache-aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
         sccache-aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+        sccache-aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
         internal-pypi-user: cibuildwheel
         internal-pypi-pass: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
 
