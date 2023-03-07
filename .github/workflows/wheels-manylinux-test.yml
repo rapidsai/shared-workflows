@@ -85,6 +85,8 @@ jobs:
     needs: wheel-test-compute-matrix
     strategy:
       matrix: ${{ fromJSON(needs.wheel-test-compute-matrix.outputs.MATRIX) }}
+    permissions:
+      id-token: write
     runs-on:
       - self-hosted
       - linux
@@ -97,14 +99,17 @@ jobs:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_PY_VERSION: ${{ matrix.includes.python }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.test-before-amd64 }}
         RAPIDS_BEFORE_TEST_COMMANDS_ARM64: ${{ inputs.test-before-arm64 }}
         PIP_EXTRA_INDEX_URL: "https://pypi.k8s.rapids.ai/simple"
         CIBW_TEST_EXTRAS: "test"
         CIBW_TEST_COMMAND: ${{ matrix.includes.test-command }}
     steps:
+    - uses: aws-actions/configure-aws-credentials@v1-node16
+      with:
+        role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+        aws-region: ${{ vars.AWS_REGION }}
+        role-duration-seconds: 43200 # 12h
     - name: Run nvidia-smi to make sure GPU is working
       run: nvidia-smi
 

@@ -25,18 +25,23 @@ jobs:
   wheel-publish:
     name: wheels publish
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     container:
       # ctk version of the cibw container is irrelevant in the publish step
       # it's simply a launcher for twine
       image: "rapidsai/cibuildwheel:cuda-runtime-11.8.0-ubuntu20.04"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
         TWINE_USERNAME: cibuildwheel
         TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
         TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
     steps:
+    - uses: aws-actions/configure-aws-credentials@v1-node16
+      with:
+        role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+        aws-region: ${{ vars.AWS_REGION }}
+        role-duration-seconds: 43200 # 12h
     - name: checkout code repo
       uses: actions/checkout@v3
       with:

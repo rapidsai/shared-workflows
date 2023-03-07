@@ -57,16 +57,21 @@ jobs:
     strategy:
       matrix:
         ctk: ["11.8.0"]
+    permissions:
+      id-token: write
     runs-on: ubuntu-latest
     container:
       image: "rapidsai/cibuildwheel:cuda-runtime-${{ matrix.ctk }}-ubuntu20.04"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         RAPIDS_PY_VERSION: "3.8"
-        AWS_ACCESS_KEY_ID: ${{ secrets.RAPIDSAI_GHA_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.RAPIDSAI_GHA_AWS_SECRET_ACCESS_KEY }}
 
     steps:
+    - uses: aws-actions/configure-aws-credentials@v1-node16
+      with:
+        role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+        aws-region: ${{ vars.AWS_REGION }}
+        role-duration-seconds: 43200 # 12h
     - name: checkout code repo
       uses: actions/checkout@v3
       with:
