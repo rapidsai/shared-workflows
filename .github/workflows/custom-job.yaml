@@ -25,12 +25,25 @@ on:
         required: true
         type: string
 
+permissions:
+  actions: none
+  checks: none
+  contents: read
+  deployments: none
+  discussions: none
+  id-token: write
+  issues: none
+  packages: read
+  pages: none
+  pull-requests: read
+  repository-projects: none
+  security-events: none
+  statuses: none
+
 jobs:
   build:
     strategy:
       fail-fast: false
-    permissions:
-      id-token: write
     runs-on:
       - self-hosted
       - linux

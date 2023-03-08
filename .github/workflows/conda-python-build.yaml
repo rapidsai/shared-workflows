@@ -19,6 +19,21 @@ on:
         type: string
         default: "ci/build_python.sh"
 
+permissions:
+  actions: none
+  checks: none
+  contents: read
+  deployments: none
+  discussions: none
+  id-token: write
+  issues: none
+  packages: read
+  pages: none
+  pull-requests: read
+  repository-projects: none
+  security-events: none
+  statuses: none
+
 jobs:
   build:
     strategy:
@@ -33,8 +48,6 @@ jobs:
           - { CUDA_VER: "12.0.1", LINUX_VER: "ubuntu22.04", ARCH: "arm64", PY_VER: "3.8" }
           - { CUDA_VER: "12.0.1", LINUX_VER: "ubuntu22.04", ARCH: "amd64", PY_VER: "3.10" }
           - { CUDA_VER: "12.0.1", LINUX_VER: "ubuntu22.04", ARCH: "arm64", PY_VER: "3.10" }
-    permissions:
-      id-token: write
     runs-on:
       - self-hosted
       - linux

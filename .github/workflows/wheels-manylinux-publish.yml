@@ -21,12 +21,25 @@ on:
         required: true
         type: string
 
+permissions:
+  actions: none
+  checks: none
+  contents: read
+  deployments: none
+  discussions: none
+  id-token: write
+  issues: none
+  packages: read
+  pages: none
+  pull-requests: read
+  repository-projects: none
+  security-events: none
+  statuses: none
+
 jobs:
   wheel-publish:
     name: wheels publish
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
     container:
       # ctk version of the cibw container is irrelevant in the publish step
       # it's simply a launcher for twine
