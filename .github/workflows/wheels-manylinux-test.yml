@@ -53,7 +53,7 @@ permissions:
   issues: none
   packages: read
   pages: none
-  pull-requests: none
+  pull-requests: read
   repository-projects: none
   security-events: none
   statuses: none
