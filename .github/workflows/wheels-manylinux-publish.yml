@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: ['3.8', '3.10']
+        python: ['3.8', '3.9', '3.10']
         linux-arch: ["x86_64", "aarch64"]
         ctk: ['11.8.0']
     container:
