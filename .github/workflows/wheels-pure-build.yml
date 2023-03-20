@@ -37,7 +37,7 @@ on:
       uses-setup-env-vars:
         required: false
         type: boolean
-        default: true
+        default: false
 
 permissions:
   actions: none
