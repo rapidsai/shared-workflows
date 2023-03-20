@@ -23,6 +23,10 @@ on:
         type: boolean
         required: false
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   other-checks:
     runs-on: ubuntu-latest
