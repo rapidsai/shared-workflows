@@ -131,11 +131,7 @@ jobs:
         python: ['3.8', '3.9', '3.10']
         arch: [amd64, arm64]
         ctk: ['11.8.0', '12.0.1']
-    runs-on:
-      - self-hosted
-      - linux
-      - ${{ matrix.arch }}
-      - ${{ inputs.node_type }}
+    runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
     container:
       # ctk version of the cibw container is irrelevant in the manylinux case
       # it's simply a launcher for cibuildwheel
@@ -164,7 +160,7 @@ jobs:
         persist-credentials: false
 
     - name: Standardize repository information
-      uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.04
+      uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.06
       with:
         repo: ${{ inputs.repo }}
         branch: ${{ inputs.branch }}
@@ -189,7 +185,7 @@ jobs:
         persist-credentials: false
 
     - name: Set CTK-related vars from input CTK versions
-      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@branch-23.04
+      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@branch-23.06
       with:
         ctk: ${{ matrix.ctk }}
         package-name: ${{ inputs.package-name }}
@@ -198,7 +194,7 @@ jobs:
       run: "${{ inputs.before-wheel }}"
 
     - name: Build wheels with cibuildwheel action
-      uses: rapidsai/shared-action-workflows/cibuildwheel@branch-23.04
+      uses: rapidsai/shared-action-workflows/cibuildwheel@branch-23.06
       with:
         # hardcoded
         output-dir: dist

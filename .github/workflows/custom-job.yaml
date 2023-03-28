@@ -48,11 +48,7 @@ jobs:
   build:
     strategy:
       fail-fast: false
-    runs-on:
-      - self-hosted
-      - linux
-      - ${{ inputs.arch }}
-      - ${{ inputs.node_type }}
+    runs-on: ${{ fromJSON(contains(inputs.node_type, 'cpu') && format('"linux-{0}-{1}"', inputs.arch, inputs.node_type) || format('{{"labels":["self-hosted", "linux", "{0}", "{1}"]}}', inputs.arch, inputs.node_type)) }}
     container:
       image: ${{ inputs.container_image }}
       env:
@@ -73,7 +69,7 @@ jobs:
       - name: Get PR Info
         if: startsWith(github.ref_name, 'pull-request/')
         id: get-pr-info
-        uses: rapidsai/shared-action-workflows/get-pr-info@branch-23.04
+        uses: rapidsai/shared-action-workflows/get-pr-info@branch-23.06
       - name: Add PR Info
         if: startsWith(github.ref_name, 'pull-request/')
         run: |
