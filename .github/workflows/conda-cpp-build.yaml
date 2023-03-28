@@ -47,11 +47,7 @@ jobs:
         include:
           - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "amd64", PY_VER: "3.10" }
           - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "arm64", PY_VER: "3.10" }
-    runs-on:
-      - self-hosted
-      - linux
-      - ${{ inputs.node_type }}
-      - ${{ matrix.ARCH }}
+    runs-on: "linux-${{ matrix.ARCH }}-${{ inputs.node_type }}"
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     container:
