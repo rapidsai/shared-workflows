@@ -48,7 +48,7 @@ jobs:
   build:
     strategy:
       fail-fast: false
-    runs-on: ${{ fromJSON(contains(inputs.node_type, 'cpu') && format('"linux-{0}-{1}"', inputs.arch, inputs.node_type) || format('{{"labels":["self-hosted", "linux", "{0}", "{1}"]}}', inputs.arch, inputs.node_type)) }}
+    runs-on: "linux-${{ inputs.arch }}-${{ inputs.node_type }}"
     container:
       image: ${{ inputs.container_image }}
       env:

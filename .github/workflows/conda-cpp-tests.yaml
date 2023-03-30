@@ -62,25 +62,25 @@ jobs:
 
           export MATRICES="
             pull-request:
-              - { CUDA_VER: '11.2.2', LINUX_VER: 'centos7', ARCH: 'amd64', PY_VER: '3.8', GPU: 'v100', DRIVER: '450' }
-              - { CUDA_VER: '11.4.1', LINUX_VER: 'ubuntu20.04', ARCH: 'amd64', PY_VER: '3.8', GPU: 'v100', DRIVER: '525' }
-              - { CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', ARCH: 'amd64', PY_VER: '3.10', GPU: 'v100', DRIVER: '525' }
-              - { CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', ARCH: 'arm64', PY_VER: '3.10', GPU: 'a100', DRIVER: '525' }
+              - { CUDA_VER: '11.2.2', LINUX_VER: 'centos7', ARCH: 'amd64', PY_VER: '3.8', GPU: 'v100', DRIVER: 'earliest' }
+              - { CUDA_VER: '11.4.1', LINUX_VER: 'ubuntu20.04', ARCH: 'amd64', PY_VER: '3.8', GPU: 'v100', DRIVER: 'latest' }
+              - { CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', ARCH: 'amd64', PY_VER: '3.10', GPU: 'v100', DRIVER: 'latest' }
+              - { CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', ARCH: 'arm64', PY_VER: '3.10', GPU: 'a100', DRIVER: 'latest' }
             nightly:
-              - { CUDA_VER: '11.2.2', LINUX_VER: 'centos7', ARCH: 'amd64', PY_VER: '3.8', GPU: 'v100', DRIVER: '450' }
-              - { CUDA_VER: '11.2.2', LINUX_VER: 'ubuntu20.04', ARCH: 'amd64', PY_VER: '3.8', GPU: 'v100', DRIVER: '450' }
-              - { CUDA_VER: '11.2.2', LINUX_VER: 'ubuntu20.04', ARCH: 'amd64', PY_VER: '3.8', GPU: 'v100', DRIVER: '525' }
-              - { CUDA_VER: '11.4.1', LINUX_VER: 'ubuntu20.04', ARCH: 'amd64', PY_VER: '3.8', GPU: 'v100', DRIVER: '450' }
-              - { CUDA_VER: '11.4.1', LINUX_VER: 'ubuntu20.04', ARCH: 'amd64', PY_VER: '3.8', GPU: 'v100', DRIVER: '525' }
-              - { CUDA_VER: '11.4.1', LINUX_VER: 'ubuntu20.04', ARCH: 'arm64', PY_VER: '3.8', GPU: 'a100', DRIVER: '525' }
-              - { CUDA_VER: '11.5.1', LINUX_VER: 'ubuntu20.04', ARCH: 'amd64', PY_VER: '3.10', GPU: 'v100', DRIVER: '450' }
-              - { CUDA_VER: '11.5.1', LINUX_VER: 'rockylinux8', ARCH: 'amd64', PY_VER: '3.10', GPU: 'v100', DRIVER: '450' }
-              - { CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', ARCH: 'amd64', PY_VER: '3.10', GPU: 'v100', DRIVER: '525' }
-              - { CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', ARCH: 'arm64', PY_VER: '3.10', GPU: 'a100', DRIVER: '525' }
-              - { CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', ARCH: 'amd64', PY_VER: '3.10', GPU: 'v100', DRIVER: '525' }
-              - { CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', ARCH: 'arm64', PY_VER: '3.10', GPU: 'a100', DRIVER: '525' }
+              - { CUDA_VER: '11.2.2', LINUX_VER: 'centos7', ARCH: 'amd64', PY_VER: '3.8', GPU: 'v100', DRIVER: 'earliest' }
+              - { CUDA_VER: '11.2.2', LINUX_VER: 'ubuntu20.04', ARCH: 'amd64', PY_VER: '3.8', GPU: 'v100', DRIVER: 'earliest' }
+              - { CUDA_VER: '11.2.2', LINUX_VER: 'ubuntu20.04', ARCH: 'amd64', PY_VER: '3.8', GPU: 'v100', DRIVER: 'latest' }
+              - { CUDA_VER: '11.4.1', LINUX_VER: 'ubuntu20.04', ARCH: 'amd64', PY_VER: '3.8', GPU: 'v100', DRIVER: 'earliest' }
+              - { CUDA_VER: '11.4.1', LINUX_VER: 'ubuntu20.04', ARCH: 'amd64', PY_VER: '3.8', GPU: 'v100', DRIVER: 'latest' }
+              - { CUDA_VER: '11.4.1', LINUX_VER: 'ubuntu20.04', ARCH: 'arm64', PY_VER: '3.8', GPU: 'a100', DRIVER: 'latest' }
+              - { CUDA_VER: '11.5.1', LINUX_VER: 'ubuntu20.04', ARCH: 'amd64', PY_VER: '3.10', GPU: 'v100', DRIVER: 'earliest' }
+              - { CUDA_VER: '11.5.1', LINUX_VER: 'rockylinux8', ARCH: 'amd64', PY_VER: '3.10', GPU: 'v100', DRIVER: 'earliest' }
+              - { CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', ARCH: 'amd64', PY_VER: '3.10', GPU: 'v100', DRIVER: 'latest' }
+              - { CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', ARCH: 'arm64', PY_VER: '3.10', GPU: 'a100', DRIVER: 'latest' }
+              - { CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', ARCH: 'amd64', PY_VER: '3.10', GPU: 'v100', DRIVER: 'latest' }
+              - { CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', ARCH: 'arm64', PY_VER: '3.10', GPU: 'a100', DRIVER: 'latest' }
             ext_nightly:
-              - { CUDA_VER: '11.2.2', LINUX_VER: 'ubuntu22.04', ARCH: 'amd64', PY_VER: '3.10', GPU: 't4', DRIVER: '525' }
+              - { CUDA_VER: '11.2.2', LINUX_VER: 'ubuntu22.04', ARCH: 'amd64', PY_VER: '3.10', GPU: 't4', DRIVER: 'latest' }
           "
 
           TEST_MATRIX=$(yq -n 'env(MATRICES) | .[strenv(BUILD_TYPE)]')
@@ -99,11 +99,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
-    runs-on:
-      - self-hosted
-      - linux
-      - gpu-${{ matrix.GPU }}-${{ matrix.DRIVER }}-1
-      - ${{ matrix.ARCH }}
+    runs-on: "linux-${{ matrix.ARCH }}-gpu-${{ matrix.GPU }}-${{ matrix.DRIVER }}-1"
     env:
       RAPIDS_TESTS_DIR: ${{ github.workspace }}/test-results
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts

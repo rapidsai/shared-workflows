@@ -89,14 +89,14 @@ jobs:
 
           export MATRICES="
             pull-request:
-              - { arch: 'amd64', python: '3.8', ctk: '11.8.0', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: '525' }
-              - { arch: 'arm64', python: '3.8', ctk: '11.8.0', image: 'ubuntu20.04', test-type: 'smoke', test-command: ${SMOKE_TEST_CMD}, gpu: 'a100', driver: '525' }
+              - { arch: 'amd64', python: '3.8', ctk: '11.8.0', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: 'latest' }
+              - { arch: 'arm64', python: '3.8', ctk: '11.8.0', image: 'ubuntu20.04', test-type: 'smoke', test-command: ${SMOKE_TEST_CMD}, gpu: 'a100', driver: 'latest' }
             nightly:
-              - { arch: 'amd64', python: '3.8', ctk: '11.8.0', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: '525' }
-              - { arch: 'amd64', python: '3.9', ctk: '11.8.0', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: '525' }
-              - { arch: 'amd64', python: '3.10', ctk: '11.8.0', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: '525' }
-              - { arch: 'arm64', python: '3.8', ctk: '11.8.0', image: 'ubuntu20.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'a100', driver: '525' }
-              - { arch: 'arm64', python: '3.10', ctk: '11.8.0', image: 'ubuntu20.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'a100', driver: '525' }
+              - { arch: 'amd64', python: '3.8', ctk: '11.8.0', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: 'latest' }
+              - { arch: 'amd64', python: '3.9', ctk: '11.8.0', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: 'latest' }
+              - { arch: 'amd64', python: '3.10', ctk: '11.8.0', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: 'latest' }
+              - { arch: 'arm64', python: '3.8', ctk: '11.8.0', image: 'ubuntu20.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'a100', driver: 'latest' }
+              - { arch: 'arm64', python: '3.10', ctk: '11.8.0', image: 'ubuntu20.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'a100', driver: 'latest' }
           "
 
           TEST_MATRIX=$(yq -n 'env(MATRICES) | .[strenv(BUILD_TYPE)]')
@@ -112,11 +112,7 @@ jobs:
     needs: wheel-test-compute-matrix
     strategy:
       matrix: ${{ fromJSON(needs.wheel-test-compute-matrix.outputs.MATRIX) }}
-    runs-on:
-      - self-hosted
-      - linux
-      - ${{ matrix.arch }}
-      - gpu-${{ matrix.gpu }}-${{ matrix.driver }}-1
+    runs-on: "linux-${{ matrix.arch }}-gpu-${{ matrix.gpu }}-${{ matrix.driver }}-1"
     container:
       image: "rapidsai/citestwheel:cuda-devel-${{ matrix.ctk }}-${{ matrix.image }}"
       options: ${{ inputs.test-docker-options }}
