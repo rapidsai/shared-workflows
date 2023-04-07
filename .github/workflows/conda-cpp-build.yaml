@@ -18,6 +18,9 @@ on:
       build_script:
         type: string
         default: "ci/build_cpp.sh"
+      matrix_filter:
+        type: string
+        default: "."
 
 defaults:
   run:
@@ -39,23 +42,40 @@ permissions:
   statuses: none
 
 jobs:
+  compute-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      MATRIX: ${{ steps.compute-matrix.outputs.MATRIX }}
+    steps:
+      - name: Compute Build Matrix
+        id: compute-matrix
+        run: |
+          set -eo pipefail
+
+          export MATRIX='
+          - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "amd64", PY_VER: "3.10" }
+          - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "arm64", PY_VER: "3.10" }
+          '
+
+          echo "MATRIX=$(
+            yq -n -o json 'env(MATRIX)' | \
+            jq -c '${{ inputs.matrix_filter }} | {includes: .}' \
+          )" >> ${GITHUB_OUTPUT}
   build:
+    needs: compute-matrix
     timeout-minutes: 480
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "amd64", PY_VER: "3.10" }
-          - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "arm64", PY_VER: "3.10" }
+      matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on:
       - self-hosted
       - linux
       - ${{ inputs.node_type }}
-      - ${{ matrix.ARCH }}
+      - ${{ matrix.includes.ARCH }}
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     container:
-      image: rapidsai/ci:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
+      image: rapidsai/ci:cuda${{ matrix.includes.CUDA_VER }}-${{ matrix.includes.LINUX_VER }}-py${{ matrix.includes.PY_VER }}
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}
