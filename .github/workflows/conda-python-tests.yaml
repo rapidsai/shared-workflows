@@ -21,6 +21,9 @@ on:
       run_codecov:
         type: boolean
         default: true
+      matrix_filter:
+        type: string
+        default: "."
 
 defaults:
   run:
@@ -58,39 +61,42 @@ jobs:
       - name: Compute Python Test Matrix
         id: compute-matrix
         run: |
-          export MATRICES='{
-            "pull-request": [
-              { "CUDA_VER": "11.2.2", "LINUX_VER": "centos7", "ARCH": "amd64", "PY_VER": "3.8", "GPU": "v100", "DRIVER": "450" },
-              { "CUDA_VER": "11.4.1", "LINUX_VER": "ubuntu20.04", "ARCH": "amd64", "PY_VER": "3.8", "GPU": "v100", "DRIVER": "525" },
-              { "CUDA_VER": "11.8.0", "LINUX_VER": "ubuntu22.04", "ARCH": "amd64", "PY_VER": "3.10", "GPU": "v100", "DRIVER": "525" },
-              { "CUDA_VER": "11.8.0", "LINUX_VER": "ubuntu22.04", "ARCH": "arm64", "PY_VER": "3.10", "GPU": "a100", "DRIVER": "525" }
-            ],
-            "nightly": [
-              { "CUDA_VER": "11.2.2", "LINUX_VER": "centos7", "ARCH": "amd64", "PY_VER": "3.8", "GPU": "v100", "DRIVER": "450" },
-              { "CUDA_VER": "11.2.2", "LINUX_VER": "ubuntu20.04", "ARCH": "amd64", "PY_VER": "3.8", "GPU": "v100", "DRIVER": "450" },
-              { "CUDA_VER": "11.2.2", "LINUX_VER": "ubuntu20.04", "ARCH": "amd64", "PY_VER": "3.8", "GPU": "v100", "DRIVER": "525" },
-              { "CUDA_VER": "11.4.1", "LINUX_VER": "ubuntu20.04", "ARCH": "amd64", "PY_VER": "3.8", "GPU": "v100", "DRIVER": "450" },
-              { "CUDA_VER": "11.4.1", "LINUX_VER": "ubuntu20.04", "ARCH": "amd64", "PY_VER": "3.8", "GPU": "v100", "DRIVER": "525" },
-              { "CUDA_VER": "11.4.1", "LINUX_VER": "ubuntu20.04", "ARCH": "arm64", "PY_VER": "3.8", "GPU": "a100", "DRIVER": "525" },
-              { "CUDA_VER": "11.5.1", "LINUX_VER": "ubuntu20.04", "ARCH": "amd64", "PY_VER": "3.10", "GPU": "v100", "DRIVER": "450" },
-              { "CUDA_VER": "11.5.1", "LINUX_VER": "rockylinux8", "ARCH": "amd64", "PY_VER": "3.10", "GPU": "v100", "DRIVER": "450" },
-              { "CUDA_VER": "11.8.0", "LINUX_VER": "ubuntu22.04", "ARCH": "amd64", "PY_VER": "3.10", "GPU": "v100", "DRIVER": "525" },
-              { "CUDA_VER": "11.8.0", "LINUX_VER": "ubuntu22.04", "ARCH": "arm64", "PY_VER": "3.10", "GPU": "a100", "DRIVER": "525" },
-              { "CUDA_VER": "11.8.0", "LINUX_VER": "rockylinux8", "ARCH": "amd64", "PY_VER": "3.10", "GPU": "v100", "DRIVER": "525" },
-              { "CUDA_VER": "11.8.0", "LINUX_VER": "rockylinux8", "ARCH": "arm64", "PY_VER": "3.10", "GPU": "a100", "DRIVER": "525" }
-            ],
-            "ext_nightly": [
-              { "CUDA_VER": "11.2.2", "LINUX_VER": "ubuntu22.04", "ARCH": "amd64", "PY_VER": "3.10", "GPU": "t4", "DRIVER": "525" }
-            ]
-          }'
+          set -eo pipefail
 
-          export TEST_MATRIX=$(jq -nc 'env.MATRICES | fromjson | .[env.BUILD_TYPE]')
+          export MATRICES='
+            pull-request:
+              - { CUDA_VER: "11.2.2", LINUX_VER: "centos7", ARCH: "amd64", PY_VER: "3.8", GPU: "v100", DRIVER: "450" }
+              - { CUDA_VER: "11.4.1", LINUX_VER: "ubuntu20.04", ARCH: "amd64", PY_VER: "3.8", GPU: "v100", DRIVER: "525" }
+              - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "amd64", PY_VER: "3.10", GPU: "v100", DRIVER: "525" }
+              - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "arm64", PY_VER: "3.10", GPU: "a100", DRIVER: "525" }
+            nightly:
+              - { CUDA_VER: "11.2.2", LINUX_VER: "centos7", ARCH: "amd64", PY_VER: "3.8", GPU: "v100", DRIVER: "450" }
+              - { CUDA_VER: "11.2.2", LINUX_VER: "ubuntu20.04", ARCH: "amd64", PY_VER: "3.8", GPU: "v100", DRIVER: "450" }
+              - { CUDA_VER: "11.2.2", LINUX_VER: "ubuntu20.04", ARCH: "amd64", PY_VER: "3.8", GPU: "v100", DRIVER: "525" }
+              - { CUDA_VER: "11.4.1", LINUX_VER: "ubuntu20.04", ARCH: "amd64", PY_VER: "3.8", GPU: "v100", DRIVER: "450" }
+              - { CUDA_VER: "11.4.1", LINUX_VER: "ubuntu20.04", ARCH: "amd64", PY_VER: "3.8", GPU: "v100", DRIVER: "525" }
+              - { CUDA_VER: "11.4.1", LINUX_VER: "ubuntu20.04", ARCH: "arm64", PY_VER: "3.8", GPU: "a100", DRIVER: "525" }
+              - { CUDA_VER: "11.5.1", LINUX_VER: "ubuntu20.04", ARCH: "amd64", PY_VER: "3.10", GPU: "v100", DRIVER: "450" }
+              - { CUDA_VER: "11.5.1", LINUX_VER: "rockylinux8", ARCH: "amd64", PY_VER: "3.10", GPU: "v100", DRIVER: "450" }
+              - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "amd64", PY_VER: "3.10", GPU: "v100", DRIVER: "525" }
+              - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "arm64", PY_VER: "3.10", GPU: "a100", DRIVER: "525" }
+              - { CUDA_VER: "11.8.0", LINUX_VER: "rockylinux8", ARCH: "amd64", PY_VER: "3.10", GPU: "v100", DRIVER: "525" }
+              - { CUDA_VER: "11.8.0", LINUX_VER: "rockylinux8", ARCH: "arm64", PY_VER: "3.10", GPU: "a100", DRIVER: "525" }
+            ext_nightly:
+              - { CUDA_VER: "11.2.2", LINUX_VER: "ubuntu22.04", ARCH: "amd64", PY_VER: "3.10", GPU: "t4", DRIVER: "525" }
+          '
+
+          TEST_MATRIX=$(yq -n 'env(MATRICES) | .[strenv(BUILD_TYPE)]')
+          export TEST_MATRIX
 
           if [[ "${BUILD_TYPE}" == "nightly" && "${{inputs.extended_nightly_tests}}" == "true" ]]; then
-            TEST_MATRIX=$(jq -nc '(env.TEST_MATRIX|fromjson) + (env.MATRICES|fromjson|.ext_nightly)')
+            TEST_MATRIX=$(yq -n 'env(TEST_MATRIX) + (env(MATRICES)|.ext_nightly)')
           fi
 
-          echo "MATRIX=$(jq -nc 'env.TEST_MATRIX | fromjson | {includes: .}')" >> ${GITHUB_OUTPUT}
+          echo "MATRIX=$(
+            yq -n -o json 'env(TEST_MATRIX)' | \
+            jq -c '${{ inputs.matrix_filter }} | {includes: .}' \
+          )" >> ${GITHUB_OUTPUT}
   tests:
     needs: compute-matrix
     strategy:
