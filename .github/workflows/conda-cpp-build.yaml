@@ -59,7 +59,7 @@ jobs:
 
           echo "MATRIX=$(
             yq -n -o json 'env(MATRIX)' | \
-            jq -c '${{ inputs.matrix_filter }} | {includes: .}' \
+            jq -c '${{ inputs.matrix_filter }} | {include: .}' \
           )" >> ${GITHUB_OUTPUT}
   build:
     needs: compute-matrix
@@ -71,11 +71,11 @@ jobs:
       - self-hosted
       - linux
       - ${{ inputs.node_type }}
-      - ${{ matrix.includes.ARCH }}
+      - ${{ matrix.ARCH }}
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     container:
-      image: rapidsai/ci:cuda${{ matrix.includes.CUDA_VER }}-${{ matrix.includes.LINUX_VER }}-py${{ matrix.includes.PY_VER }}
+      image: rapidsai/ci:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}

@@ -95,7 +95,7 @@ jobs:
 
           echo "MATRIX=$(
             yq -n -o json 'env(TEST_MATRIX)' | \
-            jq -c '${{ inputs.matrix_filter }} | {includes: .}' \
+            jq -c '${{ inputs.matrix_filter }} | {include: .}' \
           )" >> ${GITHUB_OUTPUT}
   tests:
     needs: compute-matrix
@@ -105,14 +105,14 @@ jobs:
     runs-on:
       - self-hosted
       - linux
-      - gpu-${{ matrix.includes.GPU }}-${{ matrix.includes.DRIVER }}-1
-      - ${{ matrix.includes.ARCH }}
+      - gpu-${{ matrix.GPU }}-${{ matrix.DRIVER }}-1
+      - ${{ matrix.ARCH }}
     env:
       RAPIDS_COVERAGE_DIR: ${{ github.workspace }}/coverage-results
       RAPIDS_TESTS_DIR: ${{ github.workspace }}/test-results
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     container:
-      image: rapidsai/ci:cuda${{ matrix.includes.CUDA_VER }}-${{ matrix.includes.LINUX_VER }}-py${{ matrix.includes.PY_VER }}
+      image: rapidsai/ci:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}
