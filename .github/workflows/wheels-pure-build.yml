@@ -37,7 +37,11 @@ on:
       uses-setup-env-vars:
         required: false
         type: boolean
-        default: true
+        default: false
+
+defaults:
+  run:
+    shell: bash
 
 permissions:
   actions: none
@@ -123,7 +127,6 @@ jobs:
         fi
 
         python -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps -vvv
-      shell: bash
 
     - name: Upload wheels to downloads.rapids.ai
       run: rapids-upload-wheels-to-s3 dist
