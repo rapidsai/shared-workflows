@@ -18,6 +18,9 @@ on:
       build_script:
         type: string
         default: "ci/build_cpp.sh"
+      matrix_filter:
+        type: string
+        default: "."
 
 defaults:
   run:
@@ -39,16 +42,33 @@ permissions:
   statuses: none
 
 jobs:
-  build:
-    timeout-minutes: 480
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
+  compute-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      MATRIX: ${{ steps.compute-matrix.outputs.MATRIX }}
+    steps:
+      - name: Compute Build Matrix
+        id: compute-matrix
+        run: |
+          set -eo pipefail
+
+          export MATRIX='
           - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "amd64", PY_VER: "3.10" }
           - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "arm64", PY_VER: "3.10" }
           - { CUDA_VER: "12.0.1", LINUX_VER: "ubuntu22.04", ARCH: "amd64", PY_VER: "3.10" }
           - { CUDA_VER: "12.0.1", LINUX_VER: "ubuntu22.04", ARCH: "arm64", PY_VER: "3.10" }
+          '
+
+          echo "MATRIX=$(
+            yq -n -o json 'env(MATRIX)' | \
+            jq -c '${{ inputs.matrix_filter }} | {include: .}' \
+          )" >> ${GITHUB_OUTPUT}
+  build:
+    needs: compute-matrix
+    timeout-minutes: 480
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.ARCH }}-${{ inputs.node_type }}"
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
