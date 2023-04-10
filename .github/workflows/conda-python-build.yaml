@@ -64,6 +64,7 @@ jobs:
             jq -c '${{ inputs.matrix_filter }} | {include: .}' \
           )" >> ${GITHUB_OUTPUT}
   build:
+    needs: compute-matrix
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
