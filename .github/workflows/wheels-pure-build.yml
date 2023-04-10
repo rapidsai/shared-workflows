@@ -39,6 +39,10 @@ on:
         type: boolean
         default: true
 
+defaults:
+  run:
+    shell: bash
+
 permissions:
   actions: none
   checks: none
@@ -123,7 +127,6 @@ jobs:
         fi
 
         python -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps -vvv
-      shell: bash
 
     - name: Upload wheels to downloads.rapids.ai
       run: rapids-upload-wheels-to-s3 dist

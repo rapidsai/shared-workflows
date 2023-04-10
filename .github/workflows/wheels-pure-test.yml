@@ -29,6 +29,10 @@ on:
         type: string
         default: 'true'
 
+defaults:
+  run:
+    shell: bash
+
 permissions:
   actions: none
   checks: none

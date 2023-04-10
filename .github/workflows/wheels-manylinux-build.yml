@@ -96,6 +96,10 @@ on:
         type: boolean
         default: true
 
+defaults:
+  run:
+    shell: bash
+
 permissions:
   actions: none
   checks: none
