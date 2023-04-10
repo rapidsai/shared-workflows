@@ -29,6 +29,9 @@ on:
       package-dir:
         required: true
         type: string
+      matrix_filter:
+        type: string
+        default: "."
 
       # Extra repository that will be cloned into the project directory.
       extra-repo:
@@ -40,7 +43,7 @@ on:
         type: string
         default: ''
       # Note that this is the _name_ of a secret containing the key, not the key itself.
-      extra-repo-deploy-key: 
+      extra-repo-deploy-key:
         required: false
         type: string
         default: ''
@@ -96,6 +99,10 @@ on:
         type: boolean
         default: false
 
+defaults:
+  run:
+    shell: bash
+
 permissions:
   actions: none
   checks: none
@@ -123,14 +130,35 @@ jobs:
       id: get_epoch_time
       run: echo "RAPIDS_EPOCH_TIMESTAMP=$(date +%s)" >> "${GITHUB_OUTPUT}"
 
+  compute-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      MATRIX: ${{ steps.compute-matrix.outputs.MATRIX }}
+    steps:
+      - name: Compute Build Matrix
+        id: compute-matrix
+        run: |
+          set -eo pipefail
+
+          export MATRIX='
+          - { ctk: "11.8.0", arch: "amd64", python: "3.8" }
+          - { ctk: "11.8.0", arch: "amd64", python: "3.9" }
+          - { ctk: "11.8.0", arch: "amd64", python: "3.10" }
+          - { ctk: "11.8.0", arch: "arm64", python: "3.8" }
+          - { ctk: "11.8.0", arch: "arm64", python: "3.9" }
+          - { ctk: "11.8.0", arch: "arm64", python: "3.10" }
+          '
+
+          echo "MATRIX=$(
+            yq -n -o json 'env(MATRIX)' | \
+            jq -c '${{ inputs.matrix_filter }} | {include: .}' \
+          )" >> ${GITHUB_OUTPUT}
+
   wheel-build:
     name: cibuildwheel ${{ matrix.arch }} ${{ matrix.python }} ${{ matrix.ctk }}
-    needs: wheel-epoch-timestamp
+    needs: [wheel-epoch-timestamp, compute-matrix]
     strategy:
-      matrix:
-        python: ['3.8', '3.9', '3.10']
-        arch: [amd64, arm64]
-        ctk: ['11.8.0']
+      matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
     container:
       # ctk version of the cibw container is irrelevant in the manylinux case
