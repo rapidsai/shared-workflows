@@ -94,30 +94,30 @@ jobs:
           EOF)
 
           export TEST_MATRIX=$(jq -nc 'env.MATRICES | fromjson | .[env.BUILD_TYPE]')
-          echo "MATRIX=$(jq -nc 'env.TEST_MATRIX | fromjson | {includes: .}')" >> ${GITHUB_OUTPUT}
+          echo "MATRIX=$(jq -nc 'env.TEST_MATRIX | fromjson | {include: .}')" >> ${GITHUB_OUTPUT}
 
   wheel-test:
-    name: wheel ${{ matrix.includes.test-type }} test ${{ matrix.includes.arch }} ${{ matrix.includes.python }} ${{ matrix.includes.ctk }}
+    name: wheel ${{ matrix.test-type }} test ${{ matrix.arch }} ${{ matrix.python }} ${{ matrix.ctk }}
     needs: wheel-test-compute-matrix
     strategy:
       matrix: ${{ fromJSON(needs.wheel-test-compute-matrix.outputs.MATRIX) }}
     runs-on:
       - self-hosted
       - linux
-      - ${{ matrix.includes.arch }}
-      - gpu-${{ matrix.includes.gpu }}-${{ matrix.includes.driver }}-1
+      - ${{ matrix.arch }}
+      - gpu-${{ matrix.gpu }}-${{ matrix.driver }}-1
     container:
-      image: "rapidsai/citestwheel:cuda-devel-${{ matrix.includes.ctk }}-${{ matrix.includes.image }}"
+      image: "rapidsai/citestwheel:cuda-devel-${{ matrix.ctk }}-${{ matrix.image }}"
       options: ${{ inputs.test-docker-options }}
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
-        RAPIDS_PY_VERSION: ${{ matrix.includes.python }}
+        RAPIDS_PY_VERSION: ${{ matrix.python }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.test-before-amd64 }}
         RAPIDS_BEFORE_TEST_COMMANDS_ARM64: ${{ inputs.test-before-arm64 }}
         PIP_EXTRA_INDEX_URL: "https://pypi.k8s.rapids.ai/simple"
         CIBW_TEST_EXTRAS: "test"
-        CIBW_TEST_COMMAND: ${{ matrix.includes.test-command }}
+        CIBW_TEST_COMMAND: ${{ matrix.test-command }}
     steps:
     - uses: aws-actions/configure-aws-credentials@v1-node16
       with:
@@ -149,7 +149,7 @@ jobs:
     - name: Set CTK-related vars from input CTK versions
       uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@branch-23.06
       with:
-        ctk: ${{ matrix.includes.ctk }}
+        ctk: ${{ matrix.ctk }}
         package-name: ${{ inputs.package-name }}
 
     - name: Run citestwheel
