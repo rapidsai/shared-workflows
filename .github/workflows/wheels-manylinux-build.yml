@@ -152,7 +152,7 @@ jobs:
           echo "MATRIX=$(
             yq -n -o json 'env(MATRIX)' | \
             jq -c '${{ inputs.matrix_filter }} | {include: .}' \
-          )" >> ${GITHUB_OUTPUT}
+          )" | tee --append "${GITHUB_OUTPUT}"
 
   wheel-build:
     name: cibuildwheel ${{ matrix.arch }} ${{ matrix.python }} ${{ matrix.ctk }}
