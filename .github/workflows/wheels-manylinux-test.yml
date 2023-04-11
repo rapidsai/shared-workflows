@@ -85,6 +85,8 @@ jobs:
           SMOKE_TEST_CMD: ${{ inputs.test-smoketest }}
           UNIT_TEST_CMD: ${{ inputs.test-unittest }}
         run: |
+          set -eo pipefail
+
           export MATRICES="
             pull-request:
               - { arch: 'amd64', python: '3.8', ctk: '11.8.0', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: '525' }
