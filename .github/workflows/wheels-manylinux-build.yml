@@ -140,14 +140,14 @@ jobs:
         run: |
           set -eo pipefail
 
-          export MATRIX='
-          - { ctk: "11.8.0", arch: "amd64", python: "3.8" }
-          - { ctk: "11.8.0", arch: "amd64", python: "3.9" }
-          - { ctk: "11.8.0", arch: "amd64", python: "3.10" }
-          - { ctk: "11.8.0", arch: "arm64", python: "3.8" }
-          - { ctk: "11.8.0", arch: "arm64", python: "3.9" }
-          - { ctk: "11.8.0", arch: "arm64", python: "3.10" }
-          '
+          export MATRIX="
+          - { ctk: '11.8.0', arch: 'amd64', python: '3.8' }
+          - { ctk: '11.8.0', arch: 'amd64', python: '3.9' }
+          - { ctk: '11.8.0', arch: 'amd64', python: '3.10' }
+          - { ctk: '11.8.0', arch: 'arm64', python: '3.8' }
+          - { ctk: '11.8.0', arch: 'arm64', python: '3.9' }
+          - { ctk: '11.8.0', arch: 'arm64', python: '3.10' }
+          "
 
           echo "MATRIX=$(
             yq -n -o json 'env(MATRIX)' | \
