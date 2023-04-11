@@ -81,18 +81,23 @@ jobs:
           fi
       - name: Compute test matrix
         id: compute-matrix
+        env:
+          SMOKE_TEST_CMD: ${{ inputs.test-smoketest }}
+          UNIT_TEST_CMD: ${{ inputs.test-unittest }}
         run: |
-          export MATRICES='
+          set -eo pipefail
+
+          export MATRICES="
             pull-request:
-              - { arch: "amd64", python: "3.8", ctk: "11.8.0", image: "ubuntu18.04", test-type: "unit", test-command: "${{ inputs.test-unittest }}", gpu: "v100", driver: "525" }
-              - { arch: "arm64", python: "3.8", ctk: "11.8.0", image: "ubuntu20.04", test-type: "smoke", test-command: "${{ inputs.test-smoketest }}", gpu: "a100", driver: "525" }
+              - { arch: 'amd64', python: '3.8', ctk: '11.8.0', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: '525' }
+              - { arch: 'arm64', python: '3.8', ctk: '11.8.0', image: 'ubuntu20.04', test-type: 'smoke', test-command: ${SMOKE_TEST_CMD}, gpu: 'a100', driver: '525' }
             nightly:
-              - { arch: "amd64", python: "3.8", ctk: "11.8.0", image: "ubuntu18.04", test-type: "unit", test-command: "${{ inputs.test-unittest }}", gpu: "v100", driver: "525" }
-              - { arch: "amd64", python: "3.9", ctk: "11.8.0", image: "ubuntu18.04", test-type: "unit", test-command: "${{ inputs.test-unittest }}", gpu: "v100", driver: "525" }
-              - { arch: "amd64", python: "3.10", ctk: "11.8.0", image: "ubuntu18.04", test-type: "unit", test-command: "${{ inputs.test-unittest }}", gpu: "v100", driver: "525" }
-              - { arch: "arm64", python: "3.8", ctk: "11.8.0", image: "ubuntu20.04", test-type: "unit", test-command: "${{ inputs.test-unittest }}", gpu: "a100", driver: "525" }
-              - { arch: "arm64", python: "3.10", ctk: "11.8.0", image: "ubuntu20.04", test-type: "unit", test-command: "${{ inputs.test-unittest }}", gpu: "a100", driver: "525" }
-          '
+              - { arch: 'amd64', python: '3.8', ctk: '11.8.0', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: '525' }
+              - { arch: 'amd64', python: '3.9', ctk: '11.8.0', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: '525' }
+              - { arch: 'amd64', python: '3.10', ctk: '11.8.0', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: '525' }
+              - { arch: 'arm64', python: '3.8', ctk: '11.8.0', image: 'ubuntu20.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'a100', driver: '525' }
+              - { arch: 'arm64', python: '3.10', ctk: '11.8.0', image: 'ubuntu20.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'a100', driver: '525' }
+          "
 
           TEST_MATRIX=$(yq -n 'env(MATRICES) | .[strenv(BUILD_TYPE)]')
           export TEST_MATRIX
@@ -100,7 +105,7 @@ jobs:
           echo "MATRIX=$(
             yq -n -o json 'env(TEST_MATRIX)' | \
             jq -c '${{ inputs.matrix_filter }} | {include: .}' \
-          )" >> ${GITHUB_OUTPUT}
+          )" | tee --append "${GITHUB_OUTPUT}"
 
   wheel-test:
     name: wheel ${{ matrix.test-type }} test ${{ matrix.arch }} ${{ matrix.python }} ${{ matrix.ctk }}

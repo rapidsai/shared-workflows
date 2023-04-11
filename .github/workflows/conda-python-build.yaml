@@ -52,17 +52,17 @@ jobs:
         run: |
           set -eo pipefail
 
-          export MATRIX='
-          - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "amd64", PY_VER: "3.8" }
-          - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "arm64", PY_VER: "3.8" }
-          - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "amd64", PY_VER: "3.10" }
-          - { CUDA_VER: "11.8.0", LINUX_VER: "ubuntu22.04", ARCH: "arm64", PY_VER: "3.10" }
-          '
+          export MATRIX="
+          - { CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', ARCH: 'amd64', PY_VER: '3.8' }
+          - { CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', ARCH: 'arm64', PY_VER: '3.8' }
+          - { CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', ARCH: 'amd64', PY_VER: '3.10' }
+          - { CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', ARCH: 'arm64', PY_VER: '3.10' }
+          "
 
           echo "MATRIX=$(
             yq -n -o json 'env(MATRIX)' | \
             jq -c '${{ inputs.matrix_filter }} | {include: .}' \
-          )" >> ${GITHUB_OUTPUT}
+          )" | tee --append "${GITHUB_OUTPUT}"
   build:
     needs: compute-matrix
     strategy:
