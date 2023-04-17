@@ -51,7 +51,7 @@ permissions:
 jobs:
   wheel-test:
     name: wheel test pure
-    runs-on: [self-hosted, linux, amd64, gpu-v100-525-1]
+    runs-on: linux-amd64-gpu-v100-latest-1
     strategy:
       matrix:
         ctk: ["11.8.0"]
