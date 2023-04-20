@@ -8,7 +8,7 @@ inputs:
     description: 'Path to output wheels'
     required: true
   python-version:
-    description: 'python version e.g. 3.8'
+    description: 'python version e.g. 3.9'
     required: true
   cuda-suffix:
     description: 'Add a -cu11-style suffix to wheel name'

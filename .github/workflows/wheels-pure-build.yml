@@ -71,7 +71,7 @@ jobs:
       image: "rapidsai/cibuildwheel:cuda-runtime-${{ matrix.ctk }}-ubuntu20.04"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
-        RAPIDS_PY_VERSION: "3.8"
+        RAPIDS_PY_VERSION: "3.9"
 
     steps:
     - uses: aws-actions/configure-aws-credentials@v1-node16
