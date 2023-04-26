@@ -14,7 +14,7 @@ runs:
           const branch = process.env.GITHUB_REF_NAME;
           const prBranchPattern = new RegExp("^pull-request/[0-9]+$");
           if (!branch.match(prBranchPattern)) {
-            throw new Error `${branch} does not match PR branch pattern.`;
+            throw new Error(`${branch} does not match PR branch pattern.`);
           }
           const prNumber = branch.split("/")[1];
 
