@@ -55,22 +55,6 @@ on:
         default: 'true'
 
       # cibw settings
-      cibw-environment:
-        type: string
-        required: false
-        default: ''
-      cibw-before-all-amd64:
-        required: false
-        type: string
-        default: 'true'
-      cibw-before-all-arm64:
-        required: false
-        type: string
-        default: 'true'
-      cibw-before-build:
-        required: false
-        type: string
-        default: 'true'
       post-repair-amd64:
         required: false
         type: string
@@ -133,8 +117,8 @@ jobs:
           export MATRIX="
           - { ctk: '11.8.0', arch: 'amd64', python: '3.9' }
           - { ctk: '11.8.0', arch: 'amd64', python: '3.10' }
-          - { ctk: '11.8.0', arch: 'arm64', python: '3.9' }
-          - { ctk: '11.8.0', arch: 'arm64', python: '3.10' }
+          #- { ctk: '11.8.0', arch: 'arm64', python: '3.9' }
+          #- { ctk: '11.8.0', arch: 'arm64', python: '3.10' }
           "
 
           echo "MATRIX=$(
@@ -149,14 +133,11 @@ jobs:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
     container:
-      # ctk version of the cibw container is irrelevant in the manylinux case
-      # it's simply a launcher for cibuildwheel
-      image: "rapidsai/cibuildwheel:cuda-runtime-11.8.0-ubuntu20.04"
+      # TODO: Temporarily hardcoding for amd64 only builds, but we will need to
+      # enable arm builds here eventually. We will also need to branch on the
+      # CTK version.
+      image: "rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7"
 
-      # we need the below for docker-in-docker
-      # cibuildwheel images launch manylinux images
-      volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         RAPIDS_PY_VERSION: ${{ matrix.python }}
@@ -174,6 +155,12 @@ jobs:
         ref: ${{ inputs.sha }}
         fetch-depth: 0 # unshallow fetch for setuptools-scm
         persist-credentials: false
+
+    - name: Mark dir as safe for git
+      run: |
+        # TODO: This is a temporary measure, probably better to clone into a
+        # user directory rather than into the root.
+        git config --global --add safe.directory /__w/rmm/rmm
 
     - name: Standardize repository information
       uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.06
@@ -209,37 +196,72 @@ jobs:
     - name: Run before-wheel command
       run: "${{ inputs.before-wheel }}"
 
-    - name: Build wheels with cibuildwheel action
-      uses: rapidsai/shared-action-workflows/cibuildwheel@branch-23.06
-      with:
-        # hardcoded
-        output-dir: dist
+    - name: Set up environment
+      run: |
+        # TODO: Currently ignoring many of the options for cibuildwheel like
+        # before* because we're probably not using them and the usage can be
+        # simplified now that we don't have multiple environments inside vs
+        # outside manylinux, etc.
 
-        # matrix settings
-        python-version: ${{ matrix.python }}
-        cibw-before-all-amd64: ${{ inputs.cibw-before-all-amd64 }}
-        cibw-before-all-arm64: ${{ inputs.cibw-before-all-arm64 }}
-        post-repair-amd64: ${{ inputs.post-repair-amd64 }}
-        post-repair-arm64: ${{ inputs.post-repair-arm64 }}
+        # Store internal pypi credentials before running cibw-before-all
+        printf 'machine pypi.k8s.rapids.ai\n\tlogin ${{ inputs.internal-pypi-user }}\n\tpassword ${{ inputs.internal-pypi-pass }}\n' > ~/.netrc
 
-        # pre-picked epoch timestamp to use for all wheels
-        epoch-timestamp: ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }}
+        # sccache configuration
+        export SCCACHE_S3_KEY_PREFIX=gha-cibw
+        export SCCACHE_REGION=us-east-2
+        export SCCACHE_IDLE_TIMEOUT=32768
+        export SCCACHE_BUCKET=rapids-sccache-east
+        export SCCACHE_S3_USE_SSL=true
+        export AWS_ACCESS_KEY_ID=${{ inputs.sccache-aws-access-key-id }}
+        export AWS_SECRET_ACCESS_KEY=${{ inputs.sccache-aws-secret-access-key }}
+        export AWS_SESSION_TOKEN=${{ inputs.sccache-aws-session-token }}
 
-        # user inputs
-        manylinux-ctk-version: ${{ matrix.ctk }}
-        package-dir: ${{ inputs.package-dir }}
-        cuda-suffix: ${{ env.RAPIDS_PY_WHEEL_CUDA_SUFFIX }}
-        cibw-environment: ${{ inputs.cibw-environment }}
-        cibw-before-build: ${{ inputs.cibw-before-build }}
-        skbuild-configure-options: ${{ inputs.skbuild-configure-options }}
-        skbuild-build-options: ${{ inputs.skbuild-build-options }}
+        # Set up skbuild options. Enable sccache in skbuild config options
+        export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
+        export SKBUILD_BUILD_OPTIONS="${{ inputs.skbuild-build-options }}"
 
-        # secrets
-        sccache-aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
-        sccache-aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-        sccache-aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
-        internal-pypi-user: cibuildwheel
-        internal-pypi-pass: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
+        # Set up for pip installation of dependencies from the nightly index
+        export PIP_INDEX_URL=https://pypi.k8s.rapids.ai/simple
+        export PIP_FIND_LINKS=/project/local-wheelhouse
+
+    - name: Apply wheel modifications
+      run: |
+        # Use gha-tools rapids-pip-wheel-version to generate wheel version then
+        # update the necessary files
+        versioneer_override="$(rapids-pip-wheel-version ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }})"
+
+        bash ci/release/apply_wheel_modifications.sh ${versioneer_override} ${{ env.RAPIDS_PY_WHEEL_CUDA_SUFFIX }}
+        echo "The package name and/or version was modified in the package source. The git diff is:"
+        git diff
+
+    - name: Build the wheel
+      run: |
+        pyenv global ${{ matrix.python }}
+
+        cd "${{ inputs.package-dir }}"
+        
+        # TODO: Need a way to do this that doesn't require enabling it every time
+        scl enable devtoolset-11 bash
+
+        # Hardcode the output dir
+        python -m pip wheel . -w dist
+
+    - name: Repair the wheel
+      run: |
+        # Repair the wheel
+        pushd dist
+        
+        # TODO: Stop hardcoding the output platform, will be different for arch
+        auditwheel repair -w . * --plat manylinux_2_17_x86_64
+        
+        runner_arch=$(uname -m)
+        if [[ "${runner_arch}" == "aarch64" ]]; then
+          ${{ inputs.post-repair-arm64 }}
+        else
+          ${{ inputs.post-repair-amd64 }}
+        fi
+        
+        popd
 
     - name: Upload wheels to downloads.rapids.ai
       run: rapids-upload-wheels-to-s3 dist
