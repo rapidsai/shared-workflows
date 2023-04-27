@@ -217,7 +217,8 @@ jobs:
         export AWS_SESSION_TOKEN=${{ inputs.sccache-aws-session-token }}
 
         # Set up skbuild options. Enable sccache in skbuild config options
-        export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
+        #export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
+        export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}}"
         export SKBUILD_BUILD_OPTIONS="${{ inputs.skbuild-build-options }}"
 
         # Set up for pip installation of dependencies from the nightly index
@@ -239,7 +240,7 @@ jobs:
         pyenv global ${{ matrix.python }}
 
         cd "${{ inputs.package-dir }}"
-        
+
         # TODO: Need a way to do this that doesn't require enabling it every time
         scl enable devtoolset-11 bash
 
@@ -250,17 +251,17 @@ jobs:
       run: |
         # Repair the wheel
         pushd dist
-        
+
         # TODO: Stop hardcoding the output platform, will be different for arch
         auditwheel repair -w . * --plat manylinux_2_17_x86_64
-        
+
         runner_arch=$(uname -m)
         if [[ "${runner_arch}" == "aarch64" ]]; then
           ${{ inputs.post-repair-arm64 }}
         else
           ${{ inputs.post-repair-amd64 }}
         fi
-        
+
         popd
 
     - name: Upload wheels to downloads.rapids.ai
