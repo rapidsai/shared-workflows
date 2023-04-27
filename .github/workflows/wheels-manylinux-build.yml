@@ -243,10 +243,8 @@ jobs:
         # Hardcode the output dir
         python -m pip wheel . -w dist
 
-    - name: Repair the wheel
-      run: |
         # Repair the wheel
-        pushd "${{ inputs.package-dir }}/dist"
+        cd dist
 
         # TODO: Stop hardcoding the output platform, will be different for arch
         auditwheel repair -w . * --plat manylinux_2_17_x86_64
@@ -257,8 +255,6 @@ jobs:
         else
           ${{ inputs.post-repair-amd64 }}
         fi
-
-        popd
 
     - name: Upload wheels to downloads.rapids.ai
       run: rapids-upload-wheels-to-s3 dist
