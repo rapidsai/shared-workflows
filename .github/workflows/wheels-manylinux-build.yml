@@ -259,5 +259,10 @@ jobs:
     - name: Upload wheels to downloads.rapids.ai
       run: |
         pyenv global ${{ matrix.python }}
-        python -m pip install awscli
+
+        # Temporary here until it's installed in the container
+        curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
+        unzip awscli-bundle.zip
+        ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
+
         rapids-upload-wheels-to-s3 "${{ inputs.package-dir }}"/dist
