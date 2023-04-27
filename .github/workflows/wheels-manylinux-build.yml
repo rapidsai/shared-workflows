@@ -196,34 +196,10 @@ jobs:
     - name: Run before-wheel command
       run: "${{ inputs.before-wheel }}"
 
-    - name: Set up environment
+    - name: Set up credentials
       run: |
-        # TODO: Currently ignoring many of the options for cibuildwheel like
-        # before* because we're probably not using them and the usage can be
-        # simplified now that we don't have multiple environments inside vs
-        # outside manylinux, etc.
-
         # Store internal pypi credentials before running cibw-before-all
         printf 'machine pypi.k8s.rapids.ai\n\tlogin ${{ inputs.internal-pypi-user }}\n\tpassword ${{ inputs.internal-pypi-pass }}\n' > ~/.netrc
-
-        # sccache configuration
-        export SCCACHE_S3_KEY_PREFIX=gha-cibw
-        export SCCACHE_REGION=us-east-2
-        export SCCACHE_IDLE_TIMEOUT=32768
-        export SCCACHE_BUCKET=rapids-sccache-east
-        export SCCACHE_S3_USE_SSL=true
-        export AWS_ACCESS_KEY_ID=${{ inputs.sccache-aws-access-key-id }}
-        export AWS_SECRET_ACCESS_KEY=${{ inputs.sccache-aws-secret-access-key }}
-        export AWS_SESSION_TOKEN=${{ inputs.sccache-aws-session-token }}
-
-        # Set up skbuild options. Enable sccache in skbuild config options
-        #export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
-        export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}}"
-        export SKBUILD_BUILD_OPTIONS="${{ inputs.skbuild-build-options }}"
-
-        # Set up for pip installation of dependencies from the nightly index
-        export PIP_INDEX_URL=https://pypi.k8s.rapids.ai/simple
-        export PIP_FIND_LINKS=/project/local-wheelhouse
 
     - name: Apply wheel modifications
       run: |
@@ -243,6 +219,25 @@ jobs:
 
         # TODO: Need a way to do this that doesn't require enabling it every time
         source scl_source enable devtoolset-11
+
+        # sccache configuration
+        export SCCACHE_S3_KEY_PREFIX=gha-cibw
+        export SCCACHE_REGION=us-east-2
+        export SCCACHE_IDLE_TIMEOUT=32768
+        export SCCACHE_BUCKET=rapids-sccache-east
+        export SCCACHE_S3_USE_SSL=true
+        export AWS_ACCESS_KEY_ID=${{ inputs.sccache-aws-access-key-id }}
+        export AWS_SECRET_ACCESS_KEY=${{ inputs.sccache-aws-secret-access-key }}
+        export AWS_SESSION_TOKEN=${{ inputs.sccache-aws-session-token }}
+
+        # Set up skbuild options. Enable sccache in skbuild config options
+        #export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
+        export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}}"
+        export SKBUILD_BUILD_OPTIONS="${{ inputs.skbuild-build-options }}"
+
+        # Set up for pip installation of dependencies from the nightly index
+        export PIP_INDEX_URL=https://pypi.k8s.rapids.ai/simple
+        export PIP_FIND_LINKS=/project/local-wheelhouse
 
         # Hardcode the output dir
         python -m pip wheel . -w dist
