@@ -245,7 +245,6 @@ jobs:
 
         # Repair the wheel
         # TODO: Stop hardcoding the output platform, will be different for arch
-        # TODO: See if there is a better way to determine the name of the package to repair
         cd dist
         python -m auditwheel repair -w . ${{ inputs.package-name }}* --plat manylinux_2_17_x86_64
 
@@ -263,12 +262,4 @@ jobs:
         mv dist/*manylinux* final_dist
 
     - name: Upload wheels to downloads.rapids.ai
-      run: |
-        pyenv global ${{ matrix.python }}
-
-        # Temporary here until it's installed in the container
-        curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
-        unzip awscli-bundle.zip
-        ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
-
-        rapids-upload-wheels-to-s3 "${{ inputs.package-dir }}"/final_dist
+      run: rapids-upload-wheels-to-s3 "${{ inputs.package-dir }}"/final_dist
