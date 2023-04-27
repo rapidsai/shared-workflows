@@ -156,12 +156,6 @@ jobs:
         fetch-depth: 0 # unshallow fetch for setuptools-scm
         persist-credentials: false
 
-    - name: Mark dir as safe for git
-      run: |
-        # TODO: This is a temporary measure, probably better to clone into a
-        # user directory rather than into the root.
-        git config --global --add safe.directory /__w/rmm/rmm
-
     - name: Standardize repository information
       uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.06
       with:
