@@ -242,7 +242,7 @@ jobs:
         cd "${{ inputs.package-dir }}"
 
         # TODO: Need a way to do this that doesn't require enabling it every time
-        scl enable devtoolset-11 bash
+        source scl_source enable devtoolset-11
 
         # Hardcode the output dir
         python -m pip wheel . -w dist
