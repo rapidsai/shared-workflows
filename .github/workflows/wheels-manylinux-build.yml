@@ -219,7 +219,7 @@ jobs:
 
         # TODO: Need a way to do this that doesn't require enabling it every time
         #source scl_source enable devtoolset-11
-        source /opt/rh/devtoolset-11/enable
+        #source /opt/rh/devtoolset-11/enable
 
         # sccache configuration
         export SCCACHE_S3_KEY_PREFIX=gha-cibw
