@@ -211,7 +211,7 @@ jobs:
         echo "The package name and/or version was modified in the package source. The git diff is:"
         git diff
 
-    - name: Build the wheel
+    - name: Build and repair the wheel
       run: |
         pyenv global ${{ matrix.python }}
 
@@ -247,7 +247,7 @@ jobs:
         cd dist
 
         # TODO: Stop hardcoding the output platform, will be different for arch
-        auditwheel repair -w . * --plat manylinux_2_17_x86_64
+        python -m auditwheel repair -w . * --plat manylinux_2_17_x86_64
 
         runner_arch=$(uname -m)
         if [[ "${runner_arch}" == "aarch64" ]]; then
