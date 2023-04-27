@@ -244,10 +244,10 @@ jobs:
         python -m pip wheel . -w dist
 
         # Repair the wheel
-        cd dist
-
         # TODO: Stop hardcoding the output platform, will be different for arch
-        python -m auditwheel repair -w . * --plat manylinux_2_17_x86_64
+        # TODO: See if there is a better way to determine the name of the package to repair
+        cd dist
+        python -m auditwheel repair -w . ${{ inputs.package-name }}* --plat manylinux_2_17_x86_64
 
         runner_arch=$(uname -m)
         if [[ "${runner_arch}" == "aarch64" ]]; then
