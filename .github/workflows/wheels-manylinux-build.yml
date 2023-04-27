@@ -232,7 +232,8 @@ jobs:
         export AWS_SESSION_TOKEN=${{ inputs.sccache-aws-session-token }}
 
         # Set up skbuild options. Enable sccache in skbuild config options
-        export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
+        #export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
+        export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}}"
         export SKBUILD_BUILD_OPTIONS="${{ inputs.skbuild-build-options }}"
 
         # Set up for pip installation of dependencies from the nightly index
