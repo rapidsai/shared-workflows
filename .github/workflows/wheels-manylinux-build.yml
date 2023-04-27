@@ -246,6 +246,7 @@ jobs:
 
         # Hardcode the output dir
         python -m pip wheel . -w dist
+      shell: bash
 
     - name: Repair the wheel
       run: |
