@@ -257,4 +257,4 @@ jobs:
         fi
 
     - name: Upload wheels to downloads.rapids.ai
-      run: rapids-upload-wheels-to-s3 dist
+      run: rapids-upload-wheels-to-s3 "${{ inputs.package-dir }}"/dist
