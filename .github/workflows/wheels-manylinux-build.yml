@@ -255,6 +255,12 @@ jobs:
         else
           ${{ inputs.post-repair-amd64 }}
         fi
+        
+        # Need to pick the final wheel out from all the dependencies and the
+        # pre-repaired wheel.
+        cd ..
+        mkdir final_dist
+        mv dist/*manylinux* final_dist
 
     - name: Upload wheels to downloads.rapids.ai
       run: |
@@ -265,4 +271,4 @@ jobs:
         unzip awscli-bundle.zip
         ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
 
-        rapids-upload-wheels-to-s3 "${{ inputs.package-dir }}"/dist
+        rapids-upload-wheels-to-s3 "${{ inputs.package-dir }}"/final_dist
