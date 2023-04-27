@@ -238,6 +238,9 @@ jobs:
         # directly in the containers at build if possible.
         cd dist
         python -m auditwheel repair -w . ${{ inputs.package-name }}* --plat manylinux_2_17_x86_64
+        # For arm, manylinux_2_34_x86_64. Should be able to bump this down
+        # though, not sure where the >2_27 symbols are coming from when
+        # building with ubuntu 18.04
 
         if [[ "${{ matrix.arch }}" == "arm64" ]]; then
           ${{ inputs.post-repair-arm64 }}
