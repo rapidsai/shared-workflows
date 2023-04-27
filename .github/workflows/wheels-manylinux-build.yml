@@ -257,4 +257,7 @@ jobs:
         fi
 
     - name: Upload wheels to downloads.rapids.ai
-      run: rapids-upload-wheels-to-s3 "${{ inputs.package-dir }}"/dist
+      run: |
+        pyenv global ${{ matrix.python }}
+        python -m pip install awscli
+        rapids-upload-wheels-to-s3 "${{ inputs.package-dir }}"/dist
