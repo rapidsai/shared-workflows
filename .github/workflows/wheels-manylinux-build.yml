@@ -218,7 +218,7 @@ jobs:
         export SKBUILD_BUILD_OPTIONS="${{ inputs.skbuild-build-options }}"
 
         # Set up for pip installation of dependencies from the nightly index
-        export PIP_INDEX_URL=https://pypi.k8s.rapids.ai/simple
+        export PIP_EXTRA_INDEX_URL=https://pypi.k8s.rapids.ai/simple
         export PIP_FIND_LINKS=/local-wheelhouse
 
         # Store internal pypi credentials before any step that may download wheels
