@@ -237,8 +237,7 @@ jobs:
         if [[ "${{ matrix.arch }}" == "amd64" ]]; then
           python -m auditwheel repair -w . ${{ inputs.package-name }}* --plat manylinux_2_17_x86_64
         else 
-          # TODO: Figure out why this is requiring 2_34 instead of 2_31
-          python -m auditwheel repair -w . ${{ inputs.package-name }}* --plat manylinux_2_34_aarch64
+          python -m auditwheel repair -w . ${{ inputs.package-name }}* --plat manylinux_2_31_aarch64
         fi
 
         if [[ "${{ matrix.arch }}" == "arm64" ]]; then
