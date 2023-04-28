@@ -73,5 +73,5 @@ jobs:
 
     - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
       run:  |
-        yum install -y jq
+        yum update -y && yum install -y jq
         rapids-twine "${{ inputs.package-name }}"
