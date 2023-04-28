@@ -115,10 +115,10 @@ jobs:
           set -eo pipefail
 
           export MATRIX="
-          - { ctk: '11.8.0', arch: 'amd64', python: '3.9' }
-          - { ctk: '11.8.0', arch: 'amd64', python: '3.10' }
-          #- { ctk: '11.8.0', arch: 'arm64', python: '3.9' }
-          #- { ctk: '11.8.0', arch: 'arm64', python: '3.10' }
+          - { ctk: '11.8.0', arch: 'amd64', python: '3.9', image: 'rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7'}
+          #- { ctk: '11.8.0', arch: 'amd64', python: '3.10', image: 'rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7' }
+          #- { ctk: '11.8.0', arch: 'arm64', python: '3.9', image: 'rapidsai/manylinux_v2_2_31:cuda-devel-11.8.0-ubuntu20.04' }
+          - { ctk: '11.8.0', arch: 'arm64', python: '3.10', image: 'rapidsai/manylinux_v2_2_31:cuda-devel-11.8.0-ubuntu20.04' }
           "
 
           echo "MATRIX=$(
@@ -133,10 +133,7 @@ jobs:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
     container:
-      # TODO: Temporarily hardcoding for amd64 only builds, but we will need to
-      # enable arm builds here eventually. We will also need to branch on the
-      # CTK version.
-      image: "rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7"
+      image: "${{ matrix.image }}"
 
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
@@ -237,10 +234,11 @@ jobs:
         # arch. Consider setting the AUDITWHEEL_PLAT environment variable
         # directly in the containers at build if possible.
         cd dist
-        python -m auditwheel repair -w . ${{ inputs.package-name }}* --plat manylinux_2_17_x86_64
-        # For arm, manylinux_2_34_x86_64. Should be able to bump this down
-        # though, not sure where the >2_27 symbols are coming from when
-        # building with ubuntu 18.04
+        if [[ "${arch}" == "amd64" ]]; then
+          python -m auditwheel repair -w . ${{ inputs.package-name }}* --plat manylinux_2_17_x86_64
+        else 
+          python -m auditwheel repair -w . ${{ inputs.package-name }}* --plat manylinux_2_31_aarch64
+        fi
 
         if [[ "${{ matrix.arch }}" == "arm64" ]]; then
           ${{ inputs.post-repair-arm64 }}
