@@ -72,4 +72,6 @@ jobs:
         sha: ${{ inputs.sha }}
 
     - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
-      run: rapids-twine "${{ inputs.package-name }}"
+      run:  |
+        yum install -y jq
+        rapids-twine "${{ inputs.package-name }}"
