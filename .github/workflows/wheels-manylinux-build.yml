@@ -255,4 +255,6 @@ jobs:
       shell: bash -leo pipefail {0}
 
     - name: Upload wheels to downloads.rapids.ai
-      run: rapids-upload-wheels-to-s3 "${{ inputs.package-dir }}"/final_dist
+      run: |
+        apt install -y jq
+        rapids-upload-wheels-to-s3 "${{ inputs.package-dir }}"/final_dist
