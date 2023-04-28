@@ -72,6 +72,4 @@ jobs:
         sha: ${{ inputs.sha }}
 
     - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
-      run:  |
-        yum install -y epel-release && yum update -y && yum install -y jq
-        rapids-twine "${{ inputs.package-name }}"
+      run: rapids-twine-new "${{ inputs.package-name }}"
