@@ -222,7 +222,7 @@ jobs:
         export PIP_FIND_LINKS=/project/local-wheelhouse
 
         # Store internal pypi credentials before any step that may download wheels
-        printf 'machine pypi.k8s.rapids.ai\n\tlogin ${{ inputs.internal-pypi-user }}\n\tpassword ${{ inputs.internal-pypi-pass }}\n' > ~/.netrc
+        printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
 
         # Hardcode the output dir
         python -m pip wheel . -w dist
