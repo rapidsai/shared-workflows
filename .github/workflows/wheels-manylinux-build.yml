@@ -225,7 +225,7 @@ jobs:
         printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
 
         # Hardcode the output dir
-        python -m pip wheel . -w dist -vvv
+        python -m pip wheel . -w dist -vvv --no-deps
 
         # Repair the wheel
         # TODO: Stop hardcoding the output platform, will be different for each
