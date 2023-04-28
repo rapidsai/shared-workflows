@@ -251,7 +251,7 @@ jobs:
         # pre-repaired wheel.
         cd ..
         mkdir final_dist
-        mv "dist/${{ inputs.package-name }}*manylinux*" final_dist
+        mv "dist/*manylinux*" final_dist
       # Use a shell that loads the rc file so that we get the compiler settings
       shell: bash -leo pipefail {0}
 
