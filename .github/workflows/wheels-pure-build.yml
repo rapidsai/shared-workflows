@@ -68,7 +68,7 @@ jobs:
         ctk: ["11.8.0"]
     runs-on: ubuntu-latest
     container:
-      # Always use the manylinux container build on x86
+      # Always use the manylinux container built on x86 to match the runner arch
       image: "rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}

@@ -228,9 +228,6 @@ jobs:
         python -m pip wheel . -w dist -vvv --no-deps
 
         # Repair the wheel
-        # TODO: Stop hardcoding the output platform, will be different for each
-        # arch. Consider setting the AUDITWHEEL_PLAT environment variable
-        # directly in the containers at build if possible.
         cd dist
         if [[ "${{ matrix.arch }}" == "amd64" ]]; then
           python -m auditwheel repair -w . ${{ inputs.package-name }}* --plat manylinux_2_17_x86_64
