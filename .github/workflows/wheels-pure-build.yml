@@ -88,9 +88,6 @@ jobs:
         fetch-depth: 0 # unshallow fetch for setuptools-scm
         persist-credentials: false
 
-    - name: Temporarily force py39
-      run: pyenv global 3.9
-
     - name: Standardize repository information
       uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.06
       with:
