@@ -225,11 +225,6 @@ jobs:
         printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
 
         # Hardcode the output dir
-        if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-          apt install -y cmake
-        else
-          yum install -y cmake
-        fi
         python -m pip wheel . -w dist -vvv --no-deps
 
         # Repair the wheel
