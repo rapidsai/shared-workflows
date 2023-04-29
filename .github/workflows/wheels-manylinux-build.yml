@@ -226,9 +226,9 @@ jobs:
 
         # Hardcode the output dir
         if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-          yum install -y cmake
-        else
           apt install -y cmake
+        else
+          yum install -y cmake
         fi
         python -m pip wheel . -w dist -vvv --no-deps
 
