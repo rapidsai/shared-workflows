@@ -68,7 +68,8 @@ jobs:
         ctk: ["11.8.0"]
     runs-on: ubuntu-latest
     container:
-      image: "rapidsai/cibuildwheel:cuda-runtime-${{ matrix.ctk }}-ubuntu20.04"
+      # Always use the manylinux container build on x86
+      image: "rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         RAPIDS_PY_VERSION: "3.9"

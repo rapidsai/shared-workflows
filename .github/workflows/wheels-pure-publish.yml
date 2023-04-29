@@ -45,9 +45,9 @@ jobs:
     name: wheels publish
     runs-on: ubuntu-latest
     container:
-      # ctk version of the cibw container is irrelevant in the publish step
-      # it's simply a launcher for twine
-      image: "rapidsai/cibuildwheel:cuda-runtime-11.8.0-ubuntu20.04"
+      # ctk version of the container is irrelevant in the publish step it's
+      # simply a launcher for twine
+      image: "rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         TWINE_USERNAME: cibuildwheel
