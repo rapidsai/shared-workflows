@@ -116,8 +116,8 @@ jobs:
 
           export MATRIX="
           - { ctk: '11.8.0', arch: 'amd64', python: '3.9', image: 'rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7'}
-          #- { ctk: '11.8.0', arch: 'amd64', python: '3.10', image: 'rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7' }
-          #- { ctk: '11.8.0', arch: 'arm64', python: '3.9', image: 'rapidsai/manylinux_v2_2_31:cuda-devel-11.8.0-ubuntu20.04' }
+          - { ctk: '11.8.0', arch: 'amd64', python: '3.10', image: 'rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7' }
+          - { ctk: '11.8.0', arch: 'arm64', python: '3.9', image: 'rapidsai/manylinux_v2_2_31:cuda-devel-11.8.0-ubuntu20.04' }
           - { ctk: '11.8.0', arch: 'arm64', python: '3.10', image: 'rapidsai/manylinux_v2_2_31:cuda-devel-11.8.0-ubuntu20.04' }
           "
 
