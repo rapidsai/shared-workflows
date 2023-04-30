@@ -184,9 +184,6 @@ jobs:
         ctk: ${{ matrix.ctk }}
         package-name: ${{ inputs.package-name }}
 
-    - name: Run before-wheel command
-      run: "${{ inputs.before-wheel }}"
-
     - name: Apply wheel modifications
       run: |
         # Use gha-tools rapids-pip-wheel-version to generate wheel version then
@@ -200,6 +197,9 @@ jobs:
     - name: Build and repair the wheel
       run: |
         pyenv global ${{ matrix.python }}
+
+        # Run before-wheel command
+        "${{ inputs.before-wheel }}"
 
         cd "${{ inputs.package-dir }}"
 
