@@ -199,7 +199,7 @@ jobs:
         pyenv global ${{ matrix.python }}
 
         # Run before-wheel command
-        "${{ inputs.before-wheel }}"
+        ${{ inputs.before-wheel }}
 
         cd "${{ inputs.package-dir }}"
 
