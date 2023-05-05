@@ -109,7 +109,7 @@ jobs:
         # CUDA versions
         PIP_CU_VERSION=$(echo ${RAPIDS_PY_WHEEL_CUDA_SUFFIX} | sed "s/-//")
 
-        "${{ inputs.before-wheel }}"
+        ${{ inputs.before-wheel }}
 
     - name: Build pure python wheel with pip wheel
       run: |
