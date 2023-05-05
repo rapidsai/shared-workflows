@@ -164,12 +164,12 @@ jobs:
 
     - name: Run citestwheel
       run: |
-      # This variable needs to be used as an un-evaluated string by downstream libraries
-      # to support pulling wheels built from a previous workflow for different
-      # CUDA versions
-      PIP_CU_VERSION=$(echo ${{ env.RAPIDS_PY_WHEEL_CUDA_SUFFIX }} | sed "s/-//")
+        # This variable needs to be used as an un-evaluated string by downstream libraries
+        # to support pulling wheels built from a previous workflow for different
+        # CUDA versions
+        PIP_CU_VERSION=$(echo ${{ env.RAPIDS_PY_WHEEL_CUDA_SUFFIX }} | sed "s/-//")
 
-      export RAPIDS_BEFORE_TEST_COMMANDS_AMD64="${{ inputs.test-before-amd64 }}"
-      export RAPIDS_BEFORE_TEST_COMMANDS_ARM64="${{ inputs.test-before-arm64 }}"
+        export RAPIDS_BEFORE_TEST_COMMANDS_AMD64="${{ inputs.test-before-amd64 }}"
+        export RAPIDS_BEFORE_TEST_COMMANDS_ARM64="${{ inputs.test-before-arm64 }}"
 
-      /citestwheel.sh
+        /citestwheel.sh
