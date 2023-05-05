@@ -203,6 +203,9 @@ jobs:
         pyenv global ${{ matrix.python }}
 
         # Run before-wheel command
+        CU_VER=$(echo ${{ env.RAPIDS_PY_WHEEL_CUDA_SUFFIX }} | sed "s/-//")
+        echo $CU_VER
+        echo ${{ inputs.before-wheel }}
         ${{ inputs.before-wheel }}
 
         cd "${{ inputs.package-dir }}"
