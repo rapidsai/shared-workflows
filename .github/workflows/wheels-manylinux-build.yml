@@ -200,6 +200,7 @@ jobs:
 
     - name: Build and repair the wheel
       run: |
+        set -x
         pyenv global ${{ matrix.python }}
 
         # Run before-wheel command
