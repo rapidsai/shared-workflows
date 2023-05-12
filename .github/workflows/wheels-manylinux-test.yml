@@ -51,7 +51,7 @@ defaults:
     shell: bash
 
 permissions:
-  actions: none
+  actions: read
   checks: none
   contents: read
   deployments: none
