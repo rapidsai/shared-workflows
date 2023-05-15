@@ -1,4 +1,4 @@
-name: Publish RAPIDS pure-python wheels
+name: Publish RAPIDS wheels
 
 on:
   workflow_call:
@@ -76,4 +76,4 @@ jobs:
         sha: ${{ inputs.sha }}
 
     - name: Download wheel from downloads.rapids.ai and publish to internal PyPI
-      run: rapids-twine "${{ inputs.package-name }}"
+      run: rapids-twine-new "${{ inputs.package-name }}"
