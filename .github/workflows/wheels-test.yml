@@ -1,4 +1,4 @@
-name: Test RAPIDS manylinux wheels
+name: Test RAPIDS wheels
 
 on:
   workflow_call:
@@ -21,8 +21,13 @@ on:
         required: true
         type: string
       matrix_filter:
+        # jq expression to filter matrix entries.
         type: string
         default: "."
+      pure_wheel:
+        required: false
+        type: bool
+        default: false
 
       # test settings
       test-docker-options:
@@ -107,9 +112,15 @@ jobs:
           TEST_MATRIX=$(yq -n 'env(MATRICES) | .[strenv(BUILD_TYPE)]')
           export TEST_MATRIX
 
+          echo ${{ inputs.pure_wheel }}
+          if [[ ${{ inputs.pure_wheel }} == "true" ]]; then
+              pure_wheel_filter='[.[] | select(.arch == "amd64" and .image == "ubuntu18.04" and ."test-type" == "unit" and .python == "3.10")]'
+          else
+              pure_wheel_filter='.'
+          fi
           echo "MATRIX=$(
             yq -n -o json 'env(TEST_MATRIX)' | \
-            jq -c '${{ inputs.matrix_filter }} | {include: .}' \
+            jq -c "${{ inputs.matrix_filter }} | ${pure_wheel_filter} | {include: .}" \
           )" | tee --append "${GITHUB_OUTPUT}"
 
   wheel-test:
