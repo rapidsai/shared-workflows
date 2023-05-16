@@ -114,10 +114,11 @@ jobs:
 
           echo ${{ inputs.pure_wheel }}
           if [[ ${{ inputs.pure_wheel }} == "true" ]]; then
-              pure_wheel_filter='[.[] | select(.arch == "amd64" and .image == "ubuntu18.04" and ."test-type" == "unit" and .python == "3.10")]'
+              pure_wheel_filter='[.[] | select(.arch == "amd64" and .image == "ubuntu18.04" and ."test-type" == "unit")]'
           else
               pure_wheel_filter='.'
           fi
+          echo ${pure_wheel_filter}
           echo "MATRIX=$(
             yq -n -o json 'env(TEST_MATRIX)' | \
             jq -c "${{ inputs.matrix_filter }} | ${pure_wheel_filter} | {include: .}" \
