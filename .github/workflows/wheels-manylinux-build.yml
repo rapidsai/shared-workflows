@@ -119,6 +119,10 @@ jobs:
           - { ctk: '11.8.0', arch: 'amd64', python: '3.10', image: 'rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7' }
           - { ctk: '11.8.0', arch: 'arm64', python: '3.9', image: 'rapidsai/manylinux_v2_2_31:cuda-devel-11.8.0-ubuntu20.04' }
           - { ctk: '11.8.0', arch: 'arm64', python: '3.10', image: 'rapidsai/manylinux_v2_2_31:cuda-devel-11.8.0-ubuntu20.04' }
+          - { ctk: '12.0.1', arch: 'amd64', python: '3.9', image: 'rapidsai/manylinux_v2_2014:cuda-devel-12.0.1-centos7'}
+          - { ctk: '12.0.1', arch: 'amd64', python: '3.10', image: 'rapidsai/manylinux_v2_2014:cuda-devel-12.0.1-centos7' }
+          - { ctk: '12.0.1', arch: 'arm64', python: '3.9', image: 'rapidsai/manylinux_v2_2_31:cuda-devel-12.0.1-ubuntu20.04' }
+          - { ctk: '12.0.1', arch: 'arm64', python: '3.10', image: 'rapidsai/manylinux_v2_2_31:cuda-devel-12.0.1-ubuntu20.04' }
           "
 
           echo "MATRIX=$(
@@ -199,6 +203,10 @@ jobs:
         pyenv global ${{ matrix.python }}
 
         # Run before-wheel command
+        # This variable needs to be used as an un-evaluated string by downstream libraries
+        # to support pulling wheels built from a previous workflow for different
+        # CUDA versions
+        PIP_CU_VERSION=$(echo ${{ env.RAPIDS_PY_WHEEL_CUDA_SUFFIX }} | sed "s/-//")
         ${{ inputs.before-wheel }}
 
         cd "${{ inputs.package-dir }}"
@@ -219,12 +227,13 @@ jobs:
 
         # Set up for pip installation of dependencies from the nightly index
         export PIP_EXTRA_INDEX_URL=https://pypi.k8s.rapids.ai/simple
+        export PIP_FIND_LINKS=/local-wheelhouse
 
         # Store internal pypi credentials before any step that may download wheels
         printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
 
         # Hardcode the output dir
-        python -m pip wheel . -w dist -vvv --no-deps
+        python -m pip wheel . -w dist -vvv --no-deps --disable-pip-version-check
 
         # Repair the wheel
         cd dist

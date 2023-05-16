@@ -65,7 +65,7 @@ jobs:
     needs: wheel-epoch-timestamp
     strategy:
       matrix:
-        ctk: ["11.8.0"]
+        ctk: ["11.8.0", "12.0.1"]
     runs-on: ubuntu-latest
     container:
       # Always use the manylinux container built on x86 to match the runner arch
@@ -103,7 +103,13 @@ jobs:
         package-name: ${{ inputs.package-name }}
 
     - name: Run before-wheel command
-      run: "${{ inputs.before-wheel }}"
+      run: |
+        # This variable needs to be used as an un-evaluated string by downstream libraries
+        # to support pulling wheels built from a previous workflow for different
+        # CUDA versions
+        PIP_CU_VERSION=$(echo ${RAPIDS_PY_WHEEL_CUDA_SUFFIX} | sed "s/-//")
+
+        ${{ inputs.before-wheel }}
 
     - name: Build pure python wheel with pip wheel
       run: |
