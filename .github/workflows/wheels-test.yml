@@ -184,4 +184,38 @@ jobs:
         export RAPIDS_BEFORE_TEST_COMMANDS_AMD64="${{ inputs.test-before-amd64 }}"
         export RAPIDS_BEFORE_TEST_COMMANDS_ARM64="${{ inputs.test-before-arm64 }}"
 
-        /citestwheel.sh
+        set -eoxu pipefail
+
+        # Comes from wheel-ctk-name-gen
+        export RAPIDS_PY_WHEEL_NAME="${RAPIDS_PY_WHEEL_NAME:-}"
+
+        mkdir -p ./dist
+
+        arch=$(uname -m)
+
+        # need this to init pyenv first
+        eval "$(pyenv init -)"
+
+        # use pyenv to set appropriate python as default before citestwheel
+        pyenv global "${RAPIDS_PY_VERSION}" && python --version
+
+        rapids-download-wheels-from-s3 ./dist
+
+        if [ "${arch}" == "x86_64" ]; then
+                sh -c "${RAPIDS_BEFORE_TEST_COMMANDS_AMD64}"
+        elif [ "${arch}" == "aarch64" ]; then
+                sh -c "${RAPIDS_BEFORE_TEST_COMMANDS_ARM64}"
+        fi
+
+        # see: https://cibuildwheel.readthedocs.io/en/stable/options/#test-extras
+        extra_requires_suffix=''
+        if [ "${CIBW_TEST_EXTRAS}" != "" ]; then
+                extra_requires_suffix="[${CIBW_TEST_EXTRAS}]"
+        fi
+
+        # echo to expand wildcard before adding `[extra]` requires for pip
+        python -m pip install --verbose $(echo ./dist/${RAPIDS_PY_WHEEL_NAME}*.whl)$extra_requires_suffix
+
+        python -m pip check
+
+        sh -c "${CIBW_TEST_COMMAND}"
