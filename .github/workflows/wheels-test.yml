@@ -26,8 +26,8 @@ on:
         default: "."
       pure_wheel:
         required: false
-        type: bool
-        default: false
+        type: string
+        default: "false"
 
       # test settings
       test-docker-options:
