@@ -93,10 +93,7 @@ jobs:
         sha: ${{ inputs.sha }}
 
     - name: Set CTK-related vars from input CTK versions
-      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@branch-23.06
-      with:
-        ctk: ${{ matrix.ctk }}
-        package-name: ${{ inputs.package-name }}
+      run : rapids-wheel-ctk-name-gen ${{ matrix.ctk }} ${{ inputs.package-name }}
 
     - name: Run citestwheel
       run: |
