@@ -34,7 +34,7 @@ defaults:
     shell: bash
 
 permissions:
-  actions: none
+  actions: read
   checks: none
   contents: read
   deployments: none
@@ -59,9 +59,8 @@ jobs:
       image: "rapidsai/citestwheel:cuda-devel-${{ matrix.ctk }}-ubuntu18.04"
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
-        RAPIDS_PY_VERSION: "3.9"
+        RAPIDS_PY_VERSION: "3.10"
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
-        RAPIDS_BEFORE_TEST_COMMANDS_AMD64: ${{ inputs.test-before }}
         CIBW_TEST_EXTRAS: "test"
         CIBW_TEST_COMMAND: ${{ inputs.test-unittest }}
         PIP_EXTRA_INDEX_URL: "https://pypi.k8s.rapids.ai/simple"
@@ -100,4 +99,12 @@ jobs:
         package-name: ${{ inputs.package-name }}
 
     - name: Run citestwheel
-      run: /citestwheel.sh
+      run: |
+        # This variable needs to be used as an un-evaluated string by downstream libraries
+        # to support pulling wheels built from a previous workflow for different
+        # CUDA versions
+        PIP_CU_VERSION=$(echo ${RAPIDS_PY_WHEEL_CUDA_SUFFIX} | sed "s/-//")
+        
+        export RAPIDS_BEFORE_TEST_COMMANDS_AMD64="${{ inputs.test-before }}"
+
+        /citestwheel.sh

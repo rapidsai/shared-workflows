@@ -34,7 +34,7 @@ defaults:
     shell: bash
 
 permissions:
-  actions: none
+  actions: read
   checks: none
   contents: read
   deployments: none
@@ -68,10 +68,11 @@ jobs:
         ctk: ["11.8.0", "12.0.1"]
     runs-on: ubuntu-latest
     container:
-      image: "rapidsai/cibuildwheel:cuda-runtime-11.8.0-ubuntu20.04"
+      # Always use the manylinux container built on x86 to match the runner arch
+      image: "rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
-        RAPIDS_PY_VERSION: "3.9"
+        RAPIDS_PY_VERSION: "3.10"
 
     steps:
     - uses: aws-actions/configure-aws-credentials@v1-node16
@@ -102,7 +103,13 @@ jobs:
         package-name: ${{ inputs.package-name }}
 
     - name: Run before-wheel command
-      run: "${{ inputs.before-wheel }}"
+      run: |
+        # This variable needs to be used as an un-evaluated string by downstream libraries
+        # to support pulling wheels built from a previous workflow for different
+        # CUDA versions
+        PIP_CU_VERSION=$(echo ${RAPIDS_PY_WHEEL_CUDA_SUFFIX} | sed "s/-//")
+
+        ${{ inputs.before-wheel }}
 
     - name: Build pure python wheel with pip wheel
       run: |
