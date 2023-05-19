@@ -49,6 +49,8 @@ jobs:
     strategy:
       fail-fast: false
     runs-on: "linux-${{ inputs.arch }}-${{ inputs.node_type }}"
+    env:
+      RAPIDS_DOCS_DIR: /tmp/docs
     container:
       image: ${{ inputs.container_image }}
       env:
