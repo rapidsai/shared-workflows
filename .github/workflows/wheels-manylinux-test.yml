@@ -156,15 +156,16 @@ jobs:
         date: ${{ inputs.date }}
         sha: ${{ inputs.sha }}
 
-    - name: Set CTK-related vars from input CTK versions
-      run : rapids-wheel-ctk-name-gen ${{ matrix.ctk }} ${{ inputs.package-name }}
-
     - name: Run citestwheel
       run: |
+        git clone https://github.com/divyegala/gha-tools.git -b wheel-ctk-name-gen /tmp/gha-tools
+        echo "/tmp/gha-tools/tools" >> "${GITHUB_PATH}"
+        cuda_version="$(rapids-wheel-ctk-name-gen ${{ matrix.ctk }})"
+
         # This variable needs to be used as an un-evaluated string by downstream libraries
         # to support pulling wheels built from a previous workflow for different
         # CUDA versions
-        PIP_CU_VERSION=$(echo ${{ env.RAPIDS_PY_WHEEL_CUDA_SUFFIX }} | sed "s/-//")
+        PIP_CU_VERSION=${cuda_version}
 
         export RAPIDS_BEFORE_TEST_COMMANDS_AMD64="${{ inputs.test-before-amd64 }}"
         export RAPIDS_BEFORE_TEST_COMMANDS_ARM64="${{ inputs.test-before-arm64 }}"
