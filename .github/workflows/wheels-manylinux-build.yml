@@ -237,11 +237,8 @@ jobs:
 
         # Repair the wheel
         cd dist
-        if [[ "${{ matrix.arch }}" == "amd64" ]]; then
-          python -m auditwheel repair -w . ${{ inputs.package-name }}* --plat manylinux_2_17_x86_64
-        else
-          python -m auditwheel repair -w . ${{ inputs.package-name }}* --plat manylinux_2_31_aarch64
-        fi
+
+	python -m auditwheel repair -w . ${{ inputs.package-name }}*
 
         if [[ "${{ matrix.arch }}" == "arm64" ]]; then
           ${{ inputs.post-repair-arm64 }}
