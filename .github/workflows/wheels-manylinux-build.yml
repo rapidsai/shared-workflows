@@ -189,8 +189,7 @@ jobs:
         versioneer_override="$(rapids-pip-wheel-version ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }})"
 
         git clone https://github.com/divyegala/gha-tools.git -b wheel-ctk-name-gen /tmp/gha-tools
-        echo "/tmp/gha-tools/tools" >> "${GITHUB_PATH}"
-        cuda_version="$(rapids-wheel-ctk-name-gen ${{ matrix.ctk }})"
+        cuda_version="$(/tmp/gha-tools/tools/rapids-wheel-ctk-name-gen ${{ matrix.ctk }})"
 
         bash ci/release/apply_wheel_modifications.sh ${versioneer_override} "-${cuda_version}"
         echo "The package name and/or version was modified in the package source. The git diff is:"

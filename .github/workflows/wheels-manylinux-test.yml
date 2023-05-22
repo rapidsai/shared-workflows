@@ -159,8 +159,7 @@ jobs:
     - name: Run citestwheel
       run: |
         git clone https://github.com/divyegala/gha-tools.git -b wheel-ctk-name-gen /tmp/gha-tools
-        echo "/tmp/gha-tools/tools" >> "${GITHUB_PATH}"
-        cuda_version="$(rapids-wheel-ctk-name-gen ${{ matrix.ctk }})"
+        cuda_version="$(/tmp/gha-tools/tools/rapids-wheel-ctk-name-gen ${{ matrix.ctk }})"
 
         # This variable needs to be used as an un-evaluated string by downstream libraries
         # to support pulling wheels built from a previous workflow for different
