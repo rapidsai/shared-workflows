@@ -89,7 +89,7 @@ jobs:
         persist-credentials: false
 
     - name: Standardize repository information
-      uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.06
+      uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.08
       with:
         repo: ${{ inputs.repo }}
         branch: ${{ inputs.branch }}
