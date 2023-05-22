@@ -115,5 +115,7 @@ jobs:
 
         python -m pip wheel -w ./dist ${{ inputs.package-dir }} --no-deps -vvv
 
+        # rapids-upload-wheels-to-s3 uses rapids-package-name which implicitly relies
+        # on this variable being set
         export RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_${PIP_CU_VERSION}"
         rapids-upload-wheels-to-s3 dist

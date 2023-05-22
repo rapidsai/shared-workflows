@@ -249,6 +249,8 @@ jobs:
         mkdir final_dist
         mv dist/${{ inputs.package-name }}*manylinux* final_dist
 
+        # rapids-upload-wheels-to-s3 uses rapids-package-name which implicitly relies
+        # on this variable being set
         export RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_${PIP_CU_VERSION}"
         rapids-upload-wheels-to-s3 "${{ inputs.package-dir }}"/final_dist
       # Use a shell that loads the rc file so that we get the compiler settings
