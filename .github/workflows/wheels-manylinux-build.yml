@@ -237,8 +237,7 @@ jobs:
 
         # Repair the wheel
         cd dist
-
-	python -m auditwheel repair -w . ${{ inputs.package-name }}*
+        python -m auditwheel repair -w . ${{ inputs.package-name }}*
 
         if [[ "${{ matrix.arch }}" == "arm64" ]]; then
           ${{ inputs.post-repair-arm64 }}
