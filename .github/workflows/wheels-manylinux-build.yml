@@ -189,19 +189,18 @@ jobs:
         versioneer_override="$(rapids-pip-wheel-version ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }})"
 
         git clone https://github.com/divyegala/gha-tools.git -b wheel-ctk-name-gen /tmp/gha-tools
-        cuda_version="$(/tmp/gha-tools/tools/rapids-wheel-ctk-name-gen ${{ matrix.ctk }})"
+        PIP_CU_VERSION="$(/tmp/gha-tools/tools/rapids-wheel-ctk-name-gen ${{ matrix.ctk }})"
 
-        bash ci/release/apply_wheel_modifications.sh ${versioneer_override} "-${cuda_version}"
+        bash ci/release/apply_wheel_modifications.sh ${versioneer_override} "-${PIP_CU_VERSION}"
         echo "The package name and/or version was modified in the package source. The git diff is:"
         git diff
 
         pyenv global ${{ matrix.python }}
 
         # Run before-wheel command
-        # This variable needs to be used as an un-evaluated string by downstream libraries
+        # The variable $PIP_CU_VERSION needs to be used as an un-evaluated string by downstream libraries
         # to support pulling wheels built from a previous workflow for different
         # CUDA versions
-        PIP_CU_VERSION=${cuda_version}
         ${{ inputs.before-wheel }}
 
         cd "${{ inputs.package-dir }}"
@@ -249,8 +248,8 @@ jobs:
         cd ..
         mkdir final_dist
         mv dist/${{ inputs.package-name }}*manylinux* final_dist
+
+        export RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_${PIP_CU_VERSION}"
+        rapids-upload-wheels-to-s3 "${{ inputs.package-dir }}"/final_dist
       # Use a shell that loads the rc file so that we get the compiler settings
       shell: bash -leo pipefail {0}
-
-    - name: Upload wheels to downloads.rapids.ai
-      run: rapids-upload-wheels-to-s3 "${{ inputs.package-dir }}"/final_dist
