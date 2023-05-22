@@ -92,9 +92,6 @@ jobs:
         date: ${{ inputs.date }}
         sha: ${{ inputs.sha }}
 
-    - name: Set CTK-related vars from input CTK versions
-      run : rapids-wheel-ctk-name-gen ${{ matrix.ctk }} ${{ inputs.package-name }}
-
     - name: Run citestwheel
       run: |
         git clone https://github.com/divyegala/gha-tools.git -b wheel-ctk-name-gen /tmp/gha-tools
