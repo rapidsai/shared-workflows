@@ -26,6 +26,9 @@ on:
         default: "cpu16"
 
       # general settings
+      package-dir:
+        required: true
+        type: string
       matrix_filter:
         type: string
         default: "."
