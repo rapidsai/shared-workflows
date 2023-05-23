@@ -197,7 +197,7 @@ jobs:
         pyenv global ${{ matrix.python }}
 
         # Run before-wheel command
-        # The variable $PIP_CU_VERSION needs to be used as an un-evaluated string by downstream libraries
+        # The variable $PIP_CU_VERSION needs to be used as an unevaluated string by downstream libraries
         # to support pulling wheels built from a previous workflow for different
         # CUDA versions
         ${{ inputs.before-wheel }}
