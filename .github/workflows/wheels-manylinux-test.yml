@@ -155,20 +155,18 @@ jobs:
         date: ${{ inputs.date }}
         sha: ${{ inputs.sha }}
 
-    - name: Set CTK-related vars from input CTK versions
-      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@branch-23.08
-      with:
-        ctk: ${{ matrix.ctk }}
-        package-name: ${{ inputs.package-name }}
-
     - name: Run citestwheel
       run: |
-        # This variable needs to be used as an un-evaluated string by downstream libraries
+        PIP_CU_VERSION="$(rapids-wheel-ctk-name-gen ${{ matrix.ctk }})"
+
+        # The variable PIP_CU_VERSION needs to be used as an unevaluated string by downstream libraries
         # to support pulling wheels built from a previous workflow for different
         # CUDA versions
-        PIP_CU_VERSION=$(echo ${{ env.RAPIDS_PY_WHEEL_CUDA_SUFFIX }} | sed "s/-//")
 
         export RAPIDS_BEFORE_TEST_COMMANDS_AMD64="${{ inputs.test-before-amd64 }}"
         export RAPIDS_BEFORE_TEST_COMMANDS_ARM64="${{ inputs.test-before-arm64 }}"
+
+        # citestwheel.sh implicitly uses this to download previously built wheels
+        export RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_${PIP_CU_VERSION}"
 
         /citestwheel.sh
