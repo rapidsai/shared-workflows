@@ -152,6 +152,7 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
         RAPIDS_CTK_VERSION: ${{ matrix.ctk }}
+        RAPIDS_ARCH: ${{ matrix.arch }}
         RAPIDS_PY_VERSION: ${{ matrix.python }}
         RAPIDS_PYPI_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
       # Use a shell that loads the rc file so that we get the compiler settings
