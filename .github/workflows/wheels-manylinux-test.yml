@@ -158,8 +158,7 @@ jobs:
 
     - name: Run citestwheel
       run: |
-        git clone https://github.com/divyegala/gha-tools.git -b wheel-ctk-name-gen /tmp/gha-tools
-        PIP_CU_VERSION="$(/tmp/gha-tools/tools/rapids-wheel-ctk-name-gen ${{ matrix.ctk }})"
+        PIP_CU_VERSION="$(rapids-wheel-ctk-name-gen ${{ matrix.ctk }})"
 
         # The variable PIP_CU_VERSION needs to be used as an un-evaluated string by downstream libraries
         # to support pulling wheels built from a previous workflow for different
