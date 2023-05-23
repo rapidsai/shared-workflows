@@ -144,7 +144,7 @@ jobs:
         RAPIDS_PY_VERSION: ${{ matrix.python }}
 
     steps:
-    - uses: aws-actions/configure-aws-credentials@v1-node16
+    - uses: aws-actions/configure-aws-credentials@v2
       with:
         role-to-assume: ${{ vars.AWS_ROLE_ARN }}
         aws-region: ${{ vars.AWS_REGION }}
@@ -203,10 +203,6 @@ jobs:
         ${{ inputs.before-wheel }}
 
         cd "${{ inputs.package-dir }}"
-
-        export AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
-        export AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
-        export AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
 
         # Set up skbuild options. Enable sccache in skbuild config options
         export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}}"
