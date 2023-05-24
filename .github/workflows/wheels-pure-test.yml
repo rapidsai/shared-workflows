@@ -65,7 +65,7 @@ jobs:
         CIBW_TEST_COMMAND: ${{ inputs.test-unittest }}
         PIP_EXTRA_INDEX_URL: "https://pypi.k8s.rapids.ai/simple"
     steps:
-    - uses: aws-actions/configure-aws-credentials@v2
+    - uses: aws-actions/configure-aws-credentials@v1-node16
       with:
         role-to-assume: ${{ vars.AWS_ROLE_ARN }}
         aws-region: ${{ vars.AWS_REGION }}
