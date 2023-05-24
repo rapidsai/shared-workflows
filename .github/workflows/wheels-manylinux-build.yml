@@ -144,7 +144,7 @@ jobs:
         RAPIDS_PY_VERSION: ${{ matrix.python }}
 
     steps:
-    - uses: aws-actions/configure-aws-credentials@v1-node16
+    - uses: aws-actions/configure-aws-credentials@v2
       with:
         role-to-assume: ${{ vars.AWS_ROLE_ARN }}
         aws-region: ${{ vars.AWS_REGION }}
@@ -204,18 +204,8 @@ jobs:
 
         cd "${{ inputs.package-dir }}"
 
-        # sccache configuration
-        export SCCACHE_S3_KEY_PREFIX=gha-cibw
-        export SCCACHE_REGION=us-east-2
-        export SCCACHE_IDLE_TIMEOUT=32768
-        export SCCACHE_BUCKET=rapids-sccache-east
-        export SCCACHE_S3_USE_SSL=true
-        export AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
-        export AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
-        export AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
-
         # Set up skbuild options. Enable sccache in skbuild config options
-        export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
+        export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}}"
         export SKBUILD_BUILD_OPTIONS="${{ inputs.skbuild-build-options }}"
 
         # Set up for pip installation of dependencies from the nightly index
