@@ -1,0 +1,75 @@
+name: Publish RAPIDS wheels
+
+on:
+  workflow_call:
+    inputs:
+      # repo and branch
+      repo:
+        type: string
+      branch:
+        type: string
+      date:
+        type: string
+      sha:
+        type: string
+      build_type:
+        required: true
+        type: string
+
+      # general settings
+      package-name:
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  checks: none
+  contents: read
+  deployments: none
+  discussions: none
+  id-token: write
+  issues: none
+  packages: read
+  pages: none
+  pull-requests: read
+  repository-projects: none
+  security-events: none
+  statuses: none
+
+jobs:
+  wheel-publish:
+    name: wheels publish
+    runs-on: ubuntu-latest
+    container:
+      # ctk version of the container is irrelevant in the publish step
+      # it's simply a launcher for twine
+      image: "rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7"
+      env:
+        RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
+        TWINE_USERNAME: cibuildwheel
+        TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
+        TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
+    steps:
+    - uses: aws-actions/configure-aws-credentials@v2
+      with:
+        role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+        aws-region: ${{ vars.AWS_REGION }}
+        role-duration-seconds: 43200 # 12h
+    - name: checkout code repo
+      uses: actions/checkout@v3
+      with:
+        repository: ${{ inputs.repo }}
+        ref: ${{ inputs.sha }}
+        fetch-depth: 0 # unshallow fetch for setuptools-scm
+        persist-credentials: false
+
+    - name: Standardize repository information
+      uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.08
+      with:
+        repo: ${{ inputs.repo }}
+        branch: ${{ inputs.branch }}
+        date: ${{ inputs.date }}
+        sha: ${{ inputs.sha }}
+
+    - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
+      run: rapids-twine-new "${{ inputs.package-name }}"
