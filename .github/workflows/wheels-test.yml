@@ -1,0 +1,185 @@
+name: Test RAPIDS wheels
+
+on:
+  workflow_call:
+    inputs:
+      # repo and branch
+      repo:
+        type: string
+      branch:
+        type: string
+      date:
+        type: string
+      sha:
+        type: string
+      build_type:
+        required: true
+        type: string
+
+      # general settings
+      package-name:
+        required: true
+        type: string
+      matrix_filter:
+        # jq expression to filter matrix entries.
+        type: string
+        default: "."
+      pure_wheel:
+        # If true, filters out the matrix to a smaller set.
+        required: false
+        type: string
+        default: "false"
+
+      # test settings
+      test-docker-options:
+        required: false
+        type: string
+        default: '-e _NOOP'
+      test-unittest: # tests are allowed to be blank because the wheel is installed and pip checked
+        required: false
+        type: string
+        default: ''
+      test-smoketest:
+        required: false
+        type: string
+        default: ''
+      test-before-amd64:
+        required: false
+        type: string
+        default: 'true'
+      test-before-arm64:
+        required: false
+        type: string
+        default: 'true'
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  actions: read
+  checks: none
+  contents: read
+  deployments: none
+  discussions: none
+  id-token: write
+  issues: none
+  packages: read
+  pages: none
+  pull-requests: read
+  repository-projects: none
+  security-events: none
+  statuses: none
+
+jobs:
+  wheel-test-compute-matrix:
+    runs-on: ubuntu-latest
+    env:
+      BUILD_TYPE: ${{ inputs.build_type }}
+    outputs:
+      MATRIX: ${{ steps.compute-matrix.outputs.MATRIX }}
+    steps:
+      - name: Validate test type
+        run: |
+          if [[ "$BUILD_TYPE" != "pull-request" ]] && [[ "$BUILD_TYPE" != "nightly" ]]; then
+              echo "Invalid build type! Must be 'nightly' or 'pull-request'."
+              exit 1
+          fi
+      - name: Compute test matrix
+        id: compute-matrix
+        env:
+          SMOKE_TEST_CMD: ${{ inputs.test-smoketest }}
+          UNIT_TEST_CMD: ${{ inputs.test-unittest }}
+        run: |
+          set -eo pipefail
+
+          export MATRICES="
+            pull-request:
+              - { arch: 'amd64', python: '3.9', ctk: '11.8.0', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: 'latest' }
+              - { arch: 'amd64', python: '3.9', ctk: '12.0.1', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: 'latest' }
+              - { arch: 'arm64', python: '3.9', ctk: '12.0.1', image: 'ubuntu20.04', test-type: 'smoke', test-command: ${SMOKE_TEST_CMD}, gpu: 'a100', driver: 'latest' }
+            nightly:
+              - { arch: 'amd64', python: '3.9', ctk: '11.8.0', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: 'latest' }
+              - { arch: 'amd64', python: '3.10', ctk: '11.8.0', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: 'latest' }
+              - { arch: 'arm64', python: '3.9', ctk: '11.8.0', image: 'ubuntu20.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'a100', driver: 'latest' }
+              - { arch: 'arm64', python: '3.10', ctk: '11.8.0', image: 'ubuntu20.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'a100', driver: 'latest' }
+              - { arch: 'amd64', python: '3.9', ctk: '12.0.1', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: 'latest' }
+              - { arch: 'amd64', python: '3.10', ctk: '12.0.1', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: 'latest' }
+              - { arch: 'arm64', python: '3.9', ctk: '12.0.1', image: 'ubuntu20.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'a100', driver: 'latest' }
+              - { arch: 'arm64', python: '3.10', ctk: '12.0.1', image: 'ubuntu20.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'a100', driver: 'latest' }
+          "
+
+          TEST_MATRIX=$(yq -n 'env(MATRICES) | .[strenv(BUILD_TYPE)]')
+          export TEST_MATRIX
+
+          echo ${{ inputs.pure_wheel }}
+          if [[ ${{ inputs.pure_wheel }} == "true" ]]; then
+              pure_wheel_filter='[.[] | select(.arch == "amd64" and .image == "ubuntu18.04" and ."test-type" == "unit")]'
+          else
+              pure_wheel_filter='.'
+          fi
+          echo ${pure_wheel_filter}
+          echo "MATRIX=$(
+            yq -n -o json 'env(TEST_MATRIX)' | \
+            jq -c "${{ inputs.matrix_filter }} | ${pure_wheel_filter} | {include: .}" \
+          )" | tee --append "${GITHUB_OUTPUT}"
+
+  wheel-test:
+    name: wheel ${{ matrix.test-type }} test ${{ matrix.arch }} ${{ matrix.python }} ${{ matrix.ctk }}
+    needs: wheel-test-compute-matrix
+    strategy:
+      matrix: ${{ fromJSON(needs.wheel-test-compute-matrix.outputs.MATRIX) }}
+    runs-on: "linux-${{ matrix.arch }}-gpu-${{ matrix.gpu }}-${{ matrix.driver }}-1"
+    container:
+      image: "rapidsai/citestwheel:cuda-devel-${{ matrix.ctk }}-${{ matrix.image }}"
+      options: ${{ inputs.test-docker-options }}
+      env:
+        NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
+        RAPIDS_PY_VERSION: ${{ matrix.python }}
+        RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
+        PIP_EXTRA_INDEX_URL: "https://pypi.k8s.rapids.ai/simple"
+        CIBW_TEST_EXTRAS: "test"
+        CIBW_TEST_COMMAND: ${{ matrix.test-command }}
+    steps:
+    - uses: aws-actions/configure-aws-credentials@v2
+      with:
+        role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+        aws-region: ${{ vars.AWS_REGION }}
+        role-duration-seconds: 43200 # 12h
+    - name: Run nvidia-smi to make sure GPU is working
+      run: nvidia-smi
+
+    - name: Install private index credentials in cibuildwheel container
+      run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
+
+    - name: checkout code repo
+      uses: actions/checkout@v3
+      with:
+        repository: ${{ inputs.repo }}
+        ref: ${{ inputs.sha }}
+        fetch-depth: 0 # unshallow fetch for setuptools-scm
+        persist-credentials: false
+
+    - name: Standardize repository information
+      uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.08
+      with:
+        repo: ${{ inputs.repo }}
+        branch: ${{ inputs.branch }}
+        date: ${{ inputs.date }}
+        sha: ${{ inputs.sha }}
+
+    - name: Run citestwheel
+      run: |
+        PIP_CU_VERSION="$(rapids-wheel-ctk-name-gen ${{ matrix.ctk }})"
+
+        # The variable PIP_CU_VERSION needs to be used as an unevaluated string by downstream libraries
+        # to support pulling wheels built from a previous workflow for different
+        # CUDA versions
+
+        export RAPIDS_BEFORE_TEST_COMMANDS_AMD64="${{ inputs.test-before-amd64 }}"
+        export RAPIDS_BEFORE_TEST_COMMANDS_ARM64="${{ inputs.test-before-arm64 }}"
+
+        # citestwheel.sh implicitly uses this to download previously built wheels
+        export RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_${PIP_CU_VERSION}"
+
+        /citestwheel.sh
