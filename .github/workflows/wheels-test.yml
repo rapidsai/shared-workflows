@@ -112,13 +112,11 @@ jobs:
           TEST_MATRIX=$(yq -n 'env(MATRICES) | .[strenv(BUILD_TYPE)]')
           export TEST_MATRIX
 
-          echo ${{ inputs.pure_wheel }}
+          pure_wheel_filter='.'
           if [[ ${{ inputs.pure_wheel }} == "true" ]]; then
               pure_wheel_filter='[.[] | select(.arch == "amd64" and .image == "ubuntu18.04" and ."test-type" == "unit")]'
-          else
-              pure_wheel_filter='.'
           fi
-          echo ${pure_wheel_filter}
+
           echo "MATRIX=$(
             yq -n -o json 'env(TEST_MATRIX)' | \
             jq -c "${{ inputs.matrix_filter }} | ${pure_wheel_filter} | {include: .}" \
