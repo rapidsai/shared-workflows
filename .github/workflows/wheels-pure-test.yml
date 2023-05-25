@@ -65,7 +65,7 @@ jobs:
         CIBW_TEST_COMMAND: ${{ inputs.test-unittest }}
         PIP_EXTRA_INDEX_URL: "https://pypi.k8s.rapids.ai/simple"
     steps:
-    - uses: aws-actions/configure-aws-credentials@v1-node16
+    - uses: aws-actions/configure-aws-credentials@v2
       with:
         role-to-assume: ${{ vars.AWS_ROLE_ARN }}
         aws-region: ${{ vars.AWS_REGION }}
@@ -85,26 +85,24 @@ jobs:
         persist-credentials: false
 
     - name: Standardize repository information
-      uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.06
+      uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.08
       with:
         repo: ${{ inputs.repo }}
         branch: ${{ inputs.branch }}
         date: ${{ inputs.date }}
         sha: ${{ inputs.sha }}
 
-    - name: Set CTK-related vars from input CTK versions
-      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@branch-23.06
-      with:
-        ctk: ${{ matrix.ctk }}
-        package-name: ${{ inputs.package-name }}
-
     - name: Run citestwheel
       run: |
-        # This variable needs to be used as an un-evaluated string by downstream libraries
+        PIP_CU_VERSION="$(rapids-wheel-ctk-name-gen ${{ matrix.ctk }})"
+
+        # The variable PIP_CU_VERSION needs to be used as an unevaluated string by downstream libraries
         # to support pulling wheels built from a previous workflow for different
         # CUDA versions
-        PIP_CU_VERSION=$(echo ${RAPIDS_PY_WHEEL_CUDA_SUFFIX} | sed "s/-//")
-        
+
         export RAPIDS_BEFORE_TEST_COMMANDS_AMD64="${{ inputs.test-before }}"
 
+        # citestwheel.sh implicitly uses this to download previously built wheels
+        export RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_${PIP_CU_VERSION}"
+        
         /citestwheel.sh
