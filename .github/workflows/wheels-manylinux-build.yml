@@ -144,7 +144,7 @@ jobs:
         RAPIDS_PY_VERSION: ${{ matrix.python }}
 
     steps:
-    - uses: aws-actions/configure-aws-credentials@v1-node16
+    - uses: aws-actions/configure-aws-credentials@v2
       with:
         role-to-assume: ${{ vars.AWS_ROLE_ARN }}
         aws-region: ${{ vars.AWS_REGION }}
@@ -158,7 +158,7 @@ jobs:
         persist-credentials: false
 
     - name: Standardize repository information
-      uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.06
+      uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.08
       with:
         repo: ${{ inputs.repo }}
         branch: ${{ inputs.branch }}
@@ -182,47 +182,30 @@ jobs:
         ssh-key: ${{ secrets[inputs.extra-repo-deploy-key] }}
         persist-credentials: false
 
-    - name: Set CTK-related vars from input CTK versions
-      uses: rapidsai/shared-action-workflows/wheel-ctk-name-gen@branch-23.06
-      with:
-        ctk: ${{ matrix.ctk }}
-        package-name: ${{ inputs.package-name }}
-
-    - name: Apply wheel modifications
+    - name: Build and repair the wheel
       run: |
         # Use gha-tools rapids-pip-wheel-version to generate wheel version then
         # update the necessary files
         versioneer_override="$(rapids-pip-wheel-version ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }})"
 
-        bash ci/release/apply_wheel_modifications.sh ${versioneer_override} ${{ env.RAPIDS_PY_WHEEL_CUDA_SUFFIX }}
+        PIP_CU_VERSION="$(rapids-wheel-ctk-name-gen ${{ matrix.ctk }})"
+
+        bash ci/release/apply_wheel_modifications.sh ${versioneer_override} "-${PIP_CU_VERSION}"
         echo "The package name and/or version was modified in the package source. The git diff is:"
         git diff
 
-    - name: Build and repair the wheel
-      run: |
         pyenv global ${{ matrix.python }}
 
         # Run before-wheel command
-        # This variable needs to be used as an un-evaluated string by downstream libraries
+        # The variable $PIP_CU_VERSION needs to be used as an unevaluated string by downstream libraries
         # to support pulling wheels built from a previous workflow for different
         # CUDA versions
-        PIP_CU_VERSION=$(echo ${{ env.RAPIDS_PY_WHEEL_CUDA_SUFFIX }} | sed "s/-//")
         ${{ inputs.before-wheel }}
 
         cd "${{ inputs.package-dir }}"
 
-        # sccache configuration
-        export SCCACHE_S3_KEY_PREFIX=gha-cibw
-        export SCCACHE_REGION=us-east-2
-        export SCCACHE_IDLE_TIMEOUT=32768
-        export SCCACHE_BUCKET=rapids-sccache-east
-        export SCCACHE_S3_USE_SSL=true
-        export AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
-        export AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
-        export AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
-
         # Set up skbuild options. Enable sccache in skbuild config options
-        export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}} -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache -DCMAKE_CUDA_COMPILER_LAUNCHER=/usr/bin/sccache"
+        export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}}"
         export SKBUILD_BUILD_OPTIONS="${{ inputs.skbuild-build-options }}"
 
         # Set up for pip installation of dependencies from the nightly index
@@ -237,11 +220,7 @@ jobs:
 
         # Repair the wheel
         cd dist
-        if [[ "${{ matrix.arch }}" == "amd64" ]]; then
-          python -m auditwheel repair -w . ${{ inputs.package-name }}* --plat manylinux_2_17_x86_64
-        else
-          python -m auditwheel repair -w . ${{ inputs.package-name }}* --plat manylinux_2_31_aarch64
-        fi
+        python -m auditwheel repair -w . ${{ inputs.package-name }}*
 
         if [[ "${{ matrix.arch }}" == "arm64" ]]; then
           ${{ inputs.post-repair-arm64 }}
@@ -254,8 +233,10 @@ jobs:
         cd ..
         mkdir final_dist
         mv dist/${{ inputs.package-name }}*manylinux* final_dist
+
+        # rapids-upload-wheels-to-s3 uses rapids-package-name which implicitly relies
+        # on this variable being set
+        export RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_${PIP_CU_VERSION}"
+        rapids-upload-wheels-to-s3 final_dist
       # Use a shell that loads the rc file so that we get the compiler settings
       shell: bash -leo pipefail {0}
-
-    - name: Upload wheels to downloads.rapids.ai
-      run: rapids-upload-wheels-to-s3 "${{ inputs.package-dir }}"/final_dist

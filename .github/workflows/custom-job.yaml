@@ -56,7 +56,7 @@ jobs:
         PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
-      - uses: aws-actions/configure-aws-credentials@v1-node16
+      - uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -69,7 +69,7 @@ jobs:
       - name: Get PR Info
         if: startsWith(github.ref_name, 'pull-request/')
         id: get-pr-info
-        uses: rapidsai/shared-action-workflows/get-pr-info@branch-23.06
+        uses: rapidsai/shared-action-workflows/get-pr-info@branch-23.08
       - name: Add PR Info
         if: startsWith(github.ref_name, 'pull-request/')
         run: |
