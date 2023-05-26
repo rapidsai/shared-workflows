@@ -102,7 +102,7 @@ jobs:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
     container:
-      image: "rapidsai/ci-wheel:cuda${{ matrix.ctk }}-base-${{ matrix.linux_ver }}-py${{ matrix.python }}"
+      image: "rapidsai/ci-wheel:cuda${{ matrix.ctk }}-${{ matrix.linux_ver }}-py${{ matrix.python }}"
 
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
