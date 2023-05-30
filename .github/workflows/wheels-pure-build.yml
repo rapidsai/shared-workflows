@@ -117,4 +117,5 @@ jobs:
         # rapids-upload-wheels-to-s3 uses rapids-package-name which implicitly relies
         # on this variable being set
         export RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_${PIP_CU_VERSION}"
-        rapids-upload-wheels-to-s3 dist
+        # hack hack
+        RAPIDS_PY_VERSION=3 rapids-upload-wheels-to-s3 dist
