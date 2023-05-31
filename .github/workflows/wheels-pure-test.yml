@@ -104,5 +104,5 @@ jobs:
 
         # citestwheel.sh implicitly uses this to download previously built wheels
         export RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_${PIP_CU_VERSION}"
-        
+
         /citestwheel.sh
