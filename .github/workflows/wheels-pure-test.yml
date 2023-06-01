@@ -56,7 +56,7 @@ jobs:
       matrix:
         ctk: ["11.8.0", "12.0.1"]
     container:
-      image: "rapidsai/citestwheel:cuda-devel-${{ matrix.ctk }}-ubuntu18.04"
+      image: "rapidsai/citestwheel:cuda${{ matrix.ctk }}-ubuntu18.04-py3.10"
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_PY_VERSION: "3.10"

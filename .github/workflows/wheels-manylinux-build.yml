@@ -115,14 +115,14 @@ jobs:
           set -eo pipefail
 
           export MATRIX="
-          - { ctk: '11.8.0', arch: 'amd64', python: '3.9', image: 'rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7'}
-          - { ctk: '11.8.0', arch: 'amd64', python: '3.10', image: 'rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7' }
-          - { ctk: '11.8.0', arch: 'arm64', python: '3.9', image: 'rapidsai/manylinux_v2_2_31:cuda-devel-11.8.0-ubuntu20.04' }
-          - { ctk: '11.8.0', arch: 'arm64', python: '3.10', image: 'rapidsai/manylinux_v2_2_31:cuda-devel-11.8.0-ubuntu20.04' }
-          - { ctk: '12.0.1', arch: 'amd64', python: '3.9', image: 'rapidsai/manylinux_v2_2014:cuda-devel-12.0.1-centos7'}
-          - { ctk: '12.0.1', arch: 'amd64', python: '3.10', image: 'rapidsai/manylinux_v2_2014:cuda-devel-12.0.1-centos7' }
-          - { ctk: '12.0.1', arch: 'arm64', python: '3.9', image: 'rapidsai/manylinux_v2_2_31:cuda-devel-12.0.1-ubuntu20.04' }
-          - { ctk: '12.0.1', arch: 'arm64', python: '3.10', image: 'rapidsai/manylinux_v2_2_31:cuda-devel-12.0.1-ubuntu20.04' }
+          - { ctk: '11.8.0', arch: 'amd64', python: '3.9', linux_ver: 'centos7' }
+          - { ctk: '11.8.0', arch: 'amd64', python: '3.10', linux_ver: 'centos7' }
+          - { ctk: '11.8.0', arch: 'arm64', python: '3.9',  linux_ver: 'ubuntu20.04' }
+          - { ctk: '11.8.0', arch: 'arm64', python: '3.10', linux_ver: 'ubuntu20.04' }
+          - { ctk: '12.0.1', arch: 'amd64', python: '3.9',  linux_ver: 'centos7' }
+          - { ctk: '12.0.1', arch: 'amd64', python: '3.10',  linux_ver: 'centos7' }
+          - { ctk: '12.0.1', arch: 'arm64', python: '3.9', linux_ver: 'ubuntu20.04' }
+          - { ctk: '12.0.1', arch: 'arm64', python: '3.10', linux_ver: 'ubuntu20.04' }
           "
 
           echo "MATRIX=$(
@@ -137,8 +137,7 @@ jobs:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
     container:
-      image: "${{ matrix.image }}"
-
+      image: "rapidsai/ci-wheel:cuda${{ matrix.ctk }}-${{ matrix.linux_ver }}-py${{ matrix.python }}"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         RAPIDS_PY_VERSION: ${{ matrix.python }}
