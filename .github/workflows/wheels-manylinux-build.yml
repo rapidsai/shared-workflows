@@ -189,6 +189,7 @@ jobs:
         versioneer_override="$(rapids-pip-wheel-version ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }})"
 
         PIP_CU_VERSION="$(rapids-wheel-ctk-name-gen ${{ matrix.ctk }})"
+        export RAPIDS_CUDA_VERSION="${{ matrix.ctk }}"
 
         bash ci/release/apply_wheel_modifications.sh ${versioneer_override} "-${PIP_CU_VERSION}"
         echo "The package name and/or version was modified in the package source. The git diff is:"
