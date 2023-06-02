@@ -72,6 +72,10 @@ on:
         required: false
         type: string
         default: ''
+      scikit-build-core:
+        required: false
+        type: boolean
+        default: false
 
 defaults:
   run:
@@ -206,8 +210,13 @@ jobs:
         cd "${{ inputs.package-dir }}"
 
         # Set up skbuild options. Enable sccache in skbuild config options
-        export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}}"
-        export SKBUILD_BUILD_OPTIONS="${{ inputs.skbuild-build-options }}"
+        if [ ${{ inputs.scikit-build-core }} = true ]; then
+          export SKBUILD_CMAKE_ARGS="${{ inputs.skbuild-configure-options}}"
+          # TODO: Not sure if SKBUILD_BUILD_ARGS equivalent exists
+        else
+          export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}}"
+          export SKBUILD_BUILD_OPTIONS="${{ inputs.skbuild-build-options }}"
+        fi
 
         # Set up for pip installation of dependencies from the nightly index
         export PIP_EXTRA_INDEX_URL=https://pypi.k8s.rapids.ai/simple
