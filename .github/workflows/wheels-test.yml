@@ -56,7 +56,7 @@ defaults:
     shell: bash
 
 permissions:
-  actions: none
+  actions: read
   checks: none
   contents: read
   deployments: none
@@ -96,7 +96,6 @@ jobs:
             pull-request:
               - { arch: 'amd64', python: '3.9', ctk: '11.8.0', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: 'latest' }
               - { arch: 'amd64', python: '3.9', ctk: '12.0.1', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: 'latest' }
-              - { arch: 'arm64', python: '3.9', ctk: '11.8.0', image: 'ubuntu20.04', test-type: 'smoke', test-command: ${SMOKE_TEST_CMD}, gpu: 'a100', driver: 'latest' }
               - { arch: 'arm64', python: '3.9', ctk: '12.0.1', image: 'ubuntu20.04', test-type: 'smoke', test-command: ${SMOKE_TEST_CMD}, gpu: 'a100', driver: 'latest' }
             nightly:
               - { arch: 'amd64', python: '3.9', ctk: '11.8.0', image: 'ubuntu18.04', test-type: 'unit', test-command: ${UNIT_TEST_CMD}, gpu: 'v100', driver: 'latest' }
@@ -141,7 +140,7 @@ jobs:
         CIBW_TEST_EXTRAS: "test"
         CIBW_TEST_COMMAND: ${{ matrix.test-command }}
     steps:
-    - uses: aws-actions/configure-aws-credentials@v1-node16
+    - uses: aws-actions/configure-aws-credentials@v2
       with:
         role-to-assume: ${{ vars.AWS_ROLE_ARN }}
         aws-region: ${{ vars.AWS_REGION }}
@@ -161,7 +160,7 @@ jobs:
         persist-credentials: false
 
     - name: Standardize repository information
-      uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.06
+      uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.08
       with:
         repo: ${{ inputs.repo }}
         branch: ${{ inputs.branch }}
@@ -172,16 +171,9 @@ jobs:
       run: |
         set -eoxu pipefail
 
-        ctk_tag="${{ matrix.ctk }}"
-        ctk_major=$(echo $ctk_tag | cut -d'.' -f1)
-        cuda_suffix="cu${ctk_major}"
-        wheelname="${{ inputs.package-name }}_cu${ctk_major}"
+        wheelname=$(rapids-wheel-ctk-name-gen ${{ matrix.ctk }})
 
-        export RAPIDS_PY_WHEEL_CUDA_SUFFIX=${cuda_suffix}
         export RAPIDS_PY_WHEEL_NAME=${wheelname}
-
-        export RAPIDS_BEFORE_TEST_COMMANDS_AMD64="${{ inputs.test-before-amd64 }}"
-        export RAPIDS_BEFORE_TEST_COMMANDS_ARM64="${{ inputs.test-before-arm64 }}"
 
         mkdir -p ./dist
 
@@ -196,9 +188,9 @@ jobs:
         rapids-download-wheels-from-s3 ./dist
 
         if [ "${arch}" == "x86_64" ]; then
-                sh -c "${RAPIDS_BEFORE_TEST_COMMANDS_AMD64}"
+                sh -c "${{ inputs.test-before-amd64 }}"
         elif [ "${arch}" == "aarch64" ]; then
-                sh -c "${RAPIDS_BEFORE_TEST_COMMANDS_ARM64}"
+                sh -c "${{ inputs.test-before-arm64 }}"
         fi
 
         # see: https://cibuildwheel.readthedocs.io/en/stable/options/#test-extras

@@ -27,7 +27,7 @@ defaults:
     shell: bash
 
 permissions:
-  actions: none
+  actions: read
   checks: none
   contents: read
   deployments: none
@@ -76,7 +76,7 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}
     steps:
-      - uses: aws-actions/configure-aws-credentials@v1-node16
+      - uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -94,6 +94,8 @@ jobs:
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
       - name: C++ build
         run: ${{ inputs.build_script }}
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Upload additional artifacts
         if: "!cancelled()"
         run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)
