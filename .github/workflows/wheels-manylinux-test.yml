@@ -118,7 +118,7 @@ jobs:
       matrix: ${{ fromJSON(needs.wheel-test-compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.arch }}-gpu-${{ matrix.gpu }}-${{ matrix.driver }}-1"
     container:
-      image: "rapidsai/citestwheel:cuda-devel-${{ matrix.ctk }}-${{ matrix.image }}"
+      image: "rapidsai/citestwheel:cuda${{ matrix.ctk }}-${{ matrix.image }}-py${{ matrix.python }}"
       options: ${{ inputs.test-docker-options }}
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable

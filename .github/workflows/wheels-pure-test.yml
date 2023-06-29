@@ -78,7 +78,7 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     container:
-      image: "rapidsai/citestwheel:cuda-devel-${{ matrix.CUDA_VER }}-ubuntu18.04"
+      image: "rapidsai/citestwheel:cuda${{ matrix.CUDA_VER }}-ubuntu18.04-py3.10"
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_PY_VERSION: "3.10"
