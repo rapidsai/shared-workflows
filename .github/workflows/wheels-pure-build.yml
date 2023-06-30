@@ -60,19 +60,40 @@ jobs:
       id: get_epoch_time
       run: echo "RAPIDS_EPOCH_TIMESTAMP=$(date +%s)" >> "${GITHUB_OUTPUT}"
 
+  compute-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      MATRIX: ${{ steps.compute-matrix.outputs.MATRIX }}
+    steps:
+      - name: Compute Build Matrix
+        id: compute-matrix
+        run: |
+          set -eo pipefail
+
+          export MATRIX="
+          - { ctk: '11.8.0', python: '3.9', image: 'rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7'}
+          - { ctk: '11.8.0', python: '3.10', image: 'rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7' }
+          - { ctk: '12.0.1', python: '3.9', image: 'rapidsai/manylinux_v2_2014:cuda-devel-12.0.1-centos7'}
+          - { ctk: '12.0.1', python: '3.10', image: 'rapidsai/manylinux_v2_2014:cuda-devel-12.0.1-centos7' }
+          "
+
+          echo "MATRIX=$(
+            yq -n -o json 'env(MATRIX)' | \
+            jq -c '${{ inputs.matrix_filter }} | {include: .}' \
+          )" | tee --append "${GITHUB_OUTPUT}"
+
   wheel-build:
-    name: wheel build pure ${{ matrix.ctk }}
-    needs: wheel-epoch-timestamp
+    name: wheel build pure ${{ matrix.ctk }} ${{ matrix.python }}
+    needs: [wheel-epoch-timestamp, compute-matrix]
     strategy:
-      matrix:
-        ctk: ["11.8.0", "12.0.1"]
+      matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: ubuntu-latest
     container:
       # Always use the manylinux container built on x86 to match the runner arch
       image: "rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
-        RAPIDS_PY_VERSION: "3.10"
+        RAPIDS_PY_VERSION: ${{ matrix.python }}
 
     steps:
     - uses: aws-actions/configure-aws-credentials@v2
@@ -117,5 +138,7 @@ jobs:
         # rapids-upload-wheels-to-s3 uses rapids-package-name which implicitly relies
         # on this variable being set
         export RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_${PIP_CU_VERSION}"
+
+	# DO WE STILL NEED THE HACK BELOW?
         # hack hack
-        RAPIDS_PY_VERSION=3 rapids-upload-wheels-to-s3 dist
+        #RAPIDS_PY_VERSION=3 rapids-upload-wheels-to-s3 dist
