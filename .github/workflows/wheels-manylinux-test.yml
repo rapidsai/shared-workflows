@@ -114,6 +114,8 @@ jobs:
   wheel-test:
     name: wheel ${{ matrix.test-type }} test ${{ matrix.arch }} ${{ matrix.python }} ${{ matrix.ctk }}
     needs: wheel-test-compute-matrix
+    env:
+      RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     strategy:
       matrix: ${{ fromJSON(needs.wheel-test-compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.arch }}-gpu-${{ matrix.gpu }}-${{ matrix.driver }}-1"
@@ -170,3 +172,6 @@ jobs:
         export RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_${PIP_CU_VERSION}"
 
         /citestwheel.sh
+      - name: Upload additional artifacts
+        if: "!cancelled()"
+        run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}
