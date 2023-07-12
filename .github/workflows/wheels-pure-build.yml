@@ -22,6 +22,9 @@ on:
       package-dir:
         required: true
         type: string
+      matrix_filter:
+        type: string
+        default: "."
 
       # run command before pure wheel build
       before-wheel:
