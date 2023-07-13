@@ -28,6 +28,9 @@ on:
         required: false
         type: string
         default: 'true'
+      matrix_filter:
+        type: string
+        default: "."
 
 defaults:
   run:
@@ -49,14 +52,33 @@ permissions:
   statuses: none
 
 jobs:
+  compute-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      MATRIX: ${{ steps.compute-matrix.outputs.MATRIX }}
+    steps:
+      - name: Compute Matrix
+        id: compute-matrix
+        run: |
+          set -eo pipefail
+
+          export MATRIX="
+          - { CUDA_VER: '11.8.0'}
+          - { CUDA_VER: '12.0.1'}
+          "
+
+          echo "MATRIX=$(
+            yq -n -o json 'env(MATRIX)' | \
+            jq -c '${{ inputs.matrix_filter }} | {include: .}' \
+          )" | tee --append "${GITHUB_OUTPUT}"
   wheel-test:
     name: wheel test pure
+    needs: compute-matrix
     runs-on: linux-amd64-gpu-v100-latest-1
     strategy:
-      matrix:
-        ctk: ["11.8.0", "12.0.1"]
+      matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     container:
-      image: "rapidsai/citestwheel:cuda-devel-${{ matrix.ctk }}-ubuntu18.04"
+      image: "rapidsai/citestwheel:cuda${{ matrix.CUDA_VER }}-ubuntu18.04-py3.10"
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_PY_VERSION: "3.10"
@@ -94,7 +116,7 @@ jobs:
 
     - name: Run citestwheel
       run: |
-        PIP_CU_VERSION="$(rapids-wheel-ctk-name-gen ${{ matrix.ctk }})"
+        PIP_CU_VERSION="$(rapids-wheel-ctk-name-gen ${{ matrix.CUDA_VER }})"
 
         # The variable PIP_CU_VERSION needs to be used as an unevaluated string by downstream libraries
         # to support pulling wheels built from a previous workflow for different
