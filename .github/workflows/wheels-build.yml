@@ -15,6 +15,9 @@ on:
       build_type:
         required: true
         type: string
+      build_script:
+        type: string
+        default: "ci/build_wheel.sh"
 
       # allow a bigger runner instance
       node_type:
@@ -23,9 +26,6 @@ on:
         default: "cpu16"
 
       # general settings
-      package-name:
-        required: true
-        type: string
       package-dir:
         required: true
         type: string
@@ -44,31 +44,6 @@ on:
         default: ''
       # Note that this is the _name_ of a secret containing the key, not the key itself.
       extra-repo-deploy-key:
-        required: false
-        type: string
-        default: ''
-
-      # Run command before building the wheel
-      before-wheel:
-        type: string
-        required: false
-        default: 'true'
-
-      # Run command after auditwheel
-      post-repair-amd64:
-        required: false
-        type: string
-        default: 'true'
-      post-repair-arm64:
-        required: false
-        type: string
-        default: 'true'
-
-      skbuild-configure-options:
-        required: false
-        type: string
-        default: ''
-      skbuild-build-options:
         required: false
         type: string
         default: ''
@@ -93,16 +68,6 @@ permissions:
   statuses: none
 
 jobs:
-  wheel-epoch-timestamp:
-    name: wheel epoch timestamper
-    runs-on: ubuntu-latest
-    outputs:
-      rapids_epoch_timestamp: ${{ steps.get_epoch_time.outputs.rapids_epoch_timestamp }}
-
-    steps:
-    - name: Get epoch timestamp to use as nightly version
-      id: get_epoch_time
-      run: echo "RAPIDS_EPOCH_TIMESTAMP=$(date +%s)" >> "${GITHUB_OUTPUT}"
 
   compute-matrix:
     runs-on: ubuntu-latest
@@ -132,12 +97,13 @@ jobs:
 
   wheel-build:
     name: cibuildwheel ${{ matrix.arch }} ${{ matrix.python }} ${{ matrix.ctk }}
-    needs: [wheel-epoch-timestamp, compute-matrix]
+    needs: [compute-matrix]
     strategy:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
     container:
       image: "rapidsai/ci-wheel:cuda${{ matrix.ctk }}-${{ matrix.linux_ver }}-py${{ matrix.python }}"
+
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         RAPIDS_PY_VERSION: ${{ matrix.python }}
@@ -183,60 +149,10 @@ jobs:
 
     - name: Build and repair the wheel
       run: |
-        # Use gha-tools rapids-pip-wheel-version to generate wheel version then
-        # update the necessary files
-        versioneer_override="$(rapids-pip-wheel-version ${{ needs.wheel-epoch-timestamp.outputs.rapids_epoch_timestamp }})"
-
-        PIP_CU_VERSION="$(rapids-wheel-ctk-name-gen ${{ matrix.ctk }})"
-        export RAPIDS_CUDA_VERSION="${{ matrix.ctk }}"
-
-        bash ci/release/apply_wheel_modifications.sh ${versioneer_override} "-${PIP_CU_VERSION}"
-        echo "The package name and/or version was modified in the package source. The git diff is:"
-        git diff
-
-        pyenv global ${{ matrix.python }}
-
-        # Run before-wheel command
-        # The variable $PIP_CU_VERSION needs to be used as an unevaluated string by downstream libraries
-        # to support pulling wheels built from a previous workflow for different
-        # CUDA versions
-        ${{ inputs.before-wheel }}
-
-        cd "${{ inputs.package-dir }}"
-
-        # Set up skbuild options. Enable sccache in skbuild config options
-        export SKBUILD_CONFIGURE_OPTIONS="${{ inputs.skbuild-configure-options}}"
-        export SKBUILD_BUILD_OPTIONS="${{ inputs.skbuild-build-options }}"
-
-        # Set up for pip installation of dependencies from the nightly index
-        export PIP_EXTRA_INDEX_URL=https://pypi.k8s.rapids.ai/simple
-        export PIP_FIND_LINKS=/local-wheelhouse
-
         # Store internal pypi credentials before any step that may download wheels
         printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
-
-        # Hardcode the output dir
-        python -m pip wheel . -w dist -vvv --no-deps --disable-pip-version-check
-
-        # Repair the wheel
-        cd dist
-        python -m auditwheel repair -w . ${{ inputs.package-name }}*
-
-        if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-          ${{ inputs.post-repair-arm64 }}
-        else
-          ${{ inputs.post-repair-amd64 }}
-        fi
-
-        # Need to pick the final wheel out from all the dependencies and the
-        # pre-repaired wheel.
-        cd ..
-        mkdir final_dist
-        mv dist/${{ inputs.package-name }}*manylinux* final_dist
-
-        # rapids-upload-wheels-to-s3 uses rapids-package-name which implicitly relies
-        # on this variable being set
-        export RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_${PIP_CU_VERSION}"
-        rapids-upload-wheels-to-s3 final_dist
+        ${{ inputs.build_script }}
+      env:
+        GH_TOKEN: ${{ github.token }}
       # Use a shell that loads the rc file so that we get the compiler settings
       shell: bash -leo pipefail {0}
