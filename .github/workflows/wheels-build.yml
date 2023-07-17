@@ -68,6 +68,20 @@ permissions:
   statuses: none
 
 jobs:
+  setup-env-vars:
+    name: setup environment variables
+    runs-on: ubuntu-latest
+    outputs:
+      RAPIDS_EPOCH_TIMESTAMP: ${{ steps.get_epoch_time.outputs.RAPIDS_EPOCH_TIMESTAMP }}
+      PIP_EXTRA_INDEX_URL: ${{ steps.get_pip_extra_index_url.outputs.PIP_EXTRA_INDEX_URL }}
+
+    steps:
+    - name: Get epoch timestamp to use as nightly version
+      id: get_epoch_time
+      run: echo "RAPIDS_EPOCH_TIMESTAMP=$(date +%s)" >> "${GITHUB_OUTPUT}"
+    - name: Setup extra index URL for pip
+      id: get_pip_extra_index_url
+      run: echo "PIP_EXTRA_INDEX_URL=https://pypi.k8s.rapids.ai/simple" >> "${GITHUB_OUTPUT}"
 
   compute-matrix:
     runs-on: ubuntu-latest
@@ -97,7 +111,7 @@ jobs:
 
   wheel-build:
     name: cibuildwheel ${{ matrix.arch }} ${{ matrix.python }} ${{ matrix.ctk }}
-    needs: [compute-matrix]
+    needs: [setup-env-vars, compute-matrix]
     strategy:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
@@ -107,6 +121,8 @@ jobs:
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         RAPIDS_PY_VERSION: ${{ matrix.python }}
+        RAPIDS_EPOCH_TIMESTAMP: ${{ needs.setup-env-vars.outputs.RAPIDS_EPOCH_TIMESTAMP }}
+        PIP_EXTRA_INDEX_URL: ${{ needs.setup-env-vars.outputs.PIP_EXTRA_INDEX_URL }}
 
     steps:
       - uses: aws-actions/configure-aws-credentials@v2
