@@ -52,6 +52,7 @@ jobs:
     container:
       image: ${{ inputs.container_image }}
       env:
+        GH_TOKEN: ${{ github.token }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
