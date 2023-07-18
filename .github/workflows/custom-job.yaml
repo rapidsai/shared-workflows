@@ -39,7 +39,7 @@ permissions:
   issues: none
   packages: read
   pages: none
-  pull-requests: read
+  pull-requests: write
   repository-projects: none
   security-events: none
   statuses: none
