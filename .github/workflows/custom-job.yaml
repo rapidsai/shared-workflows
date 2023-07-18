@@ -75,12 +75,12 @@ jobs:
         if: startsWith(github.ref_name, 'pull-request/')
         run: |
           echo "RAPIDS_BASE_BRANCH=${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}" >> "${GITHUB_ENV}"
+          echo "RAPIDS_PR_NUMBER=${{ fromJSON(steps.get-pr-info.outputs.pr-info).number }}" >> "${GITHUB_ENV}"
       - name: Standardize repository information
         run: |
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
-          echo "RAPIDS_PR_NUMBER=${{ fromJSON(steps.get-pr-info.outputs.pr-info).number }}" >> "${GITHUB_ENV}"
       - name: Run script
         run: ${{ inputs.run_script }}
