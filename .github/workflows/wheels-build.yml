@@ -65,20 +65,16 @@ permissions:
   statuses: none
 
 jobs:
-  setup-env-vars:
-    name: setup environment variables
+  wheel-epoch-timestamp:
+    name: wheel epoch timestamper
     runs-on: ubuntu-latest
     outputs:
-      RAPIDS_EPOCH_TIMESTAMP: ${{ steps.get_epoch_time.outputs.RAPIDS_EPOCH_TIMESTAMP }}
-      PIP_EXTRA_INDEX_URL: ${{ steps.get_pip_extra_index_url.outputs.PIP_EXTRA_INDEX_URL }}
+      rapids_epoch_timestamp: ${{ steps.get_epoch_time.outputs.rapids_epoch_timestamp }}
 
     steps:
     - name: Get epoch timestamp to use as nightly version
       id: get_epoch_time
       run: echo "RAPIDS_EPOCH_TIMESTAMP=$(date +%s)" >> "${GITHUB_OUTPUT}"
-    - name: Setup extra index URL for pip
-      id: get_pip_extra_index_url
-      run: echo "PIP_EXTRA_INDEX_URL=https://pypi.k8s.rapids.ai/simple" >> "${GITHUB_OUTPUT}"
 
   compute-matrix:
     runs-on: ubuntu-latest
@@ -108,7 +104,7 @@ jobs:
 
   wheel-build:
     name: cibuildwheel ${{ matrix.arch }} ${{ matrix.python }} ${{ matrix.ctk }}
-    needs: [setup-env-vars, compute-matrix]
+    needs: [wheel-epoch-timestamp, compute-matrix]
     strategy:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
@@ -118,8 +114,7 @@ jobs:
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         RAPIDS_PY_VERSION: ${{ matrix.python }}
-        RAPIDS_EPOCH_TIMESTAMP: ${{ needs.setup-env-vars.outputs.RAPIDS_EPOCH_TIMESTAMP }}
-        PIP_EXTRA_INDEX_URL: ${{ needs.setup-env-vars.outputs.PIP_EXTRA_INDEX_URL }}
+        RAPIDS_EPOCH_TIMESTAMP: ${{ needs.wheel-epoch-timestamp.outputs.RAPIDS_EPOCH_TIMESTAMP }}
 
     steps:
       - uses: aws-actions/configure-aws-credentials@v2
@@ -136,11 +131,12 @@ jobs:
           persist-credentials: false
 
       - name: Standardize repository information
-        run: |
-          echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
-          echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
-          echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
-          echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
+        uses: rapidsai/shared-action-workflows/rapids-github-info@branch-23.08
+        with:
+          repo: ${{ inputs.repo }}
+          branch: ${{ inputs.branch }}
+          date: ${{ inputs.date }}
+          sha: ${{ inputs.sha }}
 
       - name: Preprocess extra repos
         id: preprocess-extras
