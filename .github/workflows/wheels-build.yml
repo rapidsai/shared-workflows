@@ -1,4 +1,4 @@
-name: Build RAPIDS manylinux wheels
+name: Build RAPIDS wheels
 
 on:
   workflow_call:
