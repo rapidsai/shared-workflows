@@ -20,9 +20,6 @@ on:
         default: "ci/test_wheel.sh"
 
       # general settings
-      package-name:
-        required: true
-        type: string
       matrix_filter:
         type: string
         default: "."
