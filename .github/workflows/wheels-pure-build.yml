@@ -74,7 +74,6 @@ jobs:
       image: "rapidsai/ci-wheel:cuda${{ matrix.ctk }}-centos7-py3.10"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
-        RAPIDS_PY_VERSION: "3.10"
 
     steps:
     - uses: aws-actions/configure-aws-credentials@v2
