@@ -22,9 +22,6 @@ on:
       package-dir:
         required: true
         type: string
-      matrix_filter:
-        type: string
-        default: "."
 
       # run command before pure wheel build
       before-wheel:
@@ -63,40 +60,21 @@ jobs:
       id: get_epoch_time
       run: echo "RAPIDS_EPOCH_TIMESTAMP=$(date +%s)" >> "${GITHUB_OUTPUT}"
 
-  compute-matrix:
-    runs-on: ubuntu-latest
-    outputs:
-      MATRIX: ${{ steps.compute-matrix.outputs.MATRIX }}
-    steps:
-      - name: Compute Build Matrix
-        id: compute-matrix
-        run: |
-          set -eo pipefail
-
-          export MATRIX="
-          - { ctk: '11.8.0', python: '3.9', image: 'rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7'}
-          - { ctk: '11.8.0', python: '3.10', image: 'rapidsai/manylinux_v2_2014:cuda-devel-11.8.0-centos7' }
-          - { ctk: '12.0.1', python: '3.9', image: 'rapidsai/manylinux_v2_2014:cuda-devel-12.0.1-centos7'}
-          - { ctk: '12.0.1', python: '3.10', image: 'rapidsai/manylinux_v2_2014:cuda-devel-12.0.1-centos7' }
-          "
-
-          echo "MATRIX=$(
-            yq -n -o json 'env(MATRIX)' | \
-            jq -c '${{ inputs.matrix_filter }} | {include: .}' \
-          )" | tee --append "${GITHUB_OUTPUT}"
-
   wheel-build:
-    name: wheel build pure ${{ matrix.ctk }} ${{ matrix.python }}
-    needs: [wheel-epoch-timestamp, compute-matrix]
+    name: wheel build pure ${{ matrix.ctk }}
+    needs: wheel-epoch-timestamp
+    env:
+      RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     strategy:
-      matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
+      matrix:
+        ctk: ["11.8.0", "12.0.1"]
     runs-on: ubuntu-latest
     container:
       # Always use the manylinux container built on x86 to match the runner arch
       image: "rapidsai/ci-wheel:cuda${{ matrix.ctk }}-centos7-py3.10"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
-        RAPIDS_PY_VERSION: ${{ matrix.python }}
+        RAPIDS_PY_VERSION: "3.10"
 
     steps:
     - uses: aws-actions/configure-aws-credentials@v2
@@ -142,3 +120,6 @@ jobs:
         # on this variable being set
         export RAPIDS_PY_WHEEL_NAME="${{ inputs.package-name }}_${PIP_CU_VERSION}"
         rapids-upload-wheels-to-s3 dist
+    - name: Upload additional artifacts
+      if: "!cancelled()"
+      run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}
