@@ -16,8 +16,8 @@ on:
         required: true
         type: string
       build_script:
+        required: true
         type: string
-        default: "ci/build_wheel.sh"
 
       # allow a bigger runner instance
       node_type:
@@ -65,16 +65,6 @@ permissions:
   statuses: none
 
 jobs:
-  wheel-epoch-timestamp:
-    name: wheel epoch timestamper
-    runs-on: ubuntu-latest
-    outputs:
-      rapids_epoch_timestamp: ${{ steps.get_epoch_time.outputs.rapids_epoch_timestamp }}
-
-    steps:
-    - name: Get epoch timestamp to use as nightly version
-      id: get_epoch_time
-      run: echo "RAPIDS_EPOCH_TIMESTAMP=$(date +%s)" >> "${GITHUB_OUTPUT}"
 
   compute-matrix:
     runs-on: ubuntu-latest
@@ -87,14 +77,14 @@ jobs:
           set -eo pipefail
 
           export MATRIX="
-          - { ctk: '11.8.0', arch: 'amd64', python: '3.9', linux_ver: 'centos7' }
-          - { ctk: '11.8.0', arch: 'amd64', python: '3.10', linux_ver: 'centos7' }
-          - { ctk: '11.8.0', arch: 'arm64', python: '3.9',  linux_ver: 'ubuntu20.04' }
-          - { ctk: '11.8.0', arch: 'arm64', python: '3.10', linux_ver: 'ubuntu20.04' }
-          - { ctk: '12.0.1', arch: 'amd64', python: '3.9',  linux_ver: 'centos7' }
-          - { ctk: '12.0.1', arch: 'amd64', python: '3.10',  linux_ver: 'centos7' }
-          - { ctk: '12.0.1', arch: 'arm64', python: '3.9', linux_ver: 'ubuntu20.04' }
-          - { ctk: '12.0.1', arch: 'arm64', python: '3.10', linux_ver: 'ubuntu20.04' }
+          - { CUDA_VER: '11.8.0', ARCH: 'amd64', PY_VER: '3.9', LINUX_VER: 'centos7' }
+          - { CUDA_VER: '11.8.0', ARCH: 'amd64', PY_VER: '3.10', LINUX_VER: 'centos7' }
+          - { CUDA_VER: '11.8.0', ARCH: 'arm64', PY_VER: '3.9',  LINUX_VER: 'ubuntu20.04' }
+          - { CUDA_VER: '11.8.0', ARCH: 'arm64', PY_VER: '3.10', LINUX_VER: 'ubuntu20.04' }
+          - { CUDA_VER: '12.0.1', ARCH: 'amd64', PY_VER: '3.9',  LINUX_VER: 'centos7' }
+          - { CUDA_VER: '12.0.1', ARCH: 'amd64', PY_VER: '3.10',  LINUX_VER: 'centos7' }
+          - { CUDA_VER: '12.0.1', ARCH: 'arm64', PY_VER: '3.9', LINUX_VER: 'ubuntu20.04' }
+          - { CUDA_VER: '12.0.1', ARCH: 'arm64', PY_VER: '3.10', LINUX_VER: 'ubuntu20.04' }
           "
 
           echo "MATRIX=$(
@@ -102,19 +92,17 @@ jobs:
             jq -c '${{ inputs.matrix_filter }} | {include: .}' \
           )" | tee --append "${GITHUB_OUTPUT}"
 
-  wheel-build:
-    name: cibuildwheel ${{ matrix.arch }} ${{ matrix.python }} ${{ matrix.ctk }}
-    needs: [wheel-epoch-timestamp, compute-matrix]
+  build:
+    name: ${{ matrix.ARCH }} ${{ matrix.PY_VER }} ${{ matrix.CUDA_VER }}
+    needs: [compute-matrix]
     strategy:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
-    runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
+    runs-on: "linux-${{ matrix.ARCH }}-${{ inputs.node_type }}"
     container:
-      image: "rapidsai/ci-wheel:cuda${{ matrix.ctk }}-${{ matrix.linux_ver }}-py${{ matrix.python }}"
+      image: "rapidsai/ci-wheel:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}"
 
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
-        RAPIDS_PY_VERSION: ${{ matrix.python }}
-        RAPIDS_EPOCH_TIMESTAMP: ${{ needs.wheel-epoch-timestamp.outputs.RAPIDS_EPOCH_TIMESTAMP }}
 
     steps:
       - uses: aws-actions/configure-aws-credentials@v2
