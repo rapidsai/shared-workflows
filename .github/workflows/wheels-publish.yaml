@@ -72,4 +72,4 @@ jobs:
         sha: ${{ inputs.sha }}
 
     - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
-      run: rapids-twine-new "${{ inputs.package-name }}"
+      run: rapids-twine "${{ inputs.package-name }}"
