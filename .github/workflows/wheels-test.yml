@@ -139,7 +139,7 @@ jobs:
         date: ${{ inputs.date }}
         sha: ${{ inputs.sha }}
 
-    - name: Run citestwheel
+    - name: Run tests
       run: ${{ inputs.test_script }}
 
     - name: Upload additional artifacts
