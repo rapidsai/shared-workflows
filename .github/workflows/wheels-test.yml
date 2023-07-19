@@ -15,7 +15,7 @@ on:
       build_type:
         required: true
         type: string
-      build_script:
+      test_script:
         type: string
         default: "ci/test_wheel.sh"
 
