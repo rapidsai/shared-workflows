@@ -109,6 +109,7 @@ jobs:
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_PY_VERSION: ${{ matrix.python }}
+        RAPIDS_CUDA_VERSION: ${{ matrix.ctk }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
     - uses: aws-actions/configure-aws-credentials@v2
