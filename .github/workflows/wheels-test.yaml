@@ -15,7 +15,7 @@ on:
       build_type:
         required: true
         type: string
-      test_script:
+      script:
         type: string
         default: "ci/test_wheel.sh"
 
@@ -138,7 +138,7 @@ jobs:
         sha: ${{ inputs.sha }}
 
     - name: Run tests
-      run: ${{ inputs.test_script }}
+      run: ${{ inputs.script }}
 
     - name: Upload additional artifacts
       if: "!cancelled()"
