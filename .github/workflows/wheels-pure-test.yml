@@ -83,7 +83,6 @@ jobs:
       image: "rapidsai/citestwheel:cuda${{ matrix.CUDA_VER }}-ubuntu18.04-py3.10"
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
-        RAPIDS_PY_VERSION: "3.10"
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         CIBW_TEST_EXTRAS: "test"
         CIBW_TEST_COMMAND: ${{ inputs.test-unittest }}
