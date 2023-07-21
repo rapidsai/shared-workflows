@@ -65,9 +65,6 @@ jobs:
           fi
       - name: Compute test matrix
         id: compute-matrix
-        env:
-          SMOKE_TEST_CMD: ${{ inputs.test-smoketest }}
-          UNIT_TEST_CMD: ${{ inputs.test-unittest }}
         run: |
           set -eo pipefail
 
