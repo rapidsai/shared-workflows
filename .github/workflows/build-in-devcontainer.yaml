@@ -77,7 +77,7 @@ jobs:
         run: |
           echo "REPOSITORY=$(basename $(pwd))" | tee -a "${GITHUB_ENV}";
           cp .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json .devcontainer/devcontainer.json;
-          if test -n "${SSH_AGENT_PID:-}" != ''; then
+          if test -n "${SSH_AGENT_PID:-}"; then
             cp -ar "$HOME"/.gitconfig "$HOME"/.ssh .devcontainer;
             sed -i "s@$HOME@/home/coder@g" .devcontainer/.ssh/config;
             curl -s "https://api.github.com/meta" \
