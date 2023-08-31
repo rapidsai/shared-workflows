@@ -67,23 +67,12 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '16'
-      - if: ${{ env.HAS_DEVCONTAINER == 'true' && inputs.extra-repo-deploy-key != '' }}
-        name: Set up ssh-agent
-        uses: webfactory/ssh-agent@v0.8.0
-        with:
-          ssh-private-key: "${{ secrets[inputs.extra-repo-deploy-key] }}"
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Copy devcontainer.json file up one level
         run: |
           echo "REPOSITORY=$(basename $(pwd))" | tee -a "${GITHUB_ENV}";
-          cp .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json .devcontainer/devcontainer.json;
-          if test -n "${SSH_AGENT_PID:-}"; then
-            cp -ar "$HOME"/.gitconfig "$HOME"/.ssh .devcontainer;
-            sed -i "s@$HOME@/home/coder@g" .devcontainer/.ssh/config;
-            curl -s "https://api.github.com/meta" \
-            | jq -r '.ssh_keys | map("github.com \(.)") | .[]' \
-            | tee .devcontainer/.ssh/known_hosts >/dev/null;
-          fi
+          cp .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json \
+             .devcontainer/devcontainer.json;
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
         uses: devcontainers/ci@v0.3
@@ -96,18 +85,56 @@ jobs:
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
           runCmd: |
-            cd ~/"${REPOSITORY}";
-            if test -d .devcontainer/.ssh; then
-              cp -ar .devcontainer/.ssh/* ~/.ssh/;
+
+            if test -n "${{ inputs.extra-repo-deploy-key }}"; then
+
+              echo "starting ssh-agent:";
+              eval "$(ssh-agent -s)";
+              echo "adding private key:"
+              ssh-add - <<< "${{ secrets[inputs.extra-repo-deploy-key] }}";
+
+              re="(ssh:\/\/|https:\/\/)?(git@)?(.*\.com)[:\/](.*)";
+
+              ssh-add -L | while read -r line; do
+                echo "public key:";
+                echo "$line";
+
+                pub="$(cut -d' ' -f2 <<< "$line")";
+                url="$(cut -d' ' -f3 <<< "$line")";
+
+                if ! test -f ~/.ssh/key-$pub; then
+                  cat <<______EOF | tee -a ~/.ssh/key-$pub;
+            $line
+            ______EOF
+                fi
+
+                if [[ $url =~ $re ]]; then
+                  host="${BASH_REMATCH[3]}";
+                  repo="${BASH_REMATCH[4]//.git/}";
+
+                  cat <<______EOF | tee -a ~/.gitconfig
+            [url "git@key-$pub.$host:$repo"]
+              insteadOf = https://$host/$repo
+              insteadOf = git@$host:$repo
+              insteadOf = ssh://git@$host/$repo
+            ______EOF
+
+                  cat <<______EOF | tee -a ~/.ssh/config
+            Host key-$pub.$host
+                HostName $host
+                IdentityFile /home/coder/.ssh/key-$pub
+                IdentitiesOnly yes
+            ______EOF
+                fi
+              done
+
+              curl -s "https://api.github.com/meta" | \
+                jq -r '.ssh_keys | map("github.com \(.)") | .[]' | \
+                tee ~/.ssh/known_hosts;
             fi
-            if test -f .devcontainer/.gitconfig; then
-              cat .devcontainer/.gitconfig | tee -a ~/.gitconfig;
-            fi
-            rm -rf .devcontainer/.ssh .devcontainer/.gitconfig;
 
             chmod 0700 ~/.ssh;
             chmod 0600 ~/.ssh/*;
-            sudo chown -R coder:coder ~/.ssh;
 
             ls -all ~/.ssh/;
             if test -f ~/.ssh/config; then
@@ -123,12 +150,6 @@ jobs:
               cat ~/.gitconfig;
             fi
 
-            echo "SSH_AGENT_PID: '${SSH_AGENT_PID:-}'";
-            echo "SSH_AUTH_SOCK: '${SSH_AUTH_SOCK:-}'";
-            if test -z "${SSH_AUTH_SOCK:-}"; then
-              eval "$(ssh-agent -s)";
-              ssh-add ~/.ssh/key-*;
-              ssh-add -L;
-            fi
+            cd ~/"${REPOSITORY}";
 
             ${{ inputs.build_command }}
