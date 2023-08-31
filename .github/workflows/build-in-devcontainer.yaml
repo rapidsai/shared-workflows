@@ -70,12 +70,11 @@ jobs:
             ${{ secrets.CUMLPRIMS_SSH_PRIVATE_DEPLOY_KEY }}
             ${{ secrets.CUGRAPH_OPS_SSH_PRIVATE_DEPLOY_KEY }}
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Copy devcontainer.json file up one level and adjust ssh config
+        name: Copy devcontainer.json file up one level
         run: |
           cp \
             .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json \
             .devcontainer/devcontainer.json
-          sed -i "s@$HOME@/home/coder@g" "$HOME/.ssh/config";
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
         uses: devcontainers/ci@v0.3
