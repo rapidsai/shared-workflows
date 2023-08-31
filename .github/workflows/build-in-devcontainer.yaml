@@ -64,7 +64,7 @@ jobs:
           node-version: '16'
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Set up ssh-agent
-        uses: webfactory/ssh-agent@v0.5.4
+        uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: |
             ${{ secrets.CUMLPRIMS_SSH_PRIVATE_DEPLOY_KEY }}
@@ -75,14 +75,40 @@ jobs:
           cp \
             .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json \
             .devcontainer/devcontainer.json
+          if test -f "$HOME/.gitconfig"; then
+            echo "$HOME/.gitconfig:";
+            cat "$HOME/.gitconfig";
+            cp "$HOME/.gitconfig" .devcontainer/gitconfig;
+          fi
+          if test -f "$HOME/.ssh/config"; then
+            echo "$HOME/.ssh/config:";
+            cat "$HOME/.ssh/config";
+            cp "$HOME/.ssh/config" .devcontainer/ssh_config;
+            sed -i "s@$HOME@/home/coder@g" ".devcontainer/ssh_config";
+          fi
+          if test -f "$HOME/.ssh/known_hosts"; then
+            echo "$HOME/.ssh/known_hosts:";
+            cat "$HOME/.ssh/known_hosts";
+            cp "$HOME/.ssh/known_hosts" .devcontainer/ssh_known_hosts;
+          fi
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
         uses: devcontainers/ci@v0.3
         with:
           push: never
-          runCmd: "${{ inputs.build_command }}"
           env: |
             SCCACHE_REGION=${{ vars.AWS_REGION }}
             AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
+          runCmd: |
+            cp .devcontainer/gitconfig ~/.gitconfig;
+            cp .devcontainer/ssh_config ~/.ssh/config;
+            cp .devcontainer/ssh_known_hosts ~/.ssh/known_hosts;
+            echo "gitconfig:"
+            cat ~/.gitconfig;
+            echo "ssh/config:"
+            cat ~/.ssh/config;
+            echo "ssh/known_hosts:"
+            cat ~/.ssh/known_hosts;
+            ${{ inputs.build_command }}
