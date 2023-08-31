@@ -109,18 +109,25 @@ jobs:
             chmod 0600 ~/.ssh/*;
             sudo chown -R coder:coder ~/.ssh;
 
-            echo "gitconfig:"
-            cat ~/.gitconfig;
-            echo "ssh/config:"
-            cat ~/.ssh/config;
-            echo "ssh/known_hosts:"
-            cat ~/.ssh/known_hosts;
             ls -all ~/.ssh/;
+            if test -f ~/.ssh/config; then
+              echo "ssh/config:"
+              cat ~/.ssh/config;
+            fi
+            if test -f ~/.ssh/known_hosts; then
+              echo "ssh/known_hosts:"
+              cat ~/.ssh/known_hosts;
+            fi
+            if test -f ~/.gitconfig; then
+              echo "gitconfig:"
+              cat ~/.gitconfig;
+            fi
 
-            echo "SSH_AGENT_PID: '${SSH_AGENT_PID:-}'"
-            echo "SSH_AUTH_SOCK: '${SSH_AUTH_SOCK:-}'"
+            echo "SSH_AGENT_PID: '${SSH_AGENT_PID:-}'";
+            echo "SSH_AUTH_SOCK: '${SSH_AUTH_SOCK:-}'";
             if test -z "${SSH_AUTH_SOCK:-}"; then
               eval "$(ssh-agent -s)";
+              ssh-add ~/.ssh/key-*;
               ssh-add -L;
             fi
 
