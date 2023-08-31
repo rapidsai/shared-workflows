@@ -76,21 +76,14 @@ jobs:
           cp \
             .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json \
             .devcontainer/devcontainer.json
-          if test -f "$HOME/.gitconfig"; then
-            echo "$HOME/.gitconfig:";
-            cat "$HOME/.gitconfig";
-            cp "$HOME/.gitconfig" .devcontainer/gitconfig;
+          if test -f "$HOME"/.gitconfig; then
+            cp "$HOME"/.gitconfig .devcontainer;
           fi
-          if test -f "$HOME/.ssh/config"; then
-            echo "$HOME/.ssh/config:";
-            cat "$HOME/.ssh/config";
-            cp "$HOME/.ssh/config" .devcontainer/ssh_config;
-            sed -i "s@$HOME@/home/coder@g" ".devcontainer/ssh_config";
-          fi
-          if test -f "$HOME/.ssh/known_hosts"; then
-            echo "$HOME/.ssh/known_hosts:";
-            cat "$HOME/.ssh/known_hosts";
-            cp "$HOME/.ssh/known_hosts" .devcontainer/ssh_known_hosts;
+          if test -d "$HOME"/.ssh; then
+            cp -ar "$HOME"/.ssh .devcontainer;
+            if test -f .devcontainer/.ssh/config; then
+              sed -i "s@$HOME@/home/coder@g" .devcontainer/.ssh/config;
+            fi
           fi
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
@@ -104,17 +97,28 @@ jobs:
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
           runCmd: |
-            echo "cwd: $(pwd)";
             cd ~/"${REPOSITORY}";
-            echo "REPOSITORY: ${REPOSITORY}";
-            echo "cwd: $(pwd)";
-            cp .devcontainer/gitconfig ~/.gitconfig;
-            cp .devcontainer/ssh_config ~/.ssh/config;
-            cp .devcontainer/ssh_known_hosts ~/.ssh/known_hosts;
+            if test -f .devcontainer/.gitconfig; then
+              cat .devcontainer/.gitconfig | tee -a ~/.gitconfig;
+              rm .devcontainer/.gitconfig;
+            fi
+            if test -d .devcontainer/.ssh; then
+              if test -f .devcontainer/.ssh/config; then
+                cat .devcontainer/.ssh/config | tee -a ~/.ssh/config;
+                rm .devcontainer/.ssh/config;
+              fi
+              if test -f .devcontainer/.ssh/known_hosts; then
+                cat .devcontainer/.ssh/known_hosts | tee -a ~/.ssh/known_hosts;
+                rm .devcontainer/.ssh/known_hosts;
+              fi
+              cp .devcontainer/.ssh/* ~/.ssh/;
+              rm -rf .devcontainer/.ssh
+            fi
             echo "gitconfig:"
             cat ~/.gitconfig;
             echo "ssh/config:"
             cat ~/.ssh/config;
             echo "ssh/known_hosts:"
             cat ~/.ssh/known_hosts;
+            ls -all ~/.ssh/;
             ${{ inputs.build_command }}
