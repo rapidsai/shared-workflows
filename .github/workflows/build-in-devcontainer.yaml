@@ -72,6 +72,7 @@ jobs:
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Copy devcontainer.json file up one level
         run: |
+          echo "REPOSITORY=$(basename $(pwd))" | tee -a "${GITHUB_ENV}";
           cp \
             .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json \
             .devcontainer/devcontainer.json
@@ -97,11 +98,16 @@ jobs:
         with:
           push: never
           env: |
+            REPOSITORY=${{ env.REPOSITORY }}
             SCCACHE_REGION=${{ vars.AWS_REGION }}
             AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
           runCmd: |
+            echo "cwd: $(pwd)";
+            cd ~/"${REPOSITORY}";
+            echo "REPOSITORY: ${REPOSITORY}";
+            echo "cwd: $(pwd)";
             cp .devcontainer/gitconfig ~/.gitconfig;
             cp .devcontainer/ssh_config ~/.ssh/config;
             cp .devcontainer/ssh_known_hosts ~/.ssh/known_hosts;
