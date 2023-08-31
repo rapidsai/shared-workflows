@@ -114,6 +114,9 @@ jobs:
               cp .devcontainer/.ssh/* ~/.ssh/;
               rm -rf .devcontainer/.ssh
             fi
+            chmod 700 ~/.ssh;
+            chmod 600 ~/.ssh/*;
+            sudo chown -R coder:coder ~/.ssh;
             echo "gitconfig:"
             cat ~/.gitconfig;
             echo "ssh/config:"
