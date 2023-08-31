@@ -11,6 +11,10 @@ on:
       build_command:
         type: string
         required: true
+      ssh-deploy-keys:
+        type: string
+        default: ''
+        required: false
 
 permissions:
   actions: read
@@ -62,28 +66,22 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '16'
-      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+      - if: ${{ env.HAS_DEVCONTAINER == 'true' && inputs.ssh-deploy-keys != '' }}
         name: Set up ssh-agent
         uses: webfactory/ssh-agent@v0.8.0
         with:
-          ssh-private-key: |
-            ${{ secrets.CUMLPRIMS_SSH_PRIVATE_DEPLOY_KEY }}
-            ${{ secrets.CUGRAPH_OPS_SSH_PRIVATE_DEPLOY_KEY }}
+          ssh-private-key: ${{ inputs.ssh-deploy-keys }}
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Copy devcontainer.json file up one level
         run: |
           echo "REPOSITORY=$(basename $(pwd))" | tee -a "${GITHUB_ENV}";
-          cp \
-            .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json \
-            .devcontainer/devcontainer.json
-          if test -f "$HOME"/.gitconfig; then
-            cp "$HOME"/.gitconfig .devcontainer;
-          fi
-          if test -d "$HOME"/.ssh; then
-            cp -ar "$HOME"/.ssh .devcontainer;
-            if test -f .devcontainer/.ssh/config; then
-              sed -i "s@$HOME@/home/coder@g" .devcontainer/.ssh/config;
-            fi
+          cp .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json .devcontainer/devcontainer.json;
+          if test -n "${SSH_AGENT_PID:-}" != ''; then
+            cp -ar "$HOME"/.gitconfig "$HOME"/.ssh .devcontainer;
+            sed -i "s@$HOME@/home/coder@g" .devcontainer/.ssh/config;
+            curl -s "https://api.github.com/meta" \
+            | jq -r '.ssh_keys | map("github.com \(.)") | .[]' \
+            | tee .devcontainer/.ssh/known_hosts >/dev/null;
           fi
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
@@ -98,25 +96,18 @@ jobs:
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
           runCmd: |
             cd ~/"${REPOSITORY}";
+            if test -d .devcontainer/.ssh; then
+              cp -ar .devcontainer/.ssh/* ~/.ssh/;
+            fi
             if test -f .devcontainer/.gitconfig; then
               cat .devcontainer/.gitconfig | tee -a ~/.gitconfig;
-              rm .devcontainer/.gitconfig;
             fi
-            if test -d .devcontainer/.ssh; then
-              if test -f .devcontainer/.ssh/config; then
-                cat .devcontainer/.ssh/config | tee -a ~/.ssh/config;
-                rm .devcontainer/.ssh/config;
-              fi
-              if test -f .devcontainer/.ssh/known_hosts; then
-                cat .devcontainer/.ssh/known_hosts | tee -a ~/.ssh/known_hosts;
-                rm .devcontainer/.ssh/known_hosts;
-              fi
-              cp .devcontainer/.ssh/* ~/.ssh/;
-              rm -rf .devcontainer/.ssh
-            fi
-            chmod 700 ~/.ssh;
-            chmod 600 ~/.ssh/*;
+            rm -rf .devcontainer/.ssh .devcontainer/.gitconfig;
+
+            chmod 0700 ~/.ssh;
+            chmod 0600 ~/.ssh/*;
             sudo chown -R coder:coder ~/.ssh;
+
             echo "gitconfig:"
             cat ~/.gitconfig;
             echo "ssh/config:"
@@ -124,4 +115,12 @@ jobs:
             echo "ssh/known_hosts:"
             cat ~/.ssh/known_hosts;
             ls -all ~/.ssh/;
+
+            echo "SSH_AGENT_PID: '${SSH_AGENT_PID:-}'"
+            echo "SSH_AUTH_SOCK: '${SSH_AUTH_SOCK:-}'"
+            if test -z "${SSH_AUTH_SOCK:-}"; then
+              eval "$(ssh-agent -s)";
+              ssh-add -L;
+            fi
+
             ${{ inputs.build_command }}
