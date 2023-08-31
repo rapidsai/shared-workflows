@@ -11,10 +11,11 @@ on:
       build_command:
         type: string
         required: true
-      ssh-deploy-keys:
+      # Note that this is the _name_ of a secret containing the key, not the key itself.
+      extra-repo-deploy-key:
+        required: false
         type: string
         default: ''
-        required: false
 
 permissions:
   actions: read
@@ -66,11 +67,11 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '16'
-      - if: ${{ env.HAS_DEVCONTAINER == 'true' && inputs.ssh-deploy-keys != '' }}
+      - if: ${{ env.HAS_DEVCONTAINER == 'true' && inputs.extra-repo-deploy-key != '' }}
         name: Set up ssh-agent
         uses: webfactory/ssh-agent@v0.8.0
         with:
-          ssh-private-key: ${{ inputs.ssh-deploy-keys }}
+          ssh-private-key: "${{ secrets[inputs.extra-repo-deploy-key] }}"
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Copy devcontainer.json file up one level
         run: |
