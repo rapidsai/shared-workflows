@@ -12,9 +12,6 @@ on:
         type: string
         required: true
 
-permissions:
-  contents: read
-
 jobs:
   build:
     strategy:
@@ -25,6 +22,7 @@ jobs:
         pkgr: ["conda", "pip"]
     runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
     permissions:
+      contents: read
       id-token: write # This is required for configure-aws-credentials
     steps:
       - uses: actions/checkout@v3
