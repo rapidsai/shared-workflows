@@ -85,71 +85,58 @@ jobs:
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
           runCmd: |
-
             if test -n "${{ inputs.extra-repo-deploy-key }}"; then
 
-              echo "starting ssh-agent:";
               eval "$(ssh-agent -s)";
-              echo "adding private key:"
               ssh-add - <<< "${{ secrets[inputs.extra-repo-deploy-key] }}";
 
               re="(ssh:\/\/|https:\/\/)?(git@)?(.*\.com)[:\/](.*)";
 
               ssh-add -L | while read -r line; do
-                echo "public key:";
-                echo "$line";
+                pub="$(cut -d' ' -f2 <<< "${line}")";
+                url="$(cut -d' ' -f3 <<< "${line}")";
 
-                pub="$(cut -d' ' -f2 <<< "$line")";
-                url="$(cut -d' ' -f3 <<< "$line")";
-
-                if ! test -f ~/.ssh/key-$pub; then
-                  cat <<______EOF | tee -a ~/.ssh/key-$pub;
-            $line
+                if ! test -f ~/.ssh/key-${pub}; then
+                  cat <<______EOF | tee -a ~/.ssh/key-${pub} >/dev/null
+            ${line}
             ______EOF
                 fi
 
-                if [[ $url =~ $re ]]; then
+                if [[ ${url} =~ ${re} ]]; then
                   host="${BASH_REMATCH[3]}";
                   repo="${BASH_REMATCH[4]//.git/}";
 
-                  cat <<______EOF | tee -a ~/.gitconfig
-            [url "git@key-$pub.$host:$repo"]
-              insteadOf = https://$host/$repo
-              insteadOf = git@$host:$repo
-              insteadOf = ssh://git@$host/$repo
+                  cat <<______EOF | tee -a ~/.gitconfig >/dev/null
+            [url "git@key-${pub}.${host}:${repo}"]
+              insteadOf = https://${host}/${repo}
+              insteadOf = git@${host}:${repo}
+              insteadOf = ssh://git@${host}/${repo}
             ______EOF
 
-                  cat <<______EOF | tee -a ~/.ssh/config
-            Host key-$pub.$host
-                HostName $host
-                IdentityFile /home/coder/.ssh/key-$pub
+                  cat <<______EOF | tee -a ~/.ssh/config >/dev/null
+            Host key-${pub}.${host}
+                HostName ${host}
+                IdentityFile /home/coder/.ssh/key-${pub}
                 IdentitiesOnly yes
             ______EOF
+
+                  unset host;
+                  unset repo;
                 fi
+
+                unset pub;
+                unset url;
               done
+
+              unset line;
 
               curl -s "https://api.github.com/meta" | \
                 jq -r '.ssh_keys | map("github.com \(.)") | .[]' | \
-                tee ~/.ssh/known_hosts;
-            fi
+                tee ~/.ssh/known_hosts >/dev/null
 
-            chmod 0700 ~/.ssh;
-            chmod 0600 ~/.ssh/*;
-
-            ls -all ~/.ssh/;
-            if test -f ~/.ssh/config; then
-              echo "ssh/config:"
-              cat ~/.ssh/config;
-            fi
-            if test -f ~/.ssh/known_hosts; then
-              echo "ssh/known_hosts:"
-              cat ~/.ssh/known_hosts;
-            fi
-            if test -f ~/.gitconfig; then
-              echo "gitconfig:"
-              cat ~/.gitconfig;
+              chmod 0700 ~/.ssh;
+              chmod 0600 ~/.ssh/*;
             fi
 
             cd ~/"${REPOSITORY}";
-
             ${{ inputs.build_command }}
