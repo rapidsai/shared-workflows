@@ -83,6 +83,13 @@ jobs:
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
           runCmd: |
+            cat <<EOF > ~/.config/pip/pip.conf
+            [global]
+            extra-index-url = https://cibuildwheel:${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}@pypi.k8s.rapids.ai/simple
+            EOF
+
+            rapids-make-${PYTHON_PACKAGE_MANAGER}-env || true;
+
             if test -n "${{ inputs.extra-repo-deploy-key }}"; then
 
               eval "$(ssh-agent -s)";
