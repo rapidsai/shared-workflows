@@ -82,6 +82,7 @@ jobs:
             AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
+            EXTRA_REPO_DEPLOY_KEY=${{ secrets[inputs.extra-repo-deploy-key] }}
           runCmd: |
             cat <<EOF > ~/.config/pip/pip.conf
             [global]
@@ -90,10 +91,10 @@ jobs:
 
             rapids-make-${PYTHON_PACKAGE_MANAGER}-env || true;
 
-            if test -n "${{ inputs.extra-repo-deploy-key }}"; then
+            if ! grep -qE "^$" <<< "${EXTRA_REPO_DEPLOY_KEY:-}"; then
 
               eval "$(ssh-agent -s)";
-              ssh-add - <<< "${{ secrets[inputs.extra-repo-deploy-key] }}";
+              ssh-add - <<< "${EXTRA_REPO_DEPLOY_KEY:-}";
 
               re="(ssh:\/\/|https:\/\/)?(git@)?(.*\.com)[:\/](.*)";
 
