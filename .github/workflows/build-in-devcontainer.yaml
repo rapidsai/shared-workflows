@@ -75,7 +75,7 @@ jobs:
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Copy devcontainer.json file up one level
         run: |
-          mkdir -p data;
+          mkdir -p data/empty-folder;
           echo "REPOSITORY=$(basename $(pwd))" | tee -a "${GITHUB_ENV}";
           cp repo/.devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json \
              repo/.devcontainer/devcontainer.json;
