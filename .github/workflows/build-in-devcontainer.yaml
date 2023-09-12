@@ -83,6 +83,8 @@ jobs:
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
           runCmd: |
+            set -e;
+
             cat <<EOF > ~/.config/pip/pip.conf
             [global]
             extra-index-url = https://cibuildwheel:${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}@pypi.k8s.rapids.ai/simple
@@ -91,56 +93,9 @@ jobs:
             rapids-make-${PYTHON_PACKAGE_MANAGER}-env || true;
 
             if ! grep -qE "^$" <<< "${{ inputs.extra-repo-deploy-key }}"; then
-
-              eval "$(ssh-agent -s)";
+              if ! pgrep ssh-agent >/dev/null 2>&1; then eval "$(ssh-agent -s)"; fi;
               ssh-add - <<< "${{ secrets[inputs.extra-repo-deploy-key] }}";
-
-              re="(ssh:\/\/|https:\/\/)?(git@)?(.*\.com)[:\/](.*)";
-
-              ssh-add -L | while read -r line; do
-                pub="$(cut -d' ' -f2 <<< "${line}")";
-                url="$(cut -d' ' -f3 <<< "${line}")";
-
-                if ! test -f ~/.ssh/key-${pub}; then
-                  cat <<______EOF | tee -a ~/.ssh/key-${pub} >/dev/null
-            ${line}
-            ______EOF
-                fi
-
-                if [[ ${url} =~ ${re} ]]; then
-                  host="${BASH_REMATCH[3]}";
-                  repo="${BASH_REMATCH[4]//.git/}";
-
-                  cat <<______EOF | tee -a ~/.gitconfig >/dev/null
-            [url "git@key-${pub}.${host}:${repo}"]
-              insteadOf = https://${host}/${repo}
-              insteadOf = git@${host}:${repo}
-              insteadOf = ssh://git@${host}/${repo}
-            ______EOF
-
-                  cat <<______EOF | tee -a ~/.ssh/config >/dev/null
-            Host key-${pub}.${host}
-                HostName ${host}
-                IdentityFile /home/coder/.ssh/key-${pub}
-                IdentitiesOnly yes
-            ______EOF
-
-                  unset host;
-                  unset repo;
-                fi
-
-                unset pub;
-                unset url;
-              done
-
-              unset line;
-
-              curl -s "https://api.github.com/meta" | \
-                jq -r '.ssh_keys | map("github.com \(.)") | .[]' | \
-                tee ~/.ssh/known_hosts >/dev/null
-
-              chmod 0700 ~/.ssh;
-              chmod 0600 ~/.ssh/*;
+              devcontainer-utils-init-ssh-deploy-keys || true;
             fi
 
             cd ~/"${REPOSITORY}";
