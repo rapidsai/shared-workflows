@@ -47,10 +47,9 @@ jobs:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
           fetch-depth: 0
-          path: repo
       - name: Check if repo has devcontainer
         run: |
-          if test -f repo/.devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json; then
+          if test -f .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json; then
             echo "HAS_DEVCONTAINER=true" >> "${GITHUB_ENV}";
           else
             echo "HAS_DEVCONTAINER=false" >> "${GITHUB_ENV}";
@@ -67,25 +66,16 @@ jobs:
         with:
           node-version: '16'
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Cache devcontainer build files
-        uses: actions/cache@v3
-        with:
-          key: "cuda${{ matrix.cuda }}-${{ matrix.pkgr }}-${{ matrix.arch }}-devcontainer-data"
-          path: "${{ github.workspace }}/data"
-      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Copy devcontainer.json file up one level
         run: |
-          mkdir -p "${{ github.workspace }}/data/empty-folder";
           echo "REPOSITORY=$(basename $(pwd))" | tee -a "${GITHUB_ENV}";
-          cp repo/.devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json \
-             repo/.devcontainer/devcontainer.json;
+          cp .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json \
+             .devcontainer/devcontainer.json;
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
         uses: devcontainers/ci@v0.3
         with:
           push: never
-          subFolder: repo
-          userDataFolder: "${{ github.workspace }}/data"
           env: |
             REPOSITORY=${{ env.REPOSITORY }}
             SCCACHE_REGION=${{ vars.AWS_REGION }}
