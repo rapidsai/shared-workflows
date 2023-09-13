@@ -95,7 +95,7 @@ jobs:
           runCmd: |
             set -e;
 
-            cat <<EOF > ~/.config/pip/pip.conf
+            cat <<EOF | tee -a ~/.config/pip/pip.conf >/dev/null
             [global]
             extra-index-url = https://cibuildwheel:${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}@pypi.k8s.rapids.ai/simple
             EOF
