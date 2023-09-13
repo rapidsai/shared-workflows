@@ -71,11 +71,11 @@ jobs:
         uses: actions/cache@v3
         with:
           key: "cuda${{ matrix.cuda }}-${{ matrix.pkgr }}-${{ matrix.arch }}-devcontainer-data"
-          path: data
+          path: "${{ github.workspace }}/data"
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Copy devcontainer.json file up one level
         run: |
-          mkdir -p data/empty-folder;
+          mkdir -p "${{ github.workspace }}/data/empty-folder";
           echo "REPOSITORY=$(basename $(pwd))" | tee -a "${GITHUB_ENV}";
           cp repo/.devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json \
              repo/.devcontainer/devcontainer.json;
@@ -85,7 +85,7 @@ jobs:
         with:
           push: never
           subFolder: repo
-          userDataFolder: data
+          userDataFolder: "${{ github.workspace }}/data"
           env: |
             REPOSITORY=${{ env.REPOSITORY }}
             SCCACHE_REGION=${{ vars.AWS_REGION }}
