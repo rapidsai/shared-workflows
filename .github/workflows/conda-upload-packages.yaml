@@ -42,7 +42,7 @@ jobs:
   upload:
     runs-on: ubuntu-latest
     container:
-      image: rapidsai/ci:latest
+      image: rapidsai/ci-conda:latest
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
