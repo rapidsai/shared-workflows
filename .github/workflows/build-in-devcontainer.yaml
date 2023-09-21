@@ -1,0 +1,103 @@
+on:
+  workflow_call:
+    inputs:
+      sha:
+        type: string
+      repo:
+        type: string
+      node_type:
+        type: string
+        default: "cpu8"
+      build_command:
+        type: string
+        required: true
+      # Note that this is the _name_ of a secret containing the key, not the key itself.
+      extra-repo-deploy-key:
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  actions: read
+  checks: none
+  contents: read
+  deployments: none
+  discussions: none
+  id-token: write
+  issues: none
+  packages: read
+  pages: none
+  pull-requests: read
+  repository-projects: none
+  security-events: none
+  statuses: none
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ["amd64"]
+        cuda: ["12.0"]
+        pkgr: ["conda", "pip"]
+    runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.repo }}
+          ref: ${{ inputs.sha }}
+          fetch-depth: 0
+      - name: Check if repo has devcontainer
+        run: |
+          if test -f .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json; then
+            echo "HAS_DEVCONTAINER=true" >> "${GITHUB_ENV}";
+          else
+            echo "HAS_DEVCONTAINER=false" >> "${GITHUB_ENV}";
+          fi
+      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-duration-seconds: 43200 # 12h
+      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        name: Copy devcontainer.json file up one level
+        run: |
+          echo "REPOSITORY=$(basename $(pwd))" | tee -a "${GITHUB_ENV}";
+          cp .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json \
+             .devcontainer/devcontainer.json;
+      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        name: Run build in devcontainer
+        uses: devcontainers/ci@v0.3
+        with:
+          push: never
+          env: |
+            REPOSITORY=${{ env.REPOSITORY }}
+            SCCACHE_REGION=${{ vars.AWS_REGION }}
+            AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
+            AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
+            AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
+          runCmd: |
+            set -e;
+
+            mkdir -p ~/.config/pip/;
+            cat <<EOF >> ~/.config/pip/pip.conf
+            [global]
+            extra-index-url = https://cibuildwheel:${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}@pypi.k8s.rapids.ai/simple
+            EOF
+
+            rapids-make-${PYTHON_PACKAGE_MANAGER}-env || true;
+
+            if ! grep -qE "^$" <<< "${{ inputs.extra-repo-deploy-key }}"; then
+              if ! pgrep ssh-agent >/dev/null 2>&1; then eval "$(ssh-agent -s)"; fi;
+              ssh-add - <<< "${{ secrets[inputs.extra-repo-deploy-key] }}";
+              devcontainer-utils-init-ssh-deploy-keys || true;
+            fi
+
+            cd ~/"${REPOSITORY}";
+            ${{ inputs.build_command }}
