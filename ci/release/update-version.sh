@@ -22,6 +22,6 @@ function sed_runner() {
     sed -i.bak ''"$1"'' $2 && rm -f ${2}.bak
 }
 
-for FILE in .github/workflows/*.{yaml,yml}; do
+for FILE in .github/workflows/*.yaml; do
   sed_runner "/rapidsai\/shared-action-workflows/ s/@.*/@branch-${NEXT_SHORT_TAG}/g" "${FILE}"
 done
