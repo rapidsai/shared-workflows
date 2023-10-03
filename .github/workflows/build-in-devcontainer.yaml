@@ -55,7 +55,7 @@ jobs:
             echo "HAS_DEVCONTAINER=false" >> "${GITHUB_ENV}";
           fi
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
