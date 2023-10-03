@@ -112,7 +112,7 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-duration-seconds: 43200 # 12h
       - name: checkout code repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
@@ -135,7 +135,7 @@ jobs:
           echo "EXTRA_REPO_PATH=${EXTRA_REPO_PATH}" >> $GITHUB_OUTPUT
 
       - name: checkout extra repos
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         if: ${{ inputs.extra-repo != '' }}
         with:
           repository: ${{ inputs.extra-repo }}

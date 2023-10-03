@@ -42,7 +42,7 @@ jobs:
         pkgr: ["conda", "pip"]
     runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
