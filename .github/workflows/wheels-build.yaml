@@ -106,13 +106,13 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
 
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v3
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           role-duration-seconds: 43200 # 12h
       - name: checkout code repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
@@ -135,7 +135,7 @@ jobs:
           echo "EXTRA_REPO_PATH=${EXTRA_REPO_PATH}" >> $GITHUB_OUTPUT
 
       - name: checkout extra repos
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
         if: ${{ inputs.extra-repo != '' }}
         with:
           repository: ${{ inputs.extra-repo }}

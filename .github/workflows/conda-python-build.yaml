@@ -81,12 +81,12 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v3
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           role-duration-seconds: 43200 # 12h
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
