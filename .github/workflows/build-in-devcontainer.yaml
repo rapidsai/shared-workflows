@@ -42,7 +42,7 @@ jobs:
         pkgr: ["conda", "pip"]
     runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
@@ -55,7 +55,7 @@ jobs:
             echo "HAS_DEVCONTAINER=false" >> "${GITHUB_ENV}";
           fi
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
