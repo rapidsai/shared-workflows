@@ -119,7 +119,7 @@ jobs:
       run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
 
     - name: checkout code repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v3
       with:
         repository: ${{ inputs.repo }}
         ref: ${{ inputs.sha }}

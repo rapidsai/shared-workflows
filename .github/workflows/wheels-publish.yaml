@@ -56,7 +56,7 @@ jobs:
         aws-region: ${{ vars.AWS_REGION }}
         role-duration-seconds: 43200 # 12h
     - name: checkout code repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v3
       with:
         repository: ${{ inputs.repo }}
         ref: ${{ inputs.sha }}
