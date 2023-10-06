@@ -40,7 +40,7 @@ permissions:
 
 jobs:
   upload:
-    runs-on: ubuntu-latest
+    runs-on: linux-amd64-cpu4
     container:
       image: rapidsai/ci-conda:latest
       env:
