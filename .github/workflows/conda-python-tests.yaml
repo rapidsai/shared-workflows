@@ -116,6 +116,7 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
+      options: --ulimit nofile=1000000:1000000
     steps:
       - uses: aws-actions/configure-aws-credentials@v3
         with:
