@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: get-pr-info
-        uses: rapidsai/shared-action-workflows/get-pr-info@main
+        uses: rapidsai/shared-workflows/get-pr-info@main
       - run: echo "${RAPIDS_BASE_BRANCH}"
         env:
           RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
