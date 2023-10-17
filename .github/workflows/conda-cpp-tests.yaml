@@ -12,9 +12,6 @@ on:
         type: string
       repo:
         type: string
-      extended_nightly_tests:
-        type: boolean
-        default: false
       test_script:
         type: string
         default: "ci/test_cpp.sh"
