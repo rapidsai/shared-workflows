@@ -69,7 +69,7 @@ jobs:
       - name: Get PR Info
         if: startsWith(github.ref_name, 'pull-request/')
         id: get-pr-info
-        uses: rapidsai/shared-action-workflows/get-pr-info@branch-23.12
+        uses: rapidsai/shared-actions/get-pr-info@main
       - name: Add PR Info
         if: startsWith(github.ref_name, 'pull-request/')
         run: |

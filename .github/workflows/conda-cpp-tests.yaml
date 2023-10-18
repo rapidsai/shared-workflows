@@ -12,9 +12,6 @@ on:
         type: string
       repo:
         type: string
-      extended_nightly_tests:
-        type: boolean
-        default: false
       test_script:
         type: string
         default: "ci/test_cpp.sh"
@@ -62,36 +59,24 @@ jobs:
 
           export MATRICES="
             pull-request:
-              - { CUDA_VER: '11.2.2', LINUX_VER: 'centos7', ARCH: 'amd64', PY_VER: '3.9', GPU: 'v100', DRIVER: 'earliest' }
-              - { CUDA_VER: '11.4.3', LINUX_VER: 'ubuntu20.04', ARCH: 'amd64', PY_VER: '3.9', GPU: 'v100', DRIVER: 'latest' }
+              - { CUDA_VER: '11.4.3', LINUX_VER: 'centos', ARCH: 'amd64', PY_VER: '3.9', GPU: 'v100', DRIVER: 'latest' }
               - { CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', ARCH: 'amd64', PY_VER: '3.10', GPU: 'v100', DRIVER: 'latest' }
               - { CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu22.04', ARCH: 'amd64', PY_VER: '3.10', GPU: 'v100', DRIVER: 'latest' }
               - { CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu22.04', ARCH: 'arm64', PY_VER: '3.10', GPU: 'a100', DRIVER: 'latest' }
             nightly:
-              - { CUDA_VER: '11.2.2', LINUX_VER: 'centos7', ARCH: 'amd64', PY_VER: '3.9', GPU: 'v100', DRIVER: 'earliest' }
-              - { CUDA_VER: '11.2.2', LINUX_VER: 'ubuntu20.04', ARCH: 'amd64', PY_VER: '3.9', GPU: 'v100', DRIVER: 'earliest' }
-              - { CUDA_VER: '11.2.2', LINUX_VER: 'ubuntu20.04', ARCH: 'amd64', PY_VER: '3.9', GPU: 'v100', DRIVER: 'latest' }
-              - { CUDA_VER: '11.4.3', LINUX_VER: 'ubuntu20.04', ARCH: 'amd64', PY_VER: '3.9', GPU: 'v100', DRIVER: 'earliest' }
+              - { CUDA_VER: '11.4.3', LINUX_VER: 'centos7', ARCH: 'amd64', PY_VER: '3.9', GPU: 'v100', DRIVER: 'earliest' }
               - { CUDA_VER: '11.4.3', LINUX_VER: 'ubuntu20.04', ARCH: 'amd64', PY_VER: '3.9', GPU: 'v100', DRIVER: 'latest' }
               - { CUDA_VER: '11.4.3', LINUX_VER: 'ubuntu20.04', ARCH: 'arm64', PY_VER: '3.9', GPU: 'a100', DRIVER: 'latest' }
-              - { CUDA_VER: '11.5.2', LINUX_VER: 'ubuntu20.04', ARCH: 'amd64', PY_VER: '3.10', GPU: 'v100', DRIVER: 'earliest' }
-              - { CUDA_VER: '11.5.2', LINUX_VER: 'rockylinux8', ARCH: 'amd64', PY_VER: '3.10', GPU: 'v100', DRIVER: 'earliest' }
               - { CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', ARCH: 'amd64', PY_VER: '3.10', GPU: 'v100', DRIVER: 'latest' }
               - { CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', ARCH: 'arm64', PY_VER: '3.10', GPU: 'a100', DRIVER: 'latest' }
               - { CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', ARCH: 'amd64', PY_VER: '3.10', GPU: 'v100', DRIVER: 'latest' }
               - { CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', ARCH: 'arm64', PY_VER: '3.10', GPU: 'a100', DRIVER: 'latest' }
               - { CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu22.04', ARCH: 'amd64', PY_VER: '3.10', GPU: 'v100', DRIVER: 'latest' }
               - { CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu22.04', ARCH: 'arm64', PY_VER: '3.10', GPU: 'a100', DRIVER: 'latest' }
-            ext_nightly:
-              - { CUDA_VER: '11.2.2', LINUX_VER: 'ubuntu22.04', ARCH: 'amd64', PY_VER: '3.10', GPU: 't4', DRIVER: 'latest' }
           "
 
           TEST_MATRIX=$(yq -n 'env(MATRICES) | .[strenv(BUILD_TYPE)]')
           export TEST_MATRIX
-
-          if [[ "${BUILD_TYPE}" == "nightly" && "${{inputs.extended_nightly_tests}}" == "true" ]]; then
-            TEST_MATRIX=$(yq -n 'env(TEST_MATRIX) + (env(MATRICES)|.ext_nightly)')
-          fi
 
           echo "MATRIX=$(
             yq -n -o json 'env(TEST_MATRIX)' | \
