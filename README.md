@@ -1,4 +1,4 @@
-# shared-action-workflows
+# shared-workflows
 
 ## Introduction
 
