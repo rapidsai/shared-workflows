@@ -22,6 +22,12 @@ on:
         type: string
         default: "."
 
+      # test settings
+      test-docker-options:
+        required: false
+        type: string
+        default: '-e _NOOP'
+
 defaults:
   run:
     shell: bash
@@ -97,11 +103,11 @@ jobs:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     container:
       image: rapidsai/ci-conda:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
+      options: ${{ inputs.test-docker-options }}
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
-      options: --ulimit nofile=1000000:1000000
     steps:
       - uses: aws-actions/configure-aws-credentials@v3
         with:
