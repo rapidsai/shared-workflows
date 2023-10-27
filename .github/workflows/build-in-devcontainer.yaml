@@ -71,6 +71,11 @@ jobs:
           echo "REPOSITORY=$(basename $(pwd))" | tee -a "${GITHUB_ENV}";
           cp .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json \
              .devcontainer/devcontainer.json;
+      - if: env.HAS_DEVCONTAINER == 'true' && contains(runner.name, 'rapidsai-') == false
+        name: Patch devcontainer.json for CI
+        run: |
+          jq '.updateRemoteUserUID |= false' .devcontainer/devcontainer.json > /tmp/devcontainer.json
+          mv /tmp/devcontainer.json .devcontainer/devcontainer.json
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
         uses: devcontainers/ci@v0.3
@@ -85,7 +90,7 @@ jobs:
           runCmd: |
             set -e;
 
-            mkdir -p ~/.config/pip/;
+            mkdir -m 0775 -p ~/.config/pip/;
             cat <<EOF >> ~/.config/pip/pip.conf
             [global]
             extra-index-url = https://cibuildwheel:${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}@pypi.k8s.rapids.ai/simple
