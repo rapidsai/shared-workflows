@@ -67,8 +67,9 @@ jobs:
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
       - name: Download conda C++ build artifacts
         run: |
-          rapids-download-conda-from-s3 cpp
-          rapids-extract-conda-files cpp
+          CPP_DIR=$(rapids-download-conda-from-s3 cpp)
+          EXTRACTED_DIR=$(rapids-extract-conda-files "${CPP_DIR}")
+          echo "RAPIDS_EXTRACTED_DIR=${EXTRACTED_DIR}" >> "${GITHUB_ENV}"
       - name: Get weak detection tool
         uses: actions/checkout@v3
         with:
@@ -77,4 +78,4 @@ jobs:
           path: "./tool/"
           fetch-depth: 0
       - name: Verify CUDA libraries have no public kernel entry points
-        run: python ${{ github.workspace }}/tool/detect.py -e ${{ inputs.symbol_exclusions }} /tmp/cpp_binaries/lib/
+        run: python ${{ github.workspace }}/tool/detect.py -e ${{ inputs.symbol_exclusions }} ${RAPIDS_EXTRACTED_DIR}
