@@ -100,7 +100,7 @@ jobs:
           - { CUDA_VER: '12.0.1', ARCH: 'amd64', PY_VER: '3.10',  LINUX_VER: 'rockylinux8' }
           "
 
-          if [[ ${{ inputs.build-2_28-wheels == 'true' }} ]]; then
+          if ${{ inputs.build-2_28-wheels == 'true' }}; then
               export MATRIX+=${NEW_MANYLINUX_MATRIX}
           fi
 
