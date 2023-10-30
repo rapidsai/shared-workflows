@@ -78,4 +78,4 @@ jobs:
           path: "./tool/"
           fetch-depth: 0
       - name: Verify CUDA libraries have no public kernel entry points
-        run: python ./tool/detect.py -e "${{ inputs.symbol_exclusions }}" ${RAPIDS_EXTRACTED_DIR}/lib
+        run: python ./tool/detect.py ${RAPIDS_EXTRACTED_DIR}/lib -e "${{ inputs.symbol_exclusions }}"
