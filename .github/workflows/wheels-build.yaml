@@ -45,6 +45,12 @@ on:
         type: string
         default: ''
 
+      # Build manylinux 2.28 wheels in addition to 2.17 wheels
+      build-2_28-wheels:
+        required: false
+        type: string
+        default: 'false'
+
 defaults:
   run:
     shell: bash
@@ -86,6 +92,21 @@ jobs:
           - { CUDA_VER: '12.0.1', ARCH: 'arm64', PY_VER: '3.9', LINUX_VER: 'ubuntu20.04' }
           - { CUDA_VER: '12.0.1', ARCH: 'arm64', PY_VER: '3.10', LINUX_VER: 'ubuntu20.04' }
           "
+
+          export NEW_MANYLINUX_MATRIX="
+          - { CUDA_VER: '11.8.0', ARCH: 'amd64', PY_VER: '3.9', LINUX_VER: 'rockylinux8' }
+          - { CUDA_VER: '11.8.0', ARCH: 'amd64', PY_VER: '3.10', LINUX_VER: 'rockylinux8' }
+          - { CUDA_VER: '11.8.0', ARCH: 'arm64', PY_VER: '3.9',  LINUX_VER: 'rockylinux8' }
+          - { CUDA_VER: '11.8.0', ARCH: 'arm64', PY_VER: '3.10', LINUX_VER: 'rockylinux8' }
+          - { CUDA_VER: '12.0.1', ARCH: 'amd64', PY_VER: '3.9',  LINUX_VER: 'rockylinux8' }
+          - { CUDA_VER: '12.0.1', ARCH: 'amd64', PY_VER: '3.10',  LINUX_VER: 'rockylinux8' }
+          - { CUDA_VER: '12.0.1', ARCH: 'arm64', PY_VER: '3.9', LINUX_VER: 'rockylinux8' }
+          - { CUDA_VER: '12.0.1', ARCH: 'arm64', PY_VER: '3.10', LINUX_VER: 'rockylinux8' }
+          "
+
+          if [[ ${{ inputs.build-2_28-wheels == 'true' }} ]]; then
+              export MATRIX+=${NEW_MANYLINUX_MATRIX}
+          fi
 
           echo "MATRIX=$(
             yq -n -o json 'env(MATRIX)' | \
