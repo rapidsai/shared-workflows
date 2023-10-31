@@ -1,0 +1,81 @@
+on:
+  workflow_call:
+    inputs:
+      build_type:
+        required: true
+        type: string
+      branch:
+        type: string
+      date:
+        type: string
+      sha:
+        type: string
+      repo:
+        type: string
+      enable_check_symbols:
+        default: false
+        type: boolean
+        required: false
+      symbol_exclusions:
+        type: string
+        default: "void (cub::|thrust::)"
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  actions: read
+  checks: none
+  contents: read
+  deployments: none
+  discussions: none
+  id-token: write
+  issues: none
+  packages: read
+  pages: none
+  pull-requests: read
+  repository-projects: none
+  security-events: none
+  statuses: none
+
+jobs:
+  check-symbols:
+    if: ${{ inputs.enable_check_symbols }}
+    runs-on: linux-amd64-cpu4
+    container:
+      image: rapidsai/ci-wheel:latest
+      env:
+        RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-duration-seconds: 43200 # 12h
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.repo }}
+          ref: ${{ inputs.sha }}
+          path: "./src/"
+          fetch-depth: 0
+      - name: Standardize repository information
+        run: |
+          echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
+          echo "RAPIDS_SHA=$(cd ./src && git rev-parse HEAD)" >> "${GITHUB_ENV}"
+          echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
+          echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
+      - name: Download conda C++ build artifacts
+        run: |
+          CPP_DIR=$(rapids-download-conda-from-s3 cpp)
+          EXTRACTED_DIR=$(rapids-extract-conda-files "${CPP_DIR}")
+          echo "RAPIDS_EXTRACTED_DIR=${EXTRACTED_DIR}" >> "${GITHUB_ENV}"
+      - name: Get weak detection tool
+        uses: actions/checkout@v3
+        with:
+          repository: rapidsai/detect-weak-linking
+          ref: refs/heads/main
+          path: "./tool/"
+          fetch-depth: 0
+      - name: Verify CUDA libraries have no public kernel entry points
+        run: python ./tool/detect.py ${RAPIDS_EXTRACTED_DIR}/lib -e "${{ inputs.symbol_exclusions }}"
