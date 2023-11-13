@@ -132,6 +132,8 @@ jobs:
 
     - name: Run tests
       run: ${{ inputs.script }}
+      env:
+          GH_TOKEN: ${{ github.token }}
 
     - name: Upload additional artifacts
       if: "!cancelled()"
