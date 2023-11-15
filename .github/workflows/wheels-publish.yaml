@@ -71,5 +71,7 @@ jobs:
         date: ${{ inputs.date }}
         sha: ${{ inputs.sha }}
 
-    - name: Download wheels from downloads.rapids.ai and publish to internal PyPI
-      run: rapids-twine "${{ inputs.package-name }}"
+    - name: Download wheels from downloads.rapids.ai and publish to anaconda repository
+      run: rapids-wheels-anaconda "${{ inputs.package-name }}"
+      env:
+        RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
