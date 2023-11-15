@@ -93,7 +93,7 @@ jobs:
             mkdir -m 0775 -p ~/.config/pip/;
             cat <<EOF >> ~/.config/pip/pip.conf
             [global]
-            extra-index-url = https://cibuildwheel:${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}@pypi.k8s.rapids.ai/simple
+            extra-index-url = https://pypi.anaconda.org/rapidsai-wheels-nightly/simple
             EOF
 
             rapids-make-${PYTHON_PACKAGE_MANAGER}-env || true;
