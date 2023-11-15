@@ -82,3 +82,5 @@ jobs:
           echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
       - name: Run script
         run: ${{ inputs.run_script }}
+        env:
+          GH_TOKEN: ${{ github.token }}
