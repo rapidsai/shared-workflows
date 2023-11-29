@@ -111,9 +111,6 @@ jobs:
     - name: Run nvidia-smi to make sure GPU is working
       run: nvidia-smi
 
-    - name: Install private index credentials in cibuildwheel container
-      run: printf 'machine pypi.k8s.rapids.ai\n\tlogin cibuildwheel\n\tpassword ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}\n' > ~/.netrc
-
     - name: checkout code repo
       uses: actions/checkout@v3
       with:

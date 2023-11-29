@@ -46,9 +46,6 @@ jobs:
       image: "rapidsai/ci-wheel:cuda12.0.1-centos7-py3.10"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
-        TWINE_USERNAME: cibuildwheel
-        TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_CI_PASSWORD }}
-        TWINE_REPOSITORY_URL: "https://pypi.k8s.rapids.ai/simple/"
     steps:
     - uses: aws-actions/configure-aws-credentials@v3
       with:
