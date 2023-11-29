@@ -90,7 +90,7 @@ jobs:
           runCmd: |
             set -e;
 
-            mkdir -m 0775 -p ~/.config/pip/;
+            mkdir -p ~/.config/pip/;
             cat <<EOF >> ~/.config/pip/pip.conf
             [global]
             extra-index-url = https://pypi.anaconda.org/rapidsai-wheels-nightly/simple
