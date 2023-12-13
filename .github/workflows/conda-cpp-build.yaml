@@ -54,9 +54,6 @@ jobs:
 
           export MATRIX="
           - { CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', ARCH: 'amd64', PY_VER: '3.10' }
-          - { CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', ARCH: 'arm64', PY_VER: '3.10' }
-          - { CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu22.04', ARCH: 'amd64', PY_VER: '3.10' }
-          - { CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu22.04', ARCH: 'arm64', PY_VER: '3.10' }
           "
 
           echo "MATRIX=$(
@@ -78,11 +75,6 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}
     steps:
-      - uses: aws-actions/configure-aws-credentials@v3
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-          role-duration-seconds: 43200 # 12h
       - uses: actions/checkout@v3
         with:
           repository: ${{ inputs.repo }}
@@ -94,10 +86,62 @@ jobs:
           echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
           echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
+          # "cpp-build" prefix is necessary because all jobs get bundled as part of one workflow called e.g. "build" or "pr"
+          echo "RAPIDS_ARTIFACT_PREFIX=cpp-build-${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-${{ matrix.ARCH }}-${{ matrix.PY_VER }}" >> "${GITHUB_ENV}"
       - name: C++ build
         run: ${{ inputs.build_script }}
         env:
           GH_TOKEN: ${{ github.token }}
-      - name: Upload additional artifacts
+      - name: (testing) generate artifacts
+        run: |
+          TEST_DIR="${{ github.workspace }}/test-artifacts"
+          echo "TEST_DIR=${TEST_DIR}" >> "${GITHUB_ENV}"
+          mkdir -p "${TEST_DIR}"
+          head -c 1000000 /dev/urandom     > "${TEST_DIR}/1mb.bin"
+          head -c 10000000 /dev/urandom    > "${TEST_DIR}/10mb.bin"
+          head -c 100000000 /dev/urandom   > "${TEST_DIR}/100mb.bin"
+          head -c 1000000000 /dev/urandom  > "${TEST_DIR}/1gb.bin"
+          head -c 10000000000 /dev/urandom > "${TEST_DIR}/10gb.bin"
+      - name: (testing) upload 1MB artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: "${{ env.TEST_DIR }}/1mb.bin"
+          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-1mb"
+          retention-days: 1
+      - name: (testing) upload 10MB artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: "${{ env.TEST_DIR }}/10mb.bin"
+          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-10mb"
+          retention-days: 1
+      - name: (testing) upload 100MB artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: "${{ env.TEST_DIR }}/100mb.bin"
+          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-100mb"
+          retention-days: 1
+      - name: (testing) upload 1GB artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: "${{ env.TEST_DIR }}/1gb.bin"
+          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-1gb"
+          retention-days: 1
+      - name: (testing) upload 10GB artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: "${{ env.TEST_DIR }}/10gb.bin"
+          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-10gb"
+          retention-days: 1
+      - name: (testing) upload bundle of test artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          path: "${{ env.TEST_DIR }}/*.bin"
+          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-bundle"
+          retention-days: 1
+      - name: (testing) Upload real build artifacts
         if: "!cancelled()"
-        run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)
+        uses: actions/upload-artifact@v3
+        with:
+          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}"
+          path: "${{ env.RAPIDS_ARTIFACTS_DIR }}"/
+          retention-days: 1
