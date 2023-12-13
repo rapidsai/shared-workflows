@@ -99,6 +99,7 @@ jobs:
       #     GH_TOKEN: ${{ github.token }}
       - name: (testing) generate artifacts
         run: |
+          mkdir -p "${{ env.RAPIDS_ARTIFACTS_DIR }}"
           head -c 1000000 /dev/urandom     > "${{ env.RAPIDS_ARTIFACTS_DIR }}/1mb.bin"
           head -c 10000000 /dev/urandom    > "${{ env.RAPIDS_ARTIFACTS_DIR }}/10mb.bin"
           head -c 100000000 /dev/urandom   > "${{ env.RAPIDS_ARTIFACTS_DIR }}/100mb.bin"
