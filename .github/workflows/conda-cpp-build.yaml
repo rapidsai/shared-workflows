@@ -93,10 +93,10 @@ jobs:
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
           # "cpp-build" prefix is necessary because all jobs get bundled as part of one workflow called e.g. "build" or "pr"
           echo "RAPIDS_ARTIFACT_PREFIX=cpp-build-${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-${{ matrix.ARCH }}-${{ matrix.PY_VER }}" >> "${GITHUB_ENV}"
-      - name: C++ build
-        run: ${{ inputs.build_script }}
-        env:
-          GH_TOKEN: ${{ github.token }}
+      # - name: C++ build
+      #   run: ${{ inputs.build_script }}
+      #   env:
+      #     GH_TOKEN: ${{ github.token }}
       - name: (testing) generate artifacts
         run: |
           TEST_DIR="${{ github.workspace }}/test-artifacts"
@@ -155,7 +155,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-bundle"
-          path: "${{ env.TEST_DIR }}/*.bin"
+          path: "${{ env.TEST_DIR }}/"
           retention-days: 1
           if-no-files-found: error
       - name: (testing) Upload real build artifacts
