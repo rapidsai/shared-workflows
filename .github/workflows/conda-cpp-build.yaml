@@ -99,21 +99,21 @@ jobs:
       #     GH_TOKEN: ${{ github.token }}
       - name: (testing) generate artifacts
         run: |
-          mkdir -p "${{ env.RAPIDS_ARTIFACTS_DIR }}"
-          head -c 1000000 /dev/urandom     > "${{ env.RAPIDS_ARTIFACTS_DIR }}/1mb.bin"
-          head -c 10000000 /dev/urandom    > "${{ env.RAPIDS_ARTIFACTS_DIR }}/10mb.bin"
-          head -c 100000000 /dev/urandom   > "${{ env.RAPIDS_ARTIFACTS_DIR }}/100mb.bin"
-          head -c 1000000000 /dev/urandom  > "${{ env.RAPIDS_ARTIFACTS_DIR }}/1gb.bin"
-          head -c 10000000000 /dev/urandom > "${{ env.RAPIDS_ARTIFACTS_DIR }}/10gb.bin"
+          mkdir -p ./artifacts
+          head -c 1000000 /dev/urandom     > "./artifacts/1mb.bin"
+          head -c 10000000 /dev/urandom    > "./artifacts10mb.bin"
+          head -c 100000000 /dev/urandom   > "./artifacts/100mb.bin"
+          head -c 1000000000 /dev/urandom  > "./artifacts/1gb.bin"
+          head -c 10000000000 /dev/urandom > "./artifacts/10gb.bin"
           ls -alF .
           echo "-----"
-          ls -alF "${{ env.RAPIDS_ARTIFACTS_DIR }}"
+          ls -alF "./artifacts"
       - name: (testing) upload 1MB artifact
         if: "!cancelled()"
         uses: actions/upload-artifact@v3
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-1mb"
-          path: "${{ env.RAPIDS_ARTIFACTS_DIR }}/1mb.bin"
+          path: "artifacts/1mb.bin"
           retention-days: 1
           if-no-files-found: error
       - name: (testing) upload 10MB artifact
@@ -121,7 +121,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-10mb"
-          path: "${{ env.RAPIDS_ARTIFACTS_DIR }}/10mb.bin"
+          path: "artifacts/10mb.bin"
           retention-days: 1
           if-no-files-found: error
       - name: (testing) upload 100MB artifact
@@ -129,7 +129,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-100mb"
-          path: "${{ env.RAPIDS_ARTIFACTS_DIR }}/100mb.bin"
+          path: "artifacts/100mb.bin"
           retention-days: 1
           if-no-files-found: error
       - name: (testing) upload 1GB artifact
@@ -137,7 +137,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-1gb"
-          path: "${{ env.RAPIDS_ARTIFACTS_DIR }}/1gb.bin"
+          path: "artifacts/1gb.bin"
           retention-days: 1
           if-no-files-found: error
       - name: (testing) upload 10GB artifact
@@ -145,7 +145,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-10gb"
-          path: "${{ env.RAPIDS_ARTIFACTS_DIR }}/10gb.bin"
+          path: "artifacts/10gb.bin"
           retention-days: 1
           if-no-files-found: error
       - name: (testing) upload bundle of test artifacts
@@ -153,7 +153,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-bundle"
-          path: "${{ env.RAPIDS_ARTIFACTS_DIR }}/"
+          path: "artifacts/"
           retention-days: 1
           if-no-files-found: error
       - name: (testing) Upload real build artifacts
@@ -161,6 +161,6 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}"
-          path: "${{ env.RAPIDS_ARTIFACTS_DIR }}/"
+          path: "artifacts/"
           retention-days: 1
           if-no-files-found: error
