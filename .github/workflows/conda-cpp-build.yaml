@@ -107,6 +107,9 @@ jobs:
           head -c 100000000 /dev/urandom   > "${TEST_DIR}/100mb.bin"
           head -c 1000000000 /dev/urandom  > "${TEST_DIR}/1gb.bin"
           head -c 10000000000 /dev/urandom > "${TEST_DIR}/10gb.bin"
+          ls -alF .
+          echo "-----"
+          ls -alF "${TEST_DIR}"
       - name: (testing) upload 1MB artifact
         if: "!cancelled()"
         uses: actions/upload-artifact@v3
@@ -114,6 +117,7 @@ jobs:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-1mb"
           path: "${{ env.TEST_DIR }}/1mb.bin"
           retention-days: 1
+          if-no-files-found: error
       - name: (testing) upload 10MB artifact
         if: "!cancelled()"
         uses: actions/upload-artifact@v3
@@ -121,6 +125,7 @@ jobs:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-10mb"
           path: "${{ env.TEST_DIR }}/10mb.bin"
           retention-days: 1
+          if-no-files-found: error
       - name: (testing) upload 100MB artifact
         if: "!cancelled()"
         uses: actions/upload-artifact@v3
@@ -128,6 +133,7 @@ jobs:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-100mb"
           path: "${{ env.TEST_DIR }}/100mb.bin"
           retention-days: 1
+          if-no-files-found: error
       - name: (testing) upload 1GB artifact
         if: "!cancelled()"
         uses: actions/upload-artifact@v3
@@ -135,6 +141,7 @@ jobs:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-1gb"
           path: "${{ env.TEST_DIR }}/1gb.bin"
           retention-days: 1
+          if-no-files-found: error
       - name: (testing) upload 10GB artifact
         if: "!cancelled()"
         uses: actions/upload-artifact@v3
@@ -142,6 +149,7 @@ jobs:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-10gb"
           path: "${{ env.TEST_DIR }}/10gb.bin"
           retention-days: 1
+          if-no-files-found: error
       - name: (testing) upload bundle of test artifacts
         if: "!cancelled()"
         uses: actions/upload-artifact@v3
@@ -149,6 +157,7 @@ jobs:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-bundle"
           path: "${{ env.TEST_DIR }}/*.bin"
           retention-days: 1
+          if-no-files-found: error
       - name: (testing) Upload real build artifacts
         if: "!cancelled()"
         uses: actions/upload-artifact@v3
@@ -156,3 +165,4 @@ jobs:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}"
           path: "${{ env.RAPIDS_ARTIFACTS_DIR }}/"
           retention-days: 1
+          if-no-files-found: error
