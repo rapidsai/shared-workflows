@@ -149,5 +149,5 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}"
-          path: "${{ env.RAPIDS_ARTIFACTS_DIR }}"/
+          path: "${{ env.RAPIDS_ARTIFACTS_DIR }}/"
           retention-days: 1
