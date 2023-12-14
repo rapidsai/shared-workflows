@@ -177,7 +177,7 @@ jobs:
       - name: (testing) Upload real build artifacts
         if: "!cancelled()"
         uses: actions/upload-artifact@v4-beta
-        with
+        with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}"
           path: "artifacts/"
           retention-days: 1
