@@ -72,7 +72,7 @@ jobs:
     container:
       image: rapidsai/ci-conda:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}
     steps:
@@ -113,7 +113,7 @@ jobs:
           ls -alF "./artifacts"
       - name: (testing) upload 1MB artifact
         if: "!cancelled()"
-        uses: actions/upload-artifact@v4-beta
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-1mb"
           path: "artifacts/1mb.bin"
@@ -122,7 +122,7 @@ jobs:
           compression-level: 0
       - name: (testing) upload 10MB artifact
         if: "!cancelled()"
-        uses: actions/upload-artifact@v4-beta
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-10mb"
           path: "artifacts/10mb.bin"
@@ -131,7 +131,7 @@ jobs:
           compression-level: 0
       - name: (testing) upload 100MB artifact
         if: "!cancelled()"
-        uses: actions/upload-artifact@v4-beta
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-100mb"
           path: "artifacts/100mb.bin"
@@ -140,7 +140,7 @@ jobs:
           compression-level: 0
       - name: (testing) upload 500MB artifact
         if: "!cancelled()"
-        uses: actions/upload-artifact@v4-beta
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-500mb"
           path: "artifacts/500mb.bin"
@@ -149,7 +149,7 @@ jobs:
           compression-level: 0
       - name: (testing) upload 1GB artifact
         if: "!cancelled()"
-        uses: actions/upload-artifact@v4-beta
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-1gb"
           path: "artifacts/1gb.bin"
@@ -158,7 +158,7 @@ jobs:
           compression-level: 0
       - name: (testing) upload 2GB artifact
         if: "!cancelled()"
-        uses: actions/upload-artifact@v4-beta
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-2gb"
           path: "artifacts/2gb.bin"
@@ -167,7 +167,7 @@ jobs:
           compression-level: 0
       - name: (testing) upload 5GB artifact
         if: "!cancelled()"
-        uses: actions/upload-artifact@v4-beta
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-5gb"
           path: "artifacts/5gb.bin"
@@ -176,7 +176,7 @@ jobs:
           compression-level: 0
       - name: (testing) upload bundle of test artifacts
         if: "!cancelled()"
-        uses: actions/upload-artifact@v4-beta
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-bundle"
           path: "artifacts/"
@@ -184,74 +184,72 @@ jobs:
           if-no-files-found: error
           compression-level: 0
       - name: (testing) download 1MB artifact
-        run: |
-          gh run download \
-            ${{ github.run_id }} \
-            --dir /tmp/artifacts \
-            --name "${{ env.RAPIDS_ARTIFACT_PREFIX }}-1mb" \
-            --repo ${{ github.repository }}
-
-          ls -alF /tmp/artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-1mb"
+          path: /tmp/artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.run_id }}
       - name: (testing) download 10MB artifact
-        run: |
-          gh run download \
-            ${{ github.run_id }} \
-            --dir /tmp/artifacts \
-            --name "${{ env.RAPIDS_ARTIFACT_PREFIX }}-10mb" \
-            --repo ${{ github.repository }}
-
-          ls -alF /tmp/artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-10mb"
+          path: /tmp/artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.run_id }}
       - name: (testing) download 100MB artifact
-        run: |
-          gh run download \
-            ${{ github.run_id }} \
-            --dir /tmp/artifacts \
-            --name "${{ env.RAPIDS_ARTIFACT_PREFIX }}-100mb" \
-            --repo ${{ github.repository }}
-
-          ls -alF /tmp/artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-100mb"
+          path: /tmp/artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.run_id }}
       - name: (testing) download 500MB artifact
-        run: |
-          gh run download \
-            ${{ github.run_id }} \
-            --dir /tmp/artifacts \
-            --name "${{ env.RAPIDS_ARTIFACT_PREFIX }}-500mb" \
-            --repo ${{ github.repository }}
-
-          ls -alF /tmp/artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-500mb"
+          path: /tmp/artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.run_id }}
       - name: (testing) download 1GB artifact
-        run: |
-          gh run download \
-            ${{ github.run_id }} \
-            --dir /tmp/artifacts \
-            --name "${{ env.RAPIDS_ARTIFACT_PREFIX }}-1gb" \
-            --repo ${{ github.repository }}
-
-          ls -alF /tmp/artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-1gb"
+          path: /tmp/artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.run_id }}
       - name: (testing) download 2GB artifact
-        run: |
-          gh run download \
-            ${{ github.run_id }} \
-            --dir /tmp/artifacts \
-            --name "${{ env.RAPIDS_ARTIFACT_PREFIX }}-2gb" \
-            --repo ${{ github.repository }}
-
-          ls -alF /tmp/artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-2gb"
+          path: /tmp/artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.run_id }}
       - name: (testing) download 5GB artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-5gb"
+          path: /tmp/artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.run_id }}
+      - name: (testing) check files are actually there
         run: |
-          gh run download \
-            ${{ github.run_id }} \
-            --dir /tmp/artifacts \
-            --name "${{ env.RAPIDS_ARTIFACT_PREFIX }}-5gb" \
-            --repo ${{ github.repository }}
-
           ls -alF /tmp/artifacts
       - name: (testing) download bundle of test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-bundle"
+          path: /tmp/all-artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.run_id }}
+      - name: (testing) check files from bundle are actually there
         run: |
-          gh run download \
-            ${{ github.run_id }} \
-            --dir /tmp/all-artifacts \
-            --name "${{ env.RAPIDS_ARTIFACT_PREFIX }}-bundle" \
-            --repo ${{ github.repository }}
-
           ls -alF /tmp/all-artifacts
