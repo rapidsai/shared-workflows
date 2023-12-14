@@ -101,12 +101,12 @@ jobs:
         run: |
           mkdir -p ./artifacts
           head -c 1000000 /dev/urandom    > "./artifacts/1mb.bin"
-          head -c 10000000 /dev/urandom   > "./artifacts/10mb.bin"
-          head -c 100000000 /dev/urandom  > "./artifacts/100mb.bin"
-          head -c 500000000 /dev/urandom  > "./artifacts/500mb.bin"
-          head -c 1000000000 /dev/urandom > "./artifacts/1gb.bin"
-          head -c 2000000000 /dev/urandom > "./artifacts/2gb.bin"
-          head -c 5000000000 /dev/urandom > "./artifacts/5gb.bin"
+          # head -c 10000000 /dev/urandom   > "./artifacts/10mb.bin"
+          # head -c 100000000 /dev/urandom  > "./artifacts/100mb.bin"
+          # head -c 500000000 /dev/urandom  > "./artifacts/500mb.bin"
+          # head -c 1000000000 /dev/urandom > "./artifacts/1gb.bin"
+          # head -c 2000000000 /dev/urandom > "./artifacts/2gb.bin"
+          # head -c 5000000000 /dev/urandom > "./artifacts/5gb.bin"
           ls -alF .
           echo "-----"
           ls -alF "./artifacts"
@@ -118,76 +118,76 @@ jobs:
           path: "artifacts/1mb.bin"
           retention-days: 1
           if-no-files-found: error
-          compression-level: 6
-      - name: (testing) upload 10MB artifact
-        if: "!cancelled()"
-        uses: actions/upload-artifact@v4-beta
-        with:
-          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-10mb"
-          path: "artifacts/10mb.bin"
-          retention-days: 1
-          if-no-files-found: error
-          compression-level: 6
-      - name: (testing) upload 100MB artifact
-        if: "!cancelled()"
-        uses: actions/upload-artifact@v4-beta
-        with:
-          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-100mb"
-          path: "artifacts/100mb.bin"
-          retention-days: 1
-          if-no-files-found: error
-          compression-level: 6
-      - name: (testing) upload 500MB artifact
-        if: "!cancelled()"
-        uses: actions/upload-artifact@v4-beta
-        with:
-          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-500mb"
-          path: "artifacts/500mb.bin"
-          retention-days: 1
-          if-no-files-found: error
-          compression-level: 6
-      - name: (testing) upload 1GB artifact
-        if: "!cancelled()"
-        uses: actions/upload-artifact@v4-beta
-        with:
-          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-1gb"
-          path: "artifacts/1gb.bin"
-          retention-days: 1
-          if-no-files-found: error
-          compression-level: 6
-      - name: (testing) upload 2GB artifact
-        if: "!cancelled()"
-        uses: actions/upload-artifact@v4-beta
-        with:
-          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-2gb"
-          path: "artifacts/2gb.bin"
-          retention-days: 1
-          if-no-files-found: error
-          compression-level: 6
-      - name: (testing) upload 5GB artifact
-        if: "!cancelled()"
-        uses: actions/upload-artifact@v4-beta
-        with:
-          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-5gb"
-          path: "artifacts/5gb.bin"
-          retention-days: 1
-          if-no-files-found: error
-          compression-level: 6
-      - name: (testing) upload bundle of test artifacts
-        if: "!cancelled()"
-        uses: actions/upload-artifact@v4-beta
-        with:
-          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-bundle"
-          path: "artifacts/"
-          retention-days: 1
-          if-no-files-found: error
-          compression-level: 6
-      - name: (testing) Upload real build artifacts
-        if: "!cancelled()"
-        uses: actions/upload-artifact@v4-beta
-        with:
-          name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}"
-          path: "artifacts/"
-          retention-days: 1
-          if-no-files-found: error
-          compression-level: 6
+          compression-level: 0
+      # - name: (testing) upload 10MB artifact
+      #   if: "!cancelled()"
+      #   uses: actions/upload-artifact@v4-beta
+      #   with:
+      #     name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-10mb"
+      #     path: "artifacts/10mb.bin"
+      #     retention-days: 1
+      #     if-no-files-found: error
+      #     compression-level: 0
+      # - name: (testing) upload 100MB artifact
+      #   if: "!cancelled()"
+      #   uses: actions/upload-artifact@v4-beta
+      #   with:
+      #     name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-100mb"
+      #     path: "artifacts/100mb.bin"
+      #     retention-days: 1
+      #     if-no-files-found: error
+      #     compression-level: 0
+      # - name: (testing) upload 500MB artifact
+      #   if: "!cancelled()"
+      #   uses: actions/upload-artifact@v4-beta
+      #   with:
+      #     name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-500mb"
+      #     path: "artifacts/500mb.bin"
+      #     retention-days: 1
+      #     if-no-files-found: error
+      #     compression-level: 0
+      # - name: (testing) upload 1GB artifact
+      #   if: "!cancelled()"
+      #   uses: actions/upload-artifact@v4-beta
+      #   with:
+      #     name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-1gb"
+      #     path: "artifacts/1gb.bin"
+      #     retention-days: 1
+      #     if-no-files-found: error
+      #     compression-level: 0
+      # - name: (testing) upload 2GB artifact
+      #   if: "!cancelled()"
+      #   uses: actions/upload-artifact@v4-beta
+      #   with:
+      #     name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-2gb"
+      #     path: "artifacts/2gb.bin"
+      #     retention-days: 1
+      #     if-no-files-found: error
+      #     compression-level: 0
+      # - name: (testing) upload 5GB artifact
+      #   if: "!cancelled()"
+      #   uses: actions/upload-artifact@v4-beta
+      #   with:
+      #     name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-5gb"
+      #     path: "artifacts/5gb.bin"
+      #     retention-days: 1
+      #     if-no-files-found: error
+      #     compression-level: 0
+      # - name: (testing) upload bundle of test artifacts
+      #   if: "!cancelled()"
+      #   uses: actions/upload-artifact@v4-beta
+      #   with:
+      #     name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-bundle"
+      #     path: "artifacts/"
+      #     retention-days: 1
+      #     if-no-files-found: error
+      #     compression-level: 0
+      - name: (testing) download 1MB artifact
+        run: |
+          gh run download \
+            ${{ github.run_id }} \
+            --dir /tmp/artifacts \
+            --name "${{ env.RAPIDS_ARTIFACT_PREFIX }}-1mb" \
+            --repo ${{ github.repository }}
+
+          ls -alF /tmp/artifacts
