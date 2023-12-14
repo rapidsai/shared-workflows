@@ -118,6 +118,7 @@ jobs:
           path: "artifacts/1mb.bin"
           retention-days: 1
           if-no-files-found: error
+          compression-level: 1
       - name: (testing) upload 10MB artifact
         if: "!cancelled()"
         uses: actions/upload-artifact@v4-beta
@@ -126,6 +127,7 @@ jobs:
           path: "artifacts/10mb.bin"
           retention-days: 1
           if-no-files-found: error
+          compression-level: 1
       - name: (testing) upload 100MB artifact
         if: "!cancelled()"
         uses: actions/upload-artifact@v4-beta
@@ -134,6 +136,7 @@ jobs:
           path: "artifacts/100mb.bin"
           retention-days: 1
           if-no-files-found: error
+          compression-level: 1
       - name: (testing) upload 500MB artifact
         if: "!cancelled()"
         uses: actions/upload-artifact@v4-beta
@@ -142,6 +145,7 @@ jobs:
           path: "artifacts/500mb.bin"
           retention-days: 1
           if-no-files-found: error
+          compression-level: 1
       - name: (testing) upload 1GB artifact
         if: "!cancelled()"
         uses: actions/upload-artifact@v4-beta
@@ -150,6 +154,7 @@ jobs:
           path: "artifacts/1gb.bin"
           retention-days: 1
           if-no-files-found: error
+          compression-level: 1
       - name: (testing) upload 2GB artifact
         if: "!cancelled()"
         uses: actions/upload-artifact@v4-beta
@@ -158,6 +163,7 @@ jobs:
           path: "artifacts/2gb.bin"
           retention-days: 1
           if-no-files-found: error
+          compression-level: 1
       - name: (testing) upload 5GB artifact
         if: "!cancelled()"
         uses: actions/upload-artifact@v4-beta
@@ -166,6 +172,7 @@ jobs:
           path: "artifacts/5gb.bin"
           retention-days: 1
           if-no-files-found: error
+          compression-level: 1
       - name: (testing) upload bundle of test artifacts
         if: "!cancelled()"
         uses: actions/upload-artifact@v4-beta
@@ -174,6 +181,7 @@ jobs:
           path: "artifacts/"
           retention-days: 1
           if-no-files-found: error
+          compression-level: 1
       - name: (testing) Upload real build artifacts
         if: "!cancelled()"
         uses: actions/upload-artifact@v4-beta
@@ -182,3 +190,4 @@ jobs:
           path: "artifacts/"
           retention-days: 1
           if-no-files-found: error
+          compression-level: 1
