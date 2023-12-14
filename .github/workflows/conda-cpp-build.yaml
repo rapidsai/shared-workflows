@@ -112,7 +112,7 @@ jobs:
           ls -alF "./artifacts"
       - name: (testing) upload 1MB artifact
         if: "!cancelled()"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4-beta
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-1mb"
           path: "artifacts/1mb.bin"
@@ -120,7 +120,7 @@ jobs:
           if-no-files-found: error
       - name: (testing) upload 10MB artifact
         if: "!cancelled()"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4-beta
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-10mb"
           path: "artifacts/10mb.bin"
@@ -128,7 +128,7 @@ jobs:
           if-no-files-found: error
       - name: (testing) upload 100MB artifact
         if: "!cancelled()"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4-beta
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-100mb"
           path: "artifacts/100mb.bin"
@@ -136,7 +136,7 @@ jobs:
           if-no-files-found: error
       - name: (testing) upload 500MB artifact
         if: "!cancelled()"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4-beta
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-500mb"
           path: "artifacts/500mb.bin"
@@ -144,7 +144,7 @@ jobs:
           if-no-files-found: error
       - name: (testing) upload 1GB artifact
         if: "!cancelled()"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4-beta
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-1gb"
           path: "artifacts/1gb.bin"
@@ -152,7 +152,7 @@ jobs:
           if-no-files-found: error
       - name: (testing) upload 2GB artifact
         if: "!cancelled()"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4-beta
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-2gb"
           path: "artifacts/2gb.bin"
@@ -160,7 +160,7 @@ jobs:
           if-no-files-found: error
       - name: (testing) upload 5GB artifact
         if: "!cancelled()"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4-beta
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-5gb"
           path: "artifacts/5gb.bin"
@@ -168,7 +168,7 @@ jobs:
           if-no-files-found: error
       - name: (testing) upload bundle of test artifacts
         if: "!cancelled()"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4-beta
         with:
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}-bundle"
           path: "artifacts/"
@@ -176,8 +176,8 @@ jobs:
           if-no-files-found: error
       - name: (testing) Upload real build artifacts
         if: "!cancelled()"
-        uses: actions/upload-artifact@v3
-        with:
+        uses: actions/upload-artifact@v4-beta
+        with
           name: "${{ env.RAPIDS_ARTIFACT_PREFIX }}"
           path: "artifacts/"
           retention-days: 1
