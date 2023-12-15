@@ -100,7 +100,9 @@ jobs:
                     itemId: "${{ inputs.ITEM_PROJECT_ID }}"
                     fieldId: "${{ inputs.ITERATION_FIELD_ID }}"
                   value: {
-                    iterationId: "${{ steps.get_iteration_option_id.outputs.ITERATION_OPTION_ID }}"}
+                    iterationId: "${{ steps.get_iteration_option_id.outputs.ITERATION_OPTION_ID }}"
+                    }
+                  }
                 ) {
                     projectV2Item {
                     id
