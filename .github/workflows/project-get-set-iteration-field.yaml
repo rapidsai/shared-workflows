@@ -1,0 +1,110 @@
+name: Project - Get Item ID Within the Project
+# This workflow gets the project-specific ID for an item within a project
+# All downstream queries and mutations of fields within the project require this ID
+
+on:
+  workflow_call:
+    inputs:
+      PROJECT_ID:
+        description: "The Project's graphQL node ID"
+        type: string
+        required: true
+
+      ITERATION_FIELD_ID:
+        description: "The graphQL node ID of the iteration field"
+        type: string
+        required: true
+        
+      ITEM_PROJECT_ID:
+        description: "The issue or PR's graphQL node ID"
+        type: string
+        required: true
+
+      # Optional fields, used if UPDATE_ITEM is set to true
+      UPDATE_ITEM:
+        description: "Whether to update the item's iteration field"
+        default: false
+        type: boolean
+
+      ITEM_NODE_ID:
+        description: "The issue or PR's graphQL node ID"
+        default: null
+        type: string
+
+      UPDATE_LINKED_ISSUES:
+        description: "Whether to update the linked issues' iteration fields"
+        default: false
+        type: boolean
+
+    secrets:
+      PROJECT_MANAGEMENT_SECRET:
+        description: "Project Access Token"
+        required: true
+
+    outputs:
+      ITERATION_OPTION_ID:
+        value: ${{ jobs.get_set_iteration_option_id.outputs.ITERATION_OPTION_ID }}
+        description: "The iteration option ID"
+
+jobs:
+  get_set_iteration_option_id:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      ITERATION_OPTION_ID: ${{ steps.get_iteration_option_id.outputs.ITERATION_OPTION_ID }}
+
+    steps:
+      - name: Get Iteration Option ID
+        id: get_iteration_option_id
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGEMENT_SECRET }}
+        run: |
+            # Get current sprint iteration id
+            # The current sprint is always the first iteration in the list
+            gh api graphql -f query='
+            query {
+                node(id: "${{ inputs.PROJECT_ID }}") {
+                    ... on ProjectV2 {
+                    id
+                    field(name: "Sprint") {
+                        ... on ProjectV2IterationField {
+                        id
+                        name
+                        configuration {
+                            iterations {
+                            id
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }' > sprint_option_data.json
+            current_sprint_option_id=$(jq -r '.data.node.field.configuration.iterations[0].id' sprint_option_data.json)
+            echo "ITERATION_OPTION_ID=$current_sprint_option_id" >> "$GITHUB_OUTPUT"
+
+      - name: Update item iteration field
+        id: update_item_iteration_field
+        if: ${{ inputs.UPDATE_ITEM == true }}
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGEMENT_SECRET }}
+        run: |
+            # Set the sprint based on the query above
+            # This overwrites whatever was in it before
+            gh api graphql -f query='
+              mutation {
+                updateProjectV2ItemFieldValue(
+                  input: {
+                    projectId: "${{ inputs.PROJECT_ID }}"
+                    itemId: "${{ inputs.ITEM_PROJECT_ID }}"
+                    fieldId: "${{ inputs.ITERATION_FIELD_ID }}"
+                  value: {
+                    iterationId: "${{ steps.get_iteration_option_id.outputs.ITERATION_OPTION_ID }}"}
+                ) {
+                    projectV2Item {
+                    id
+                    }
+                }
+                }'
+        continue-on-error: true
