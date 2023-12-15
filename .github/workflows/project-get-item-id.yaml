@@ -27,8 +27,6 @@ on:
 
 jobs:
   get_items_project_id:
-    permissions:
-      contents: read
     runs-on: ubuntu-latest
     outputs:
       ITEM_PROJECT_ID: ${{ steps.get_item_id.outputs.ITEM_PROJECT_ID }}
@@ -77,5 +75,6 @@ jobs:
             item_project_id=$(jq -r '.data.node.projectItems.nodes[] |
                            select(.project.id == "${{ inputs.PROJECT_ID }}") |
                            .id' project_data.json)
-            echo "ITEM_PROJECT_ID=$item_project_id" >> "$GITHUB_OUTPUT"
+            cat project_data.json
+            echo "ITEM_PROJECT_ID=$item_project_id" >> $GITHUB_OUTPUT
         continue-on-error: true
