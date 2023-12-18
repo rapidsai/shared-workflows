@@ -43,6 +43,10 @@ jobs:
     runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
     steps:
       - uses: actions/checkout@v3
+        env:
+          GIT_TRACE_PACKET: 1
+          GIT_TRACE: 1
+          GIT_CURL_VERBOSE: 1
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
