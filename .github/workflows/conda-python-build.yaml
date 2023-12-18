@@ -87,6 +87,10 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-duration-seconds: 43200 # 12h
       - uses: actions/checkout@v3
+        env:
+          GIT_TRACE_PACKET: 1
+          GIT_TRACE: 1
+          GIT_CURL_VERBOSE: 1
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
