@@ -37,6 +37,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        env:
+          GIT_TRACE_PACKET: 1
+          GIT_TRACE: 1
+          GIT_CURL_VERBOSE: 1
       - name: Get PR Info
         id: get-pr-info
         uses: rapidsai/shared-actions/get-pr-info@main
@@ -59,6 +63,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        env:
+          GIT_TRACE_PACKET: 1
+          GIT_TRACE: 1
+          GIT_CURL_VERBOSE: 1
         with:
           fetch-depth: 0
       - name: Get PR Info

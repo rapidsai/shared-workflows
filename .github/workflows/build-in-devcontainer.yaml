@@ -7,7 +7,7 @@ on:
         type: string
       node_type:
         type: string
-        default: "cpu8"
+        default: "cpu32"
       build_command:
         type: string
         required: true
@@ -43,6 +43,10 @@ jobs:
     runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
     steps:
       - uses: actions/checkout@v3
+        env:
+          GIT_TRACE_PACKET: 1
+          GIT_TRACE: 1
+          GIT_CURL_VERBOSE: 1
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
