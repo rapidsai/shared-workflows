@@ -73,7 +73,7 @@ jobs:
             
             # Use jq to do the actual filtering
             item_project_id=$(jq -r '.data.node.projectItems.nodes[] |
-                           select(.project.id == "${{ inputs.PROJECT_ID }}") |
-                           .id' project_data.json)
+                              select(.project.id == "${{ inputs.PROJECT_ID }}") |
+                              .id' project_data.json)
             echo "ITEM_PROJECT_ID=$item_project_id" >> $GITHUB_OUTPUT
         continue-on-error: true

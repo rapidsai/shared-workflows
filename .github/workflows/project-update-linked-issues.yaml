@@ -1,0 +1,142 @@
+name: Project - Update Linked Issues
+# This workflow takes a PR and updates the linked issues to match the PR
+# Issues do not have a connection back to the PRs, so this workflow can only be called by the PR
+# It's flexible what fields you update
+# This workflow will primarily be called by the 'get-set' workflows
+
+on:
+  workflow_call:
+    inputs:
+      PROJECT_ID:
+        description: "The Project's graphQL node ID"
+        type: string
+        required: true
+
+      PR_PROJECT_ID:
+        description: "The PR's graphQL project-specific ID "
+        type: string
+        required: true
+
+      PR_NODE_ID:
+        description: "The PR's graphQL node ID"
+        default: null
+        type: string
+
+      UPDATE_FIELD_TYPE:
+        description: "The type of field to update - [text, number, date, single_select, iteration]"
+        type: string
+        required: true
+
+      UPDATE_FIELD_ID:
+        description: "The graphQL node ID of the iteration field"
+        type: string
+        required: true
+
+      UPDATE_FIELD_VALUE:
+        description: "The value to set the field to"
+        type: string
+        required: true
+
+    secrets:
+      PROJECT_MANAGEMENT_SECRET:
+        description: "Project Access Token"
+        required: true
+
+
+jobs:
+    get_set_iteration_option_id:
+      runs-on: ubuntu-latest
+      permissions:
+        contents: read
+
+      steps:
+        - name: Sync Linked Issues
+          id: sync_linked_issues
+          env:
+            GITHUB_TOKEN: ${{ secrets.PROJECT_MANAGEMENT_SECRET }}
+          run: |
+            # Find the linked issues to the PR
+            # If an issue is passed in, the json will return null and the for loop won't trigger
+            # Potential future improvement could be some nicer error messaging on incorrect input
+            gh api graphql -f query='
+                query {
+                    node(id: "${{ inputs.PR_NODE_ID }}") {
+                    ... on PullRequest {
+                        closingIssuesReferences(first: 10) {
+                        nodes {
+                            projectItems(first: 10) {
+                            nodes {id, project{id}}
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }' > linked_issues.json
+            issue_ids=$(jq -r '.data.node.closingIssuesReferences.nodes[].projectItems.nodes[] |
+                        select(.project.id == "${{ inputs.PROJECT_ID }}") | .id' linked_issues.json)
+
+            for issue_id in $issue_ids; do
+              # Each field type has a different `value` that is needed by the mutation. 
+              # We could do this a little "smarter" but I like it this way in case API changes happen
+              # to a specific field type. I've also condensed the mutation formatting for brevity.
+
+              if [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "iteration" ]; then
+                gh api graphql -f query='
+                  mutation {
+                    updateProjectV2ItemFieldValue(
+                      input: {
+                        projectId: "${{ inputs.PROJECT_ID }}"
+                        itemId: "${{ inputs.PR_PROJECT_ID }}"
+                        fieldId: "${{ inputs.UPDATE_FIELD_ID }}"
+                        value: {iterationId: "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
+                    {projectV2Item {id}}}'
+                    
+              elif [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "single_select" ]; then
+                gh api graphql -f query='
+                  mutation {
+                    updateProjectV2ItemFieldValue(
+                      input: {
+                        projectId: "${{ inputs.PROJECT_ID }}"
+                        itemId: "${{ inputs.PR_PROJECT_ID }}"
+                        fieldId: "${{ inputs.UPDATE_FIELD_ID }}"
+                        value: {singleSelectOptionId: "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
+                    {projectV2Item {id}}}'
+
+              elif [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "date" ]; then
+                gh api graphql -f query='
+                  mutation {
+                    updateProjectV2ItemFieldValue(
+                      input: {
+                        projectId: "${{ inputs.PROJECT_ID }}"
+                        itemId: "${{ inputs.PR_PROJECT_ID }}"
+                        fieldId: "${{ inputs.UPDATE_FIELD_ID }}"
+                        value: {date: "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
+                    {projectV2Item {id}}}'
+
+              elif [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "text" ]; then
+                gh api graphql -f query='
+                  mutation {
+                    updateProjectV2ItemFieldValue(
+                      input: {
+                        projectId: "${{ inputs.PROJECT_ID }}"
+                        itemId: "${{ inputs.PR_PROJECT_ID }}"
+                        fieldId: "${{ inputs.UPDATE_FIELD_ID }}"
+                        value: {text: "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
+                    {projectV2Item {id}}}'
+
+              elif [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "number" ]; then
+                gh api graphql -f query='
+                  mutation {
+                    updateProjectV2ItemFieldValue(
+                      input: {
+                        projectId: "${{ inputs.PROJECT_ID }}"
+                        itemId: "${{ inputs.PR_PROJECT_ID }}"
+                        fieldId: "${{ inputs.UPDATE_FIELD_ID }}"
+                        value: {number: "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
+                    {projectV2Item {id}}}'
+
+              else
+                echo "Invalid field type"
+
+              fi
+            done
