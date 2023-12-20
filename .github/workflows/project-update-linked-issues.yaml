@@ -86,7 +86,7 @@ jobs:
                     updateProjectV2ItemFieldValue(
                       input: {
                         projectId: "${{ inputs.PROJECT_ID }}"
-                        itemId: "$issue_id"
+                        itemId: "${issue_id}"
                         fieldId: "${{ inputs.UPDATE_FIELD_ID }}"
                         value: {iterationId: "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
                     {projectV2Item {id}}}'
