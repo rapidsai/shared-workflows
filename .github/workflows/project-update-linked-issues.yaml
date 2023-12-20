@@ -88,16 +88,8 @@ jobs:
                         projectId: "${{ inputs.PROJECT_ID }}"
                         itemId: "${{ inputs.PR_PROJECT_ID }}"
                         fieldId: "${{ inputs.UPDATE_FIELD_ID }}"
-                      value: {
-                        iterationId: "${{ inputs.UPDATE_FIELD_VALUE }}"
-                        }
-                      }
-                    ) {
-                        projectV2Item {
-                        id
-                        }
-                    }
-                    }'
+                        value: {iterationId: "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
+                    {projectV2Item {id}}}'
                     
               elif [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "single_select" ]; then
                 gh api graphql -f query='
