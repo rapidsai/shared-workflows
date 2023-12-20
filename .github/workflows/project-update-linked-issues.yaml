@@ -97,7 +97,7 @@ jobs:
                     updateProjectV2ItemFieldValue(
                       input: {
                         projectId: "${{ inputs.PROJECT_ID }}"
-                        itemId: "${{ inputs.PR_PROJECT_ID }}"
+                        itemId: "'"$issue_id"'"
                         fieldId: "${{ inputs.UPDATE_FIELD_ID }}"
                         value: {singleSelectOptionId: "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
                     {projectV2Item {id}}}'
@@ -108,7 +108,7 @@ jobs:
                     updateProjectV2ItemFieldValue(
                       input: {
                         projectId: "${{ inputs.PROJECT_ID }}"
-                        itemId: "${{ inputs.PR_PROJECT_ID }}"
+                        itemId: "'"$issue_id"'"
                         fieldId: "${{ inputs.UPDATE_FIELD_ID }}"
                         value: {date: "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
                     {projectV2Item {id}}}'
@@ -119,7 +119,7 @@ jobs:
                     updateProjectV2ItemFieldValue(
                       input: {
                         projectId: "${{ inputs.PROJECT_ID }}"
-                        itemId: "${{ inputs.PR_PROJECT_ID }}"
+                        itemId: "'"$issue_id"'"
                         fieldId: "${{ inputs.UPDATE_FIELD_ID }}"
                         value: {text: "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
                     {projectV2Item {id}}}'
@@ -130,7 +130,7 @@ jobs:
                     updateProjectV2ItemFieldValue(
                       input: {
                         projectId: "${{ inputs.PROJECT_ID }}"
-                        itemId: "${{ inputs.PR_PROJECT_ID }}"
+                        itemId: "'"$issue_id"'"
                         fieldId: "${{ inputs.UPDATE_FIELD_ID }}"
                         value: {number: "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
                     {projectV2Item {id}}}'
