@@ -14,7 +14,7 @@ on:
         type: string
       node_type:
         type: string
-        default: "cpu32"
+        default: "cpu8"
       build_script:
         type: string
         default: "ci/build_cpp.sh"
