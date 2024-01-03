@@ -10,11 +10,6 @@ on:
         type: string
         required: true
 
-      FIELD_NAME:
-        description: "The name of the text/date/numeric field"
-        type: string
-        required: true
-
       FIELD_TYPE:
         description: "The type of the field [text, date, number]"
         type: string
