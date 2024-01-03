@@ -77,8 +77,6 @@ jobs:
 
             for issue_id in $issue_ids; do
               # Each field type has a different `value` that is needed by the mutation. 
-              # We could do this a little "smarter" but I like it this way in case API changes happen
-              # to a specific field type. I've also condensed the mutation formatting for brevity.
 
               if [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "iteration" ]; then
                 gh api graphql -f query='
@@ -102,7 +100,9 @@ jobs:
                         value: {singleSelectOptionId: "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
                     {projectV2Item {id}}}'
 
-              elif [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "date" ]; then
+              elif if [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "date" ] || \
+                      [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "number" ] || \
+                      [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "text" ]; then
                 gh api graphql -f query='
                   mutation {
                     updateProjectV2ItemFieldValue(
@@ -110,33 +110,10 @@ jobs:
                         projectId: "${{ inputs.PROJECT_ID }}"
                         itemId: "'"$issue_id"'"
                         fieldId: "${{ inputs.UPDATE_FIELD_ID }}"
-                        value: {date: "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
-                    {projectV2Item {id}}}'
-
-              elif [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "text" ]; then
-                gh api graphql -f query='
-                  mutation {
-                    updateProjectV2ItemFieldValue(
-                      input: {
-                        projectId: "${{ inputs.PROJECT_ID }}"
-                        itemId: "'"$issue_id"'"
-                        fieldId: "${{ inputs.UPDATE_FIELD_ID }}"
-                        value: {text: "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
-                    {projectV2Item {id}}}'
-
-              elif [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "number" ]; then
-                gh api graphql -f query='
-                  mutation {
-                    updateProjectV2ItemFieldValue(
-                      input: {
-                        projectId: "${{ inputs.PROJECT_ID }}"
-                        itemId: "'"$issue_id"'"
-                        fieldId: "${{ inputs.UPDATE_FIELD_ID }}"
-                        value: {number: "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
+                        value: {"${{ inputs.UPDATE_FIELD_TYPE }}": "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
                     {projectV2Item {id}}}'
 
               else
                 echo "Invalid field type"
-
               fi
             done

@@ -1,0 +1,98 @@
+name: Project - Get Item ID Within the Project
+# This workflow gets the project-specific ID for an item within a project
+# All downstream queries and mutations of fields within the project require this ID
+
+on:
+  workflow_call:
+    inputs:
+      PROJECT_ID:
+        description: "The Project's graphQL node ID"
+        type: string
+        required: true
+
+      FIELD_NAME:
+        description: "The name of the text/date/numeric field"
+        type: string
+        required: true
+
+      FIELD_TYPE:
+        description: "The type of the field [text, date, number]"
+        type: string
+        required: true
+
+      SET_VALUE:
+        description: "The value we'd like to set"
+        type: string
+        required: true
+
+      FIELD_ID:
+        description: "The graphQL node ID of the field"
+        type: string
+        required: true
+        
+      ITEM_PROJECT_ID:
+        description: "The issue or PR's graphQL project-specific ID"
+        type: string
+        required: true
+
+      ITEM_NODE_ID:
+        description: "The issue or PR's graphQL node ID"
+        default: null
+        type: string
+        required: true
+
+      # Optional field
+      UPDATE_LINKED_ISSUES:
+        description: "Whether to update the linked issues' single_select fields"
+        default: false
+        type: boolean
+
+    secrets:
+      PROJECT_MANAGEMENT_SECRET:
+        description: "Project Access Token"
+        required: true
+
+jobs:
+  set_text_date_numeric_option_id:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Update item text/date/numeric field
+        id: update_item_text_date_numeric_field
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGEMENT_SECRET }}
+        run: |
+            # Set the field based on the inputted desired value
+            # This overwrites whatever was in it before, we may want to make an "OVERWRITE" option
+            gh api graphql -f query='
+              mutation {
+                updateProjectV2ItemFieldValue(
+                  input: {
+                    projectId: "${{ inputs.PROJECT_ID }}"
+                    itemId: "${{ inputs.ITEM_PROJECT_ID }}"
+                    fieldId: "${{ inputs.FIELD_ID }}"
+                  value: {
+                    "${{ inputs.FIELD_TYPE }}": "${{ inputs.SET_VALUE }}"
+                    }
+                  }
+                ) {
+                    projectV2Item {
+                    id
+                    }
+                  }
+                }'
+        continue-on-error: true
+
+  update_linked_issues:
+    if: ${{ inputs.UPDATE_LINKED_ISSUES == true }}
+    uses: ./.github/workflows/project-update-linked-issues.yaml
+    with:
+      PROJECT_ID: ${{ inputs.PROJECT_ID }}
+      PR_PROJECT_ID: ${{ inputs.ITEM_PROJECT_ID }}
+      PR_NODE_ID: ${{ inputs.ITEM_NODE_ID }}
+      UPDATE_FIELD_TYPE: ${{inputs.FIELD_TYPE}}
+      UPDATE_FIELD_ID: ${{ inputs.FIELD_ID }}
+      UPDATE_FIELD_VALUE: ${{ inputs.SET_VALUE }}
+    secrets: inherit
