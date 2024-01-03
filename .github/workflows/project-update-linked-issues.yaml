@@ -100,9 +100,9 @@ jobs:
                         value: {singleSelectOptionId: "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
                     {projectV2Item {id}}}'
 
-              elif if [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "date" ] || \
-                      [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "number" ] || \
-                      [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "text" ]; then
+              elif [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "date" ] || \
+                   [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "number" ] || \
+                   [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "text" ]; then
                 gh api graphql -f query='
                   mutation {
                     updateProjectV2ItemFieldValue(
