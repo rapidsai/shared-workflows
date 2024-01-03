@@ -84,8 +84,7 @@ jobs:
                         }
                       }
                     }
-                  }
-                }' > single_select_option_data.json
+                  }' > single_select_option_data.json
             current_single_select_option_id=$(jq -r '.data.node.field.options[0].id' single_select_option_data.json)
             echo "SINGLE_SELECT_OPTION_ID=$current_single_select_option_id" >> "$GITHUB_OUTPUT"
 
