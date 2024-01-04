@@ -61,25 +61,50 @@ jobs:
         run: |
             # Set the field based on the inputted desired value
             # This overwrites whatever was in it before, we may want to make an "OVERWRITE" option
-            gh api graphql -f query="
-              mutation {
-                updateProjectV2ItemFieldValue(
-                  input: {
-                    projectId: \"${{ inputs.PROJECT_ID }}\"
-                    itemId: \"${{ inputs.ITEM_PROJECT_ID }}\"
-                    fieldId: \"${{ inputs.FIELD_ID }}\"
-                    value: { ${{ inputs.FIELD_TYPE }}: \"${{ inputs.SET_VALUE }}\" }
+            if [ "${{ inputs.FIELD_TYPE }}" == "date" ] || \
+               [ "${{ inputs.FIELD_TYPE }}" == "text" ]; then
+              gh api graphql -f query="
+                mutation {
+                  updateProjectV2ItemFieldValue(
+                    input: {
+                      projectId: \"${{ inputs.PROJECT_ID }}\"
+                      itemId: \"${{ inputs.ITEM_PROJECT_ID }}\"
+                      fieldId: \"${{ inputs.FIELD_ID }}\"
+                      value: { ${{ inputs.FIELD_TYPE }}: \"${{ inputs.SET_VALUE }}\" }
+                    }
+                  ) {
+                    projectV2Item {
+                      id
+                    }
                   }
-                ) {
-                  projectV2Item {
-                    id
-                  }
-                }
-              }"
+                }"
+
+            elif [ "${{ inputs.FIELD_TYPE }}" == "number" ]; then
+               gh api graphql -f query="
+                 mutation {
+                   updateProjectV2ItemFieldValue(
+                     input: {
+                       projectId: \"${{ inputs.PROJECT_ID }}\"
+                       itemId: \"${{ inputs.ITEM_PROJECT_ID }}\"
+                       fieldId: \"${{ inputs.FIELD_ID }}\"
+                       value: { ${{ inputs.FIELD_TYPE }}: ${{ inputs.SET_VALUE }} }
+                     }
+                   ) {
+                     projectV2Item {
+                       id
+                     }
+                   }
+                 }"
+
+            else
+              echo "Invalid field type"
+            fi
         continue-on-error: true
 
   update_linked_issues:
     if: ${{ inputs.UPDATE_LINKED_ISSUES == true }}
+    permissions:
+      contents: read
     uses: ./.github/workflows/project-update-linked-issues.yaml
     with:
       PROJECT_ID: ${{ inputs.PROJECT_ID }}

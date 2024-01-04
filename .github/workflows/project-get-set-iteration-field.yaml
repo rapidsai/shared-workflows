@@ -118,6 +118,8 @@ jobs:
 
   update_linked_issues:
     if: ${{ inputs.UPDATE_LINKED_ISSUES == true }}
+    permissions:
+      contents: read
     uses: ./.github/workflows/project-update-linked-issues.yaml
     needs: get_set_iteration_option_id
     with:
