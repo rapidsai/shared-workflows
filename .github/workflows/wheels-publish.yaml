@@ -43,7 +43,7 @@ jobs:
     container:
       # ctk version of the container is irrelevant in the publish step
       # it's simply a launcher for twine
-      image: "rapidsai/ci-wheel:cuda12.0.1-centos7-py3.10"
+      image: "rapidsai/ci-wheel:cuda12.2.2-centos7-py3.11"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
