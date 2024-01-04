@@ -103,15 +103,21 @@ jobs:
               elif [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "date" ] || \
                    [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "number" ] || \
                    [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "text" ]; then
-                gh api graphql -f query='
+                gh api graphql -f query="
                   mutation {
                     updateProjectV2ItemFieldValue(
                       input: {
-                        projectId: "${{ inputs.PROJECT_ID }}"
-                        itemId: "'"$issue_id"'"
-                        fieldId: "${{ inputs.UPDATE_FIELD_ID }}"
-                        value: {"${{ inputs.UPDATE_FIELD_TYPE }}": "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
-                    {projectV2Item {id}}}'
+                        projectId: \"${{ inputs.PROJECT_ID }}\"
+                        itemId: \"$issue_id\"
+                        fieldId: \"${{ inputs.UPDATE_FIELD_ID }}\"
+                        value: {${{ inputs.UPDATE_FIELD_TYPE }}: \"${{ inputs.UPDATE_FIELD_VALUE }}\"}
+                      }
+                    ) {
+                      projectV2Item {
+                        id
+                      }
+                    }
+                  }"
 
               else
                 echo "Invalid field type"
