@@ -68,7 +68,7 @@ jobs:
                     projectId: \"${{ inputs.PROJECT_ID }}\"
                     itemId: \"${{ inputs.ITEM_PROJECT_ID }}\"
                     fieldId: \"${{ inputs.FIELD_ID }}\"
-                    value: { ${{ inputs.FIELD_TYPE }}: ${{ inputs.SET_VALUE }} }
+                    value: { ${{ inputs.FIELD_TYPE }}: \"${{ inputs.SET_VALUE }}\" }
                   }
                 ) {
                   projectV2Item {
