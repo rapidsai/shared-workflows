@@ -41,8 +41,8 @@ jobs:
     name: wheels publish
     runs-on: linux-amd64-cpu4
     container:
-      # ctk version of the container is irrelevant in the publish step
-      # it's simply a launcher for twine
+      # CUDA toolkit version of the container is irrelevant in the publish step.
+      # This just uploads already-built wheels to remote storage.
       image: "rapidsai/ci-wheel:cuda12.2.2-centos7-py3.11"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
