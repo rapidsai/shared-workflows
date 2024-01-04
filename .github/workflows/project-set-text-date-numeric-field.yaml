@@ -61,23 +61,21 @@ jobs:
         run: |
             # Set the field based on the inputted desired value
             # This overwrites whatever was in it before, we may want to make an "OVERWRITE" option
-            gh api graphql -f query='
+            gh api graphql -f query="
               mutation {
                 updateProjectV2ItemFieldValue(
                   input: {
-                    projectId: "${{ inputs.PROJECT_ID }}"
-                    itemId: "${{ inputs.ITEM_PROJECT_ID }}"
-                    fieldId: "${{ inputs.FIELD_ID }}"
-                  value: {
-                    "${{ inputs.FIELD_TYPE }}": "${{ inputs.SET_VALUE }}"
-                    }
+                    projectId: \"${{ inputs.PROJECT_ID }}\"
+                    itemId: \"${{ inputs.ITEM_PROJECT_ID }}\"
+                    fieldId: \"${{ inputs.FIELD_ID }}\"
+                    value: { ${{ inputs.FIELD_TYPE }}: \"${{ inputs.SET_VALUE }}\" }
                   }
                 ) {
-                    projectV2Item {
+                  projectV2Item {
                     id
-                    }
                   }
-                }'
+                }
+              }"
         continue-on-error: true
 
   update_linked_issues:
