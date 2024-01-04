@@ -110,7 +110,7 @@ jobs:
                         projectId: \"${{ inputs.PROJECT_ID }}\"
                         itemId: \"$issue_id\"
                         fieldId: \"${{ inputs.UPDATE_FIELD_ID }}\"
-                        value: {${{ inputs.UPDATE_FIELD_TYPE }}: \"${{ inputs.UPDATE_FIELD_VALUE }}\"}
+                        value: {${{ inputs.UPDATE_FIELD_TYPE }}: ${{ inputs.UPDATE_FIELD_VALUE }}}
                       }
                     ) {
                       projectV2Item {
