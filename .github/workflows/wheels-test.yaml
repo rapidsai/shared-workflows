@@ -97,7 +97,6 @@ jobs:
     needs: compute-matrix
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
-    continue-on-error: ${{ matrix.CUDA_VER == '12.2.2' }}
     strategy:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.ARCH }}-gpu-${{ matrix.gpu }}-${{ matrix.driver }}-1"
