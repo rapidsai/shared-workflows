@@ -74,7 +74,6 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           push: never
-          subFolder: .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}
           configFile: .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json
           env: |
             REPOSITORY="${{ inputs.repo }}"
