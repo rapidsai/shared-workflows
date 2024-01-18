@@ -18,7 +18,6 @@ on:
         required: false
       symbol_exclusions:
         type: string
-        default: ""
 
 defaults:
   run:
@@ -87,7 +86,7 @@ jobs:
           fetch-depth: 0
       - name: Verify CUDA libraries have no public kernel entry points
         run: |
-          if ${{ inputs.symbol_exclusions == "" }}
+          if ${{ inputs.symbol_exclusions }}
             python ./tool/detect.py ${RAPIDS_EXTRACTED_DIR}/lib
           else
             python ./tool/detect.py ${RAPIDS_EXTRACTED_DIR}/lib -e "${{ inputs.symbol_exclusions }}"
