@@ -70,16 +70,11 @@ jobs:
         with:
           node-version: '16'
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Copy devcontainer.json file up one level
-        run: |
-          echo "REPOSITORY=$(basename $(pwd))" | tee -a "${GITHUB_ENV}";
-          cp .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json \
-             .devcontainer/devcontainer.json;
-      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
         uses: devcontainers/ci@v0.3
         with:
           push: never
+          configFile: .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json
           env: |
             REPOSITORY=${{ env.REPOSITORY }}
             SCCACHE_REGION=${{ vars.AWS_REGION }}
