@@ -76,7 +76,6 @@ jobs:
           push: never
           configFile: .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json
           env: |
-            REPOSITORY="${{ inputs.repo }}"
             SCCACHE_REGION=${{ vars.AWS_REGION }}
             AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
@@ -98,5 +97,4 @@ jobs:
               devcontainer-utils-init-ssh-deploy-keys || true;
             fi
 
-            cd ~/"${REPOSITORY}";
             ${{ inputs.build_command }}
