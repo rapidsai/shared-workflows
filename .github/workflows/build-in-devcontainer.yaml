@@ -5,6 +5,9 @@ on:
         type: string
       repo:
         type: string
+      gh_token:
+        type: string
+        required: false
       node_type:
         type: string
         default: "cpu8"
@@ -80,6 +83,7 @@ jobs:
             AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
+            GH_TOKEN=${{ inputs.gh_token || secrets.GITHUB_TOKEN }}
           runCmd: |
             set -e;
 
