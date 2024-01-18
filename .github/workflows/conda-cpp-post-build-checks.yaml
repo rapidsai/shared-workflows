@@ -87,7 +87,7 @@ jobs:
       - name: Verify CUDA libraries have no public kernel entry points
         run: |
           if ${{ inputs.symbol_exclusions }}
-            python ./tool/detect.py ${RAPIDS_EXTRACTED_DIR}/lib
-          else
             python ./tool/detect.py ${RAPIDS_EXTRACTED_DIR}/lib -e "${{ inputs.symbol_exclusions }}"
+          else
+            python ./tool/detect.py ${RAPIDS_EXTRACTED_DIR}/lib
           fi
