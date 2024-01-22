@@ -1,0 +1,131 @@
+name: Project - Get Item ID Within the Project
+# This workflow gets the project-specific ID for an item within a project
+# All downstream queries and mutations of fields within the project require this ID
+
+on:
+  workflow_call:
+    inputs:
+      PROJECT_ID:
+        description: "The Project's graphQL node ID"
+        type: string
+        required: true
+
+      SINGLE_SELECT_FIELD_NAME:
+        description: "The name of the single-select field"
+        type: string
+        required: true
+
+      SINGLE_SELECT_OPTION_VALUE:
+        description: "The value of the option we'd like to get/set"
+        type: string
+        required: true
+
+      SINGLE_SELECT_FIELD_ID:
+        description: "The graphQL node ID of the single-select field"
+        type: string
+        required: true
+        
+      ITEM_PROJECT_ID:
+        description: "The issue or PR's graphQL project-specific ID"
+        type: string
+        required: true
+
+      UPDATE_ITEM:
+        description: "Whether to update the item's single-select field"
+        default: false
+        type: boolean
+
+      # Optional fields, used if UPDATE_ITEM is set to true
+      ITEM_NODE_ID:
+        description: "The issue or PR's graphQL node ID, only needed if updating linked issues"
+        default: null
+        type: string
+
+      UPDATE_LINKED_ISSUES:
+        description: "Whether to update the linked issues' single_select fields"
+        default: false
+        type: boolean
+
+    secrets:
+      PROJECT_MANAGEMENT_SECRET:
+        description: "Project Access Token"
+        required: true
+
+    outputs:
+      SINGLE_SELECT_OPTION_ID:
+        value: ${{ jobs.get_set_single_select_option_id.outputs.SINGLE_SELECT_OPTION_ID }}
+        description: "The single_select option ID"
+
+jobs:
+  get_set_single_select_option_id:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      SINGLE_SELECT_OPTION_ID: ${{ steps.get_single_select_option_id.outputs.SINGLE_SELECT_OPTION_ID }}
+
+    steps:
+      - name: Get single_select Option ID
+        id: get_single_select_option_id
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGEMENT_SECRET }}
+        run: |
+            # Get single_select option id
+            gh api graphql -f query='
+            query {
+                node(id: "${{ inputs.PROJECT_ID }}") {
+                    ... on ProjectV2 {
+                    id
+                    field(name: "${{ inputs.SINGLE_SELECT_FIELD_NAME }}") {
+                        ... on ProjectV2SingleSelectField {
+                        id
+                        options(names: "${{ inputs.SINGLE_SELECT_OPTION_VALUE }}") {id}
+                          }
+                        }
+                      }
+                    }
+                  }' > single_select_option_data.json
+            current_single_select_option_id=$(jq -r '.data.node.field.options[0].id' single_select_option_data.json)
+            echo "SINGLE_SELECT_OPTION_ID=$current_single_select_option_id" >> "$GITHUB_OUTPUT"
+
+      - name: Update item single_select field
+        id: update_item_single_select_field
+        if: ${{ inputs.UPDATE_ITEM == true }}
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGEMENT_SECRET }}
+        run: |
+            # Set the single_select based on the query above
+            # This overwrites whatever was in it before, we may want to make an "OVERWRITE" option
+            gh api graphql -f query='
+              mutation {
+                updateProjectV2ItemFieldValue(
+                  input: {
+                    projectId: "${{ inputs.PROJECT_ID }}"
+                    itemId: "${{ inputs.ITEM_PROJECT_ID }}"
+                    fieldId: "${{ inputs.SINGLE_SELECT_FIELD_ID }}"
+                  value: {
+                    singleSelectOptionId: "${{ steps.get_single_select_option_id.outputs.SINGLE_SELECT_OPTION_ID }}"
+                    }
+                  }
+                ) {
+                    projectV2Item {
+                    id
+                    }
+                  }
+                }'
+        continue-on-error: true
+
+  update_linked_issues:
+    if: ${{ inputs.UPDATE_LINKED_ISSUES == true }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/project-update-linked-issues.yaml
+    needs: get_set_single_select_option_id
+    with:
+      PROJECT_ID: ${{ inputs.PROJECT_ID }}
+      PR_PROJECT_ID: ${{ inputs.ITEM_PROJECT_ID }}
+      PR_NODE_ID: ${{ inputs.ITEM_NODE_ID }}
+      UPDATE_FIELD_TYPE: "single_select"
+      UPDATE_FIELD_ID: ${{ inputs.SINGLE_SELECT_FIELD_ID }}
+      UPDATE_FIELD_VALUE: ${{ needs.get_set_single_select_option_id.outputs.SINGLE_SELECT_OPTION_ID }}
+    secrets: inherit
