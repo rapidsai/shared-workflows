@@ -67,7 +67,7 @@ jobs:
           echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
       - name: Check if repository is private
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         id: is-private
         with:
           result-encoding: string
