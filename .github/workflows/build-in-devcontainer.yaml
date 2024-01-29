@@ -87,13 +87,14 @@ jobs:
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
           runCmd: |
+            set -e;
             mkdir -p ~/.config/pip/;
             cat <<EOF >> ~/.config/pip/pip.conf
             [global]
             extra-index-url = https://pypi.anaconda.org/rapidsai-wheels-nightly/simple
             EOF
 
-            rapids-make-${PYTHON_PACKAGE_MANAGER}-env || true;
+            rapids-make-${PYTHON_PACKAGE_MANAGER}-env;
 
             if ! grep -qE "^$" <<< "${{ inputs.extra-repo-deploy-key }}"; then
               if ! pgrep ssh-agent >/dev/null 2>&1; then eval "$(ssh-agent -s)"; fi;
