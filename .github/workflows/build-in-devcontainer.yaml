@@ -56,6 +56,7 @@ jobs:
           fetch-depth: 0
       - name: Check if repo has devcontainer
         run: |
+          echo "REPOSITORY=$(basename $(pwd))" | tee -a "${GITHUB_ENV}";
           if test -f .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json; then
             echo "HAS_DEVCONTAINER=true" >> "${GITHUB_ENV}";
           else
@@ -79,14 +80,13 @@ jobs:
           push: never
           configFile: .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json
           env: |
+            REPOSITORY=${{ env.REPOSITORY }}
             GH_TOKEN=${{ secrets[inputs.gh_token] }}
             SCCACHE_REGION=${{ vars.AWS_REGION }}
             AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
           runCmd: |
-            set -e;
-
             mkdir -p ~/.config/pip/;
             cat <<EOF >> ~/.config/pip/pip.conf
             [global]
@@ -101,4 +101,5 @@ jobs:
               devcontainer-utils-init-ssh-deploy-keys || true;
             fi
 
+            cd ~/"${REPOSITORY}";
             ${{ inputs.build_command }}
