@@ -24,7 +24,11 @@ on:
       container-options:
         required: false
         type: string
-        default: '-e _NOOP'
+        default: "-e _NOOP"
+      test_summary_show:
+        required: false
+        type: string
+        default: "fail"
 
 defaults:
   run:
@@ -141,6 +145,7 @@ jobs:
       uses: test-summary/action@v2
       with:
         paths: "${{ env.RAPIDS_TESTS_DIR }}/*.xml"
+        show: ${{ inputs.test_summary_show }}
       if: always()
 
     - name: Upload additional artifacts
