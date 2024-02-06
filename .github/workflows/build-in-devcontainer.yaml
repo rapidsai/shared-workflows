@@ -5,9 +5,6 @@ on:
         type: string
       repo:
         type: string
-      gh_token:
-        type: string
-        default: "GITHUB_TOKEN"
       node_type:
         type: string
         default: "cpu8"
@@ -81,7 +78,6 @@ jobs:
           configFile: .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json
           env: |
             REPOSITORY=${{ env.REPOSITORY }}
-            GH_TOKEN=${{ secrets[inputs.gh_token] }}
             SCCACHE_REGION=${{ vars.AWS_REGION }}
             AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
