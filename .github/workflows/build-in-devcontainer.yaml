@@ -92,9 +92,14 @@ jobs:
 
             rapids-make-${PYTHON_PACKAGE_MANAGER}-env;
 
-            if ! grep -qE "^$" <<< "${{ inputs.extra-repo-deploy-key }}"; then
+            # Load private repo deploy keys
+            if ! grep -qE "^$" <<< "${{ inputs.extra-repo-deploy-key }}" \
+            || ! grep -qE "^$" <<< "${{ inputs.extra-repo-deploy-key-2 }}"; then
               if ! pgrep ssh-agent >/dev/null 2>&1; then eval "$(ssh-agent -s)"; fi;
-              ssh-add - <<< "${{ secrets[inputs.extra-repo-deploy-key] }}";
+              ssh-add - << "__EOF"
+            ${{ secrets[inputs.extra-repo-deploy-key] }}
+            ${{ secrets[inputs.extra-repo-deploy-key-2] }}
+            __EOF
               devcontainer-utils-init-ssh-deploy-keys || true;
             fi
 
