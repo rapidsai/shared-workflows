@@ -97,14 +97,14 @@ jobs:
 
             rapids-make-${PYTHON_PACKAGE_MANAGER}-env;
 
-            if test -n "${{ inputs.extra-repo-deploy-key }}" \
-            || test -n "${{ inputs.extra-repo-deploy-key-2 }}"; then
+            if test -n '${{ inputs.extra-repo-deploy-key }}' \
+            || test -n '${{ inputs.extra-repo-deploy-key-2 }}'; then
               if ! pgrep ssh-agent >/dev/null 2>&1; then eval "$(ssh-agent -s)"; fi;
-              if test -n "${{ inputs.extra-repo-deploy-key }}"; then
-                ssh-add - <<< "${{ secrets[inputs.extra-repo-deploy-key] }}";
+              if test -n '${{ inputs.extra-repo-deploy-key }}'; then
+                ssh-add - <<< '${{ secrets[inputs.extra-repo-deploy-key] }}';
               fi
-              if test -n "${{ inputs.extra-repo-deploy-key-2 }}"; then
-                ssh-add - <<< "${{ secrets[inputs.extra-repo-deploy-key-2] }}";
+              if test -n '${{ inputs.extra-repo-deploy-key-2 }}'; then
+                ssh-add - <<< '${{ secrets[inputs.extra-repo-deploy-key-2] }}';
               fi
               devcontainer-utils-init-ssh-deploy-keys || true;
             fi
