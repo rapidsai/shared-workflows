@@ -24,7 +24,11 @@ on:
       container-options:
         required: false
         type: string
-        default: '-e _NOOP'
+        default: "-e _NOOP"
+      test_summary_show:
+        required: false
+        type: string
+        default: "fail"
 
 defaults:
   run:
@@ -94,6 +98,7 @@ jobs:
     name: ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}, ${{ matrix.gpu }}
     needs: compute-matrix
     env:
+      RAPIDS_TESTS_DIR: ${{ github.workspace }}/test-results
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     strategy:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
@@ -137,6 +142,13 @@ jobs:
       run: ${{ inputs.script }}
       env:
         GH_TOKEN: ${{ github.token }}
+
+    - name: Generate test report
+      uses: test-summary/action@v2
+      with:
+        paths: "${{ env.RAPIDS_TESTS_DIR }}/*.xml"
+        show: ${{ inputs.test_summary_show }}
+      if: always()
 
     - name: Upload additional artifacts
       if: "!cancelled()"

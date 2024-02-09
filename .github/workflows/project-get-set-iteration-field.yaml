@@ -1,0 +1,132 @@
+name: Project - Get Item ID Within the Project
+# This workflow gets the project-specific ID for an item within a project
+# All downstream queries and mutations of fields within the project require this ID
+
+on:
+  workflow_call:
+    inputs:
+      PROJECT_ID:
+        description: "The Project's graphQL node ID"
+        type: string
+        required: true
+
+      ITERATION_FIELD_NAME:
+        description: "The name of the iteration field"
+        type: string
+        required: true
+
+      ITERATION_FIELD_ID:
+        description: "The graphQL node ID of the iteration field"
+        type: string
+        required: true
+        
+      ITEM_PROJECT_ID:
+        description: "The issue or PR's graphQL project-specific ID"
+        type: string
+        required: true
+
+      UPDATE_ITEM:
+        description: "Whether to update the item's iteration field"
+        default: false
+        type: boolean
+
+      # Optional fields, used if UPDATE_ITEM is set to true
+      ITEM_NODE_ID:
+        description: "The issue or PR's graphQL node ID, only needed if updating linked issues"
+        default: null
+        type: string
+
+      UPDATE_LINKED_ISSUES:
+        description: "Whether to update the linked issues' iteration fields"
+        default: false
+        type: boolean
+
+    secrets:
+      PROJECT_MANAGEMENT_SECRET:
+        description: "Project Access Token"
+        required: true
+
+    outputs:
+      ITERATION_OPTION_ID:
+        value: ${{ jobs.get_set_iteration_option_id.outputs.ITERATION_OPTION_ID }}
+        description: "The iteration option ID"
+
+jobs:
+  get_set_iteration_option_id:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      ITERATION_OPTION_ID: ${{ steps.get_iteration_option_id.outputs.ITERATION_OPTION_ID }}
+
+    steps:
+      - name: Get Iteration Option ID
+        id: get_iteration_option_id
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGEMENT_SECRET }}
+        run: |
+            # Get current iteration iteration id
+            # The current iteration is always the first element in the returned list
+            gh api graphql -f query='
+            query {
+                node(id: "${{ inputs.PROJECT_ID }}") {
+                    ... on ProjectV2 {
+                    id
+                    field(name: "${{ inputs.ITERATION_FIELD_NAME }}") {
+                        ... on ProjectV2IterationField {
+                        id
+                        name
+                        configuration {
+                          iterations {
+                          id
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }' > iteration_option_data.json
+            current_iteration_option_id=$(jq -r '.data.node.field.configuration.iterations[0].id' iteration_option_data.json)
+            echo "ITERATION_OPTION_ID=$current_iteration_option_id" >> "$GITHUB_OUTPUT"
+
+      - name: Update item iteration field
+        id: update_item_iteration_field
+        if: ${{ inputs.UPDATE_ITEM == true }}
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGEMENT_SECRET }}
+        run: |
+            # Set the iteration based on the query above
+            # This overwrites whatever was in it before, we may want to make an "OVERWRITE" option
+            gh api graphql -f query='
+              mutation {
+                updateProjectV2ItemFieldValue(
+                  input: {
+                    projectId: "${{ inputs.PROJECT_ID }}"
+                    itemId: "${{ inputs.ITEM_PROJECT_ID }}"
+                    fieldId: "${{ inputs.ITERATION_FIELD_ID }}"
+                  value: {
+                    iterationId: "${{ steps.get_iteration_option_id.outputs.ITERATION_OPTION_ID }}"
+                    }
+                  }
+                ) {
+                    projectV2Item {
+                    id
+                    }
+                }
+                }'
+        continue-on-error: true
+
+  update_linked_issues:
+    if: ${{ inputs.UPDATE_LINKED_ISSUES == true }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/project-update-linked-issues.yaml
+    needs: get_set_iteration_option_id
+    with:
+      PROJECT_ID: ${{ inputs.PROJECT_ID }}
+      PR_PROJECT_ID: ${{ inputs.ITEM_PROJECT_ID }}
+      PR_NODE_ID: ${{ inputs.ITEM_NODE_ID }}
+      UPDATE_FIELD_TYPE: "iteration"
+      UPDATE_FIELD_ID: ${{ inputs.ITERATION_FIELD_ID }}
+      UPDATE_FIELD_VALUE: ${{ needs.get_set_iteration_option_id.outputs.ITERATION_OPTION_ID }}
+    secrets: inherit
