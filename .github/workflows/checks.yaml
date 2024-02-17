@@ -36,7 +36,7 @@ jobs:
         RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         env:
           GIT_TRACE_PACKET: 1
           GIT_TRACE: 1
@@ -62,7 +62,7 @@ jobs:
       image: rapidsai/ci-conda:latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         env:
           GIT_TRACE_PACKET: 1
           GIT_TRACE: 1
