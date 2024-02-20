@@ -85,19 +85,25 @@ jobs:
           export MATRIX="
           - { CUDA_VER: '11.8.0', ARCH: 'amd64', PY_VER: '3.9', LINUX_VER: 'centos7' }
           - { CUDA_VER: '11.8.0', ARCH: 'amd64', PY_VER: '3.10', LINUX_VER: 'centos7' }
+          - { CUDA_VER: '11.8.0', ARCH: 'amd64', PY_VER: '3.11', LINUX_VER: 'centos7' }
           - { CUDA_VER: '11.8.0', ARCH: 'arm64', PY_VER: '3.9',  LINUX_VER: 'rockylinux8' }
           - { CUDA_VER: '11.8.0', ARCH: 'arm64', PY_VER: '3.10', LINUX_VER: 'rockylinux8' }
+          - { CUDA_VER: '11.8.0', ARCH: 'arm64', PY_VER: '3.11', LINUX_VER: 'rockylinux8' }
           - { CUDA_VER: '12.2.2', ARCH: 'amd64', PY_VER: '3.9',  LINUX_VER: 'centos7' }
           - { CUDA_VER: '12.2.2', ARCH: 'amd64', PY_VER: '3.10',  LINUX_VER: 'centos7' }
+          - { CUDA_VER: '12.2.2', ARCH: 'amd64', PY_VER: '3.11', LINUX_VER: 'centos7' }
           - { CUDA_VER: '12.2.2', ARCH: 'arm64', PY_VER: '3.9', LINUX_VER: 'rockylinux8' }
           - { CUDA_VER: '12.2.2', ARCH: 'arm64', PY_VER: '3.10', LINUX_VER: 'rockylinux8' }
+          - { CUDA_VER: '12.2.2', ARCH: 'arm64', PY_VER: '3.11', LINUX_VER: 'rockylinux8' }
           "
 
           export NEW_MANYLINUX_MATRIX="
           - { CUDA_VER: '11.8.0', ARCH: 'amd64', PY_VER: '3.9', LINUX_VER: 'rockylinux8' }
           - { CUDA_VER: '11.8.0', ARCH: 'amd64', PY_VER: '3.10', LINUX_VER: 'rockylinux8' }
+          - { CUDA_VER: '11.8.0', ARCH: 'amd64', PY_VER: '3.11', LINUX_VER: 'rockylinux8' }
           - { CUDA_VER: '12.2.2', ARCH: 'amd64', PY_VER: '3.9',  LINUX_VER: 'rockylinux8' }
           - { CUDA_VER: '12.2.2', ARCH: 'amd64', PY_VER: '3.10',  LINUX_VER: 'rockylinux8' }
+          - { CUDA_VER: '12.2.2', ARCH: 'amd64', PY_VER: '3.11', LINUX_VER: 'rockylinux8' }
           "
 
           if ${{ inputs.build-2_28-wheels == 'true' }}; then
@@ -115,6 +121,7 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.ARCH }}-${{ inputs.node_type }}"
+    continue-on-error: ${{ matrix.PY_VER == '3.11' }}
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     container:
