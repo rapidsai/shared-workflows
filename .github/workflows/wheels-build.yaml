@@ -121,6 +121,7 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.ARCH }}-${{ inputs.node_type }}"
+    # TODO: remove 'continue-on-error' before closing https://github.com/rapidsai/build-planning/issues/3
     continue-on-error: ${{ matrix.PY_VER == '3.11' }}
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts

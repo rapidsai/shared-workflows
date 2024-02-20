@@ -103,6 +103,7 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.ARCH }}-gpu-${{ matrix.gpu }}-${{ matrix.driver }}-1"
+    # TODO: remove 'continue-on-error' before closing https://github.com/rapidsai/build-planning/issues/3
     continue-on-error: ${{ matrix.PY_VER == '3.11' }}
     container:
       image: "rapidsai/citestwheel:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}"
