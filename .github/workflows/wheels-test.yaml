@@ -76,22 +76,22 @@ jobs:
             pull-request:
               # amd64
               - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu18.04', gpu: 'v100', driver: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu20.04', gpu: 'v100', driver: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', gpu: 'v100', driver: 'latest' }
               # arm64
               - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu20.04', gpu: 'a100', driver: 'latest' }
             nightly:
               # amd64
               - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu18.04', gpu: 'v100', driver: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu18.04', gpu: 'v100', driver: 'latest' }
               - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', gpu: 'v100', driver: 'latest' }
               - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu18.04', gpu: 'v100', driver: 'latest' }
               - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu20.04', gpu: 'v100', driver: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu20.04', gpu: 'v100', driver: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu18.04', gpu: 'v100', driver: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', gpu: 'v100', driver: 'latest' }
               # arm64
               - { ARCH: 'arm64', PY_VER: '3.9',  CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu20.04', gpu: 'a100', driver: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.9',  CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu20.04', gpu: 'a100', driver: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu20.04', gpu: 'a100', driver: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu20.04', gpu: 'a100', driver: 'latest' }
               - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', gpu: 'a100', driver: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', gpu: 'a100', driver: 'latest' }
           "
 
           TEST_MATRIX=$(yq -n 'env(MATRICES) | .[strenv(BUILD_TYPE)]')
@@ -111,6 +111,8 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.ARCH }}-gpu-${{ matrix.gpu }}-${{ matrix.driver }}-1"
+    # TODO: remove 'continue-on-error' before closing https://github.com/rapidsai/build-planning/issues/3
+    continue-on-error: ${{ matrix.PY_VER == '3.11' }}
     container:
       image: "rapidsai/citestwheel:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}"
       options: ${{ inputs.container-options }}
