@@ -83,8 +83,6 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.ARCH }}-${{ inputs.node_type }}"
-    # TODO: remove 'continue-on-error' before closing https://github.com/rapidsai/build-planning/issues/3
-    continue-on-error: ${{ matrix.PY_VER == '3.11' }}
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     container:
@@ -114,9 +112,18 @@ jobs:
           echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
       - name: Python build
+        # TODO: remove 'continue-on-error' before closing https://github.com/rapidsai/build-planning/issues/3
+        continue-on-error: ${{ matrix.PY_VER == '3.11' }}
         run: ${{ inputs.build_script }}
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Upload additional artifacts
+        # TODO: remove 'continue-on-error' before closing https://github.com/rapidsai/build-planning/issues/3
+        continue-on-error: ${{ matrix.PY_VER == '3.11' }}
         if: "!cancelled()"
         run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}
+      # TODO: remove before closing https://github.com/rapidsai/build-planning/issues/3
+      - name: mark Python 3.11 jobs successful
+        if: ${{ matrix.PY_VER == '3.11' }}
+        run: |
+          exit 0
