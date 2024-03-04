@@ -98,7 +98,7 @@ jobs:
 
           echo "MATRIX=$(
             yq -n -o json 'env(TEST_MATRIX)' | \
-            jq -c '${{ inputs.matrix_filter }} | {include: .}' \
+            jq -c '${{ inputs.matrix_filter }} | if (. | length) > 0 then {include: .} else "Error: Empty matrix\n" | halt_error(1) end' \
           )" | tee --append "${GITHUB_OUTPUT}"
 
   test:
