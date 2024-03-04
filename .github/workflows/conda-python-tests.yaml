@@ -94,7 +94,7 @@ jobs:
 
           echo "MATRIX=$(
             yq -n -o json 'env(TEST_MATRIX)' | \
-            jq -c '${{ inputs.matrix_filter }} | {include: .}' \
+            jq -c '${{ inputs.matrix_filter }} | {include: .} | if .include != [] then . else halt_error(1) end' \
           )" | tee --append "${GITHUB_OUTPUT}"
   tests:
     needs: compute-matrix

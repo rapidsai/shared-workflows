@@ -119,11 +119,11 @@ jobs:
 
           echo "MATRIX=$(
             yq -n -o json 'env(MATRIX)' | \
-            jq -c '${{ inputs.matrix_filter }} | {include: .}' \
+            jq -c '${{ inputs.matrix_filter }} | {include: .} | if .include != [] then . else halt_error(1) end' \
           )" | tee --append "${GITHUB_OUTPUT}"
 
   build:
-    name:  ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }} 
+    name:  ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}
     needs: [compute-matrix]
     strategy:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
