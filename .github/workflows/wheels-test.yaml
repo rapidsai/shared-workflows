@@ -75,10 +75,9 @@ jobs:
           export MATRICES="
             pull-request:
               # amd64
-              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu18.04', gpu: 'v100', driver: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', gpu: 'v100', driver: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', gpu: 'v100', driver: 'latest' }
               # arm64
-              - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu20.04', gpu: 'a100', driver: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu20.04', gpu: 'a100', driver: 'latest' }
             nightly:
               # amd64
               - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu18.04', gpu: 'v100', driver: 'latest' }
@@ -109,6 +108,7 @@ jobs:
       RAPIDS_TESTS_DIR: ${{ github.workspace }}/test-results
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     strategy:
+      fail-fast: true
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.ARCH }}-gpu-${{ matrix.gpu }}-${{ matrix.driver }}-1"
     container:
