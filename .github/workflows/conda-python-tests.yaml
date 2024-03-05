@@ -146,7 +146,7 @@ jobs:
           paths: "${{ env.RAPIDS_TESTS_DIR }}/*.xml"
         if: always()
       - name: Run codecov
-        if: inputs.run_codecov && runner.arch == 'X64'
+        if: inputs.run_codecov
         run: |
           codecov \
             -s \
