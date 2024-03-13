@@ -16,7 +16,6 @@ on:
         required: true
         type: string
       script:
-        required: true
         type: string
       build_script:
         type: string
