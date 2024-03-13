@@ -18,6 +18,8 @@ on:
       script:
         type: string
         default: "ci/test_wheel.sh"
+      test_script:
+        type: string
       matrix_filter:
         type: string
         default: "."
@@ -149,7 +151,7 @@ jobs:
         sha: ${{ inputs.sha }}
 
     - name: Run tests
-      run: ${{ inputs.script }}
+      run: ${{ inputs.test_script || inputs.script }}
       env:
         GH_TOKEN: ${{ github.token }}
 

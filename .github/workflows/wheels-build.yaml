@@ -18,6 +18,8 @@ on:
       script:
         required: true
         type: string
+      build_script:
+        type: string
 
       # allow a bigger runner instance
       node_type:
@@ -185,7 +187,7 @@ jobs:
 
       - name: Build and repair the wheel
         run: |
-          ${{ inputs.script }}
+          ${{ inputs.build_script || inputs.script }}
         env:
           GH_TOKEN: ${{ github.token }}
         # Use a shell that loads the rc file so that we get the compiler settings
