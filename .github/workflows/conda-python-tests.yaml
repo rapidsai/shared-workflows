@@ -14,7 +14,6 @@ on:
         type: string
       test_script:
         type: string
-        default: "ci/test_python.sh"
       script:
         type: string
         default: "ci/test_python.sh"
@@ -140,7 +139,7 @@ jobs:
           echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
       - name: Python tests
-        run: ${{ inputs.script || inputs.test_script }}
+        run: ${{ inputs.test_script || inputs.script }}
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Generate test report
