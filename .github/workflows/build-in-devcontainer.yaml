@@ -3,6 +3,12 @@ on:
     inputs:
       sha:
         type: string
+      arch:
+        type: string
+        default: '["amd64"]'
+      cuda:
+        type: string
+        default: '["12.0"]'
       repo:
         type: string
       node_type:
@@ -13,6 +19,11 @@ on:
         required: true
       # Note that this is the _name_ of a secret containing the key, not the key itself.
       extra-repo-deploy-key:
+        required: false
+        type: string
+        default: ''
+      # Note that this is the _name_ of a secret containing the key, not the key itself.
+      extra-repo-deploy-key-2:
         required: false
         type: string
         default: ''
@@ -37,8 +48,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: ["amd64"]
-        cuda: ["12.0"]
+        arch: ${{ fromJSON(inputs.arch) }}
+        cuda: ${{ fromJSON(inputs.cuda) }}
         pkgr: ["conda", "pip"]
     runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
     steps:
@@ -53,6 +64,7 @@ jobs:
           fetch-depth: 0
       - name: Check if repo has devcontainer
         run: |
+          echo "REPOSITORY=$(basename $(pwd))" | tee -a "${GITHUB_ENV}";
           if test -f .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json; then
             echo "HAS_DEVCONTAINER=true" >> "${GITHUB_ENV}";
           else
@@ -70,16 +82,11 @@ jobs:
         with:
           node-version: '16'
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Copy devcontainer.json file up one level
-        run: |
-          echo "REPOSITORY=$(basename $(pwd))" | tee -a "${GITHUB_ENV}";
-          cp .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json \
-             .devcontainer/devcontainer.json;
-      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
         uses: devcontainers/ci@v0.3
         with:
           push: never
+          configFile: .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json
           env: |
             REPOSITORY=${{ env.REPOSITORY }}
             SCCACHE_REGION=${{ vars.AWS_REGION }}
@@ -88,18 +95,23 @@ jobs:
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
           runCmd: |
             set -e;
-
             mkdir -p ~/.config/pip/;
             cat <<EOF >> ~/.config/pip/pip.conf
             [global]
             extra-index-url = https://pypi.anaconda.org/rapidsai-wheels-nightly/simple
             EOF
 
-            rapids-make-${PYTHON_PACKAGE_MANAGER}-env || true;
+            rapids-make-${PYTHON_PACKAGE_MANAGER}-env;
 
-            if ! grep -qE "^$" <<< "${{ inputs.extra-repo-deploy-key }}"; then
+            if test -n '${{ inputs.extra-repo-deploy-key }}' \
+            || test -n '${{ inputs.extra-repo-deploy-key-2 }}'; then
               if ! pgrep ssh-agent >/dev/null 2>&1; then eval "$(ssh-agent -s)"; fi;
-              ssh-add - <<< "${{ secrets[inputs.extra-repo-deploy-key] }}";
+              if test -n '${{ inputs.extra-repo-deploy-key }}'; then
+                ssh-add - <<< '${{ secrets[inputs.extra-repo-deploy-key] }}';
+              fi
+              if test -n '${{ inputs.extra-repo-deploy-key-2 }}'; then
+                ssh-add - <<< '${{ secrets[inputs.extra-repo-deploy-key-2] }}';
+              fi
               devcontainer-utils-init-ssh-deploy-keys || true;
             fi
 
