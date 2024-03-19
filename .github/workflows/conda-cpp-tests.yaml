@@ -68,17 +68,17 @@ jobs:
           export MATRICES="
             pull-request:
               # amd64
-              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', GPU: 'v100', DRIVER: 'earliest' }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'v100', DRIVER: 'latest'   }
+              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', GPU: 'l4', DRIVER: 'earliest' }
+              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4', DRIVER: 'latest'   }
               # arm64
               - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest'   }
             nightly:
               # amd64
-              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.4.3', LINUX_VER: 'rockylinux8', GPU: 'v100', DRIVER: 'earliest' }
-              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.4.3', LINUX_VER: 'ubuntu20.04', GPU: 'v100', DRIVER: 'latest'   }
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', GPU: 'v100', DRIVER: 'latest'   }
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'rockylinux8', GPU: 'v100', DRIVER: 'latest'   }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'v100', DRIVER: 'latest'   }
+              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.4.3', LINUX_VER: 'rockylinux8', GPU: 'l4', DRIVER: 'earliest' }
+              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.4.3', LINUX_VER: 'ubuntu20.04', GPU: 'l4', DRIVER: 'latest'   }
+              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', GPU: 'l4', DRIVER: 'latest'   }
+              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'rockylinux8', GPU: 'l4', DRIVER: 'latest'   }
+              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4', DRIVER: 'latest'   }
               # arm64
               - { ARCH: 'arm64', PY_VER: '3.9',  CUDA_VER: '11.4.3', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest'   }
               - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu22.04', GPU: 'a100', DRIVER: 'latest'   }
@@ -100,7 +100,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
-    runs-on: "linux-${{ matrix.ARCH }}-gpu-${{ matrix.GPU }}-${{ matrix.DRIVER }}-1"
+    runs-on: "linux-${{ matrix.ARCH }}-gpu-${{ matrix.GPU }}-${{ matrix.DRIVER }}-1-testing"
     env:
       RAPIDS_TESTS_DIR: ${{ github.workspace }}/test-results
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
@@ -109,7 +109,6 @@ jobs:
       options: ${{ inputs.container-options }}
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
-        PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
