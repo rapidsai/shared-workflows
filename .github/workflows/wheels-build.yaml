@@ -45,12 +45,6 @@ on:
         type: string
         default: ''
 
-      # Build manylinux 2.28 wheels in addition to 2.17 wheels
-      build-2_28-wheels:
-        required: false
-        type: string
-        default: 'false'
-
 defaults:
   run:
     shell: bash
@@ -88,12 +82,12 @@ jobs:
           #
           export MATRIX="
           # amd64
-          - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.8.0', LINUX_VER: 'centos7' }
-          - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '12.2.2', LINUX_VER: 'centos7' }
-          - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'centos7' }
-          - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.2.2', LINUX_VER: 'centos7' }
-          - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '11.8.0', LINUX_VER: 'centos7' }
-          - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'centos7' }
+          - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8' }
           # arm64
           - { ARCH: 'arm64', PY_VER: '3.9',  CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
           - { ARCH: 'arm64', PY_VER: '3.9',  CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8' }
@@ -103,27 +97,14 @@ jobs:
           - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8' }
           "
 
-          export NEW_MANYLINUX_MATRIX="
-          # amd64
-          - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
-          - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8' }
-          - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
-          - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8' }
-          - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
-          - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8' }
-          "
-
-          if ${{ inputs.build-2_28-wheels == 'true' }}; then
-              export MATRIX+=${NEW_MANYLINUX_MATRIX}
-          fi
-
-          echo "MATRIX=$(
+          MATRIX="$(
             yq -n -o json 'env(MATRIX)' | \
-            jq -c '${{ inputs.matrix_filter }} | {include: .}' \
-          )" | tee --append "${GITHUB_OUTPUT}"
+            jq -c '${{ inputs.matrix_filter }} | if (. | length) > 0 then {include: .} else "Error: Empty matrix\n" | halt_error(1) end'
+          )"
 
+          echo "MATRIX=${MATRIX}" | tee --append "${GITHUB_OUTPUT}"
   build:
-    name:  ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }} 
+    name:  ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}
     needs: [compute-matrix]
     strategy:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
