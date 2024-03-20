@@ -153,7 +153,7 @@ jobs:
         GH_TOKEN: ${{ github.token }}
 
     - name: Generate test report
-      uses: test-summary/action@v2.2
+      uses: test-summary/action@v2.3
       with:
         paths: "${{ env.RAPIDS_TESTS_DIR }}/*.xml"
         show: ${{ inputs.test_summary_show }}
