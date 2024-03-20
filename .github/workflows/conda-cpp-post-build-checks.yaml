@@ -52,7 +52,7 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           role-duration-seconds: 43200 # 12h
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         env:
           GIT_TRACE_PACKET: 1
           GIT_TRACE: 1
@@ -74,7 +74,7 @@ jobs:
           EXTRACTED_DIR=$(rapids-extract-conda-files "${CPP_DIR}")
           echo "RAPIDS_EXTRACTED_DIR=${EXTRACTED_DIR}" >> "${GITHUB_ENV}"
       - name: Get weak detection tool
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         env:
           GIT_TRACE_PACKET: 1
           GIT_TRACE: 1

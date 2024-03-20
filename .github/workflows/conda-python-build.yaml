@@ -98,7 +98,7 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           role-duration-seconds: 43200 # 12h
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         env:
           GIT_TRACE_PACKET: 1
           GIT_TRACE: 1
