@@ -85,7 +85,6 @@ jobs:
       image: rapidsai/ci-conda:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
-        PARALLEL_LEVEL: ${{ env.PARALLEL_LEVEL }}
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
