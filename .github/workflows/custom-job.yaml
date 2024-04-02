@@ -1,9 +1,5 @@
 on:
   workflow_call:
-    outputs:
-      job_output:
-        description: "job_output set by inputs.run_script"
-        value: "${{ jobs.build.outputs.job_output }}"
     inputs:
       build_type:
         required: true
@@ -50,11 +46,6 @@ permissions:
 
 jobs:
   build:
-    outputs:
-      # Export run_step_output to dependent jobs
-      # To set this, the script must do
-      # echo "job_output=WHATEVER" >> "${GITHUB_OUTPUT}"
-      job_output: ${{ steps.run-step.outputs.job_output }}
     strategy:
       fail-fast: false
     runs-on: "linux-${{ inputs.arch }}-${{ inputs.node_type }}"
