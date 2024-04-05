@@ -88,6 +88,7 @@ jobs:
         run: ${{ inputs.run_script }}
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_JOB_NAME: ${{ github.job }}
       - name: Upload file to GitHub Artifact1
         uses: actions/upload-artifact@v4
         with:
