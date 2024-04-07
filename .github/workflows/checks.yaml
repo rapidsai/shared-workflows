@@ -52,9 +52,6 @@ jobs:
       - name: Check workflow file dependencies
         if: ${{ inputs.enable_check_pr_job_dependencies }}
         run: rapids-check-pr-job-dependencies
-      - name: Run rapids-dependency-file-checker
-        if: ${{ inputs.enable_check_generated_files }}
-        run: rapids-dependency-file-checker ${{ inputs.dependency_generator_config_file_path }}
   check-style:
     if: ${{ inputs.enable_check_style }}
     runs-on: ubuntu-latest
