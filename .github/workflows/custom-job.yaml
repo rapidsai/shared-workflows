@@ -93,3 +93,4 @@ jobs:
         with:
           name: gh-status
           path: gh-status.json
+          if-no-files-found: ignore
