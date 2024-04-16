@@ -124,7 +124,6 @@ jobs:
         role-to-assume: ${{ vars.AWS_ROLE_ARN }}
         aws-region: ${{ vars.AWS_REGION }}
         role-duration-seconds: 43200 # 12h
-        disable-retry: "true"
     - name: Run nvidia-smi to make sure GPU is working
       run: nvidia-smi
 
