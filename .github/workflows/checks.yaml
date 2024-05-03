@@ -7,20 +7,29 @@ on:
         required: false
         type: string
       enable_check_size:
+        description: "Whether to enable the size checker"
         default: true
         type: boolean
         required: false
       enable_check_style:
+        description: "Whether to enable the style checker"
         default: true
         type: boolean
         required: false
       enable_check_generated_files:
+        description: "Whether to enable the generated files checker"
         default: true
         type: boolean
         required: false
       enable_check_pr_job_dependencies:
+        description: "Whether to enable the PR workflow dependency checker"
         default: true
         type: boolean
+        required: false
+      ignored_pr_jobs:
+        description: "Space separated list of jobs to ignore when checking PR workflow dependencies"
+        default: ""
+        type: string
         required: false
 
 defaults:
@@ -51,7 +60,9 @@ jobs:
           RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
       - name: Check workflow file dependencies
         if: ${{ inputs.enable_check_pr_job_dependencies }}
-        run: rapids-check-pr-job-dependencies
+        run: rapids-check-pr-job-dependencies "${IGNORED_JOBS}"
+        env:
+          IGNORED_JOBS: ${{ inputs.ignored_pr_jobs }}
   check-style:
     if: ${{ inputs.enable_check_style }}
     runs-on: ubuntu-latest
