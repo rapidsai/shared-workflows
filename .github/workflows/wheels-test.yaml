@@ -29,6 +29,11 @@ on:
         required: false
         type: string
         default: "fail"
+    # the use of secrets in shared-workflows is discouraged, especially for public repositories.
+    # these values were added for situations where the use of secrets is unavoidable.
+    secrets:
+      RAPIDS_AUX_SECRET_1:
+        required: false
 
 defaults:
   run:
@@ -151,6 +156,7 @@ jobs:
       run: ${{ inputs.script }}
       env:
         GH_TOKEN: ${{ github.token }}
+        RAPIDS_AUX_SECRET_1: ${{ secrets.RAPIDS_AUX_SECRET_1 }}
 
     - name: Generate test report
       uses: test-summary/action@v2.3
