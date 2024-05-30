@@ -148,6 +148,7 @@ jobs:
         if: inputs.run_codecov
         run: |
           codecov \
+            -t ${{ secrets.CODECOV_TOKEN }} \
             -s \
             "${RAPIDS_COVERAGE_DIR}" \
             -v
