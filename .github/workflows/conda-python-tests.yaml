@@ -71,22 +71,8 @@ jobs:
           export MATRICES="
             pull-request:
               # amd64
-              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', GPU: 'v100', DRIVER: 'earliest' }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'v100', DRIVER: 'latest'   }
-              # arm64
-              - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest'   }
-            nightly:
-              # amd64
-              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.4.3', LINUX_VER: 'rockylinux8', GPU: 'v100', DRIVER: 'earliest' }
-              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.4.3', LINUX_VER: 'ubuntu20.04', GPU: 'v100', DRIVER: 'latest'   }
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', GPU: 'v100', DRIVER: 'latest'   }
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'rockylinux8', GPU: 'v100', DRIVER: 'latest'   }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'v100', DRIVER: 'latest'   }
-              # arm64
-              - { ARCH: 'arm64', PY_VER: '3.9',  CUDA_VER: '11.4.3', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest'   }
-              - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu22.04', GPU: 'a100', DRIVER: 'latest'   }
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', GPU: 'a100', DRIVER: 'latest'   }
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8', GPU: 'a100', DRIVER: 'latest'   }
+              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', GPU: 'v100', DRIVER: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.9', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu20.04', GPU: 'v100', DRIVER: 'latest' }
           "
 
           TEST_MATRIX=$(yq -n 'env(MATRICES) | .[strenv(BUILD_TYPE)]')
@@ -109,7 +95,7 @@ jobs:
       RAPIDS_TESTS_DIR: ${{ github.workspace }}/test-results
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     container:
-      image: rapidsai/ci-conda:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
+      image: jawenv/jawe:rapidsai-ci-conda-codecov-cli-0.6.0_source_dist_${{ contains(matrix.LINUX_VER, 'ubuntu') && 'ubuntu' || 'rocky' }}
       options: ${{ inputs.container-options }}
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
@@ -149,12 +135,11 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
-          codecov \
-            upload-process \
+          codecovcli \
             -v \
-            -s \
+            upload-process \
             -C ${{ github.sha }} \
-            "${RAPIDS_COVERAGE_DIR}"
+            -s "${RAPIDS_COVERAGE_DIR}"
       - name: Upload additional artifacts
         if: "!cancelled()"
         run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}
