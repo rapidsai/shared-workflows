@@ -38,7 +38,7 @@ on:
         required: true
 
     secrets:
-      PROJECT_MANAGEMENT_SECRET:
+      ADD_TO_PROJECT_GITHUB_TOKEN:
         description: "Project Access Token"
         required: true
 
@@ -53,7 +53,7 @@ jobs:
         - name: Sync Linked Issues
           id: sync_linked_issues
           env:
-            GITHUB_TOKEN: ${{ secrets.PROJECT_MANAGEMENT_SECRET }}
+            GITHUB_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
           run: |
             # Find the linked issues to the PR
             # If an issue is passed in, the json will return null and the for loop won't trigger

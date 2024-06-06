@@ -16,7 +16,7 @@ on:
         required: true
 
     secrets:
-      PROJECT_MANAGEMENT_SECRET:
+      ADD_TO_PROJECT_GITHUB_TOKEN:
         description: "Project Access Token"
         required: true
 
@@ -40,7 +40,7 @@ jobs:
       - name: Get Item Project ID
         id: get_item_id
         env:
-          GH_TOKEN: ${{ secrets.PROJECT_MANAGEMENT_SECRET }}
+          GH_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
         run: |
             # Query up to 10 projects for the PR
             # There's no graphQL filter configured to query by a specific project

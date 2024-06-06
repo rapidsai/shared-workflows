@@ -43,7 +43,7 @@ on:
         type: boolean
 
     secrets:
-      PROJECT_MANAGEMENT_SECRET:
+      ADD_TO_PROJECT_GITHUB_TOKEN:
         description: "Project Access Token"
         required: true
 
@@ -57,7 +57,7 @@ jobs:
       - name: Update item text/date/numeric field
         id: update_item_text_date_numeric_field
         env:
-          GH_TOKEN: ${{ secrets.PROJECT_MANAGEMENT_SECRET }}
+          GH_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
         run: |
             # Set the field based on the inputted desired value
             # This overwrites whatever was in it before, we may want to make an "OVERWRITE" option
