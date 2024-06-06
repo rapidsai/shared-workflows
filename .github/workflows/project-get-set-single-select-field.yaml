@@ -47,7 +47,7 @@ on:
         type: boolean
 
     secrets:
-      PROJECT_MANAGEMENT_SECRET:
+      ADD_TO_PROJECT_GITHUB_TOKEN:
         description: "Project Access Token"
         required: true
 
@@ -68,7 +68,7 @@ jobs:
       - name: Get single_select Option ID
         id: get_single_select_option_id
         env:
-          GH_TOKEN: ${{ secrets.PROJECT_MANAGEMENT_SECRET }}
+          GH_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
         run: |
             # Get single_select option id
             gh api graphql -f query='
@@ -92,7 +92,7 @@ jobs:
         id: update_item_single_select_field
         if: ${{ inputs.UPDATE_ITEM == true }}
         env:
-          GH_TOKEN: ${{ secrets.PROJECT_MANAGEMENT_SECRET }}
+          GH_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
         run: |
             # Set the single_select based on the query above
             # This overwrites whatever was in it before, we may want to make an "OVERWRITE" option

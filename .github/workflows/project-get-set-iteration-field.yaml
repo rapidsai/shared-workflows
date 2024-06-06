@@ -42,7 +42,7 @@ on:
         type: boolean
 
     secrets:
-      PROJECT_MANAGEMENT_SECRET:
+      ADD_TO_PROJECT_GITHUB_TOKEN:
         description: "Project Access Token"
         required: true
 
@@ -63,7 +63,7 @@ jobs:
       - name: Get Iteration Option ID
         id: get_iteration_option_id
         env:
-          GH_TOKEN: ${{ secrets.PROJECT_MANAGEMENT_SECRET }}
+          GH_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
         run: |
             # Get current iteration iteration id
             # The current iteration is always the first element in the returned list
@@ -93,7 +93,7 @@ jobs:
         id: update_item_iteration_field
         if: ${{ inputs.UPDATE_ITEM == true }}
         env:
-          GH_TOKEN: ${{ secrets.PROJECT_MANAGEMENT_SECRET }}
+          GH_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
         run: |
             # Set the iteration based on the query above
             # This overwrites whatever was in it before, we may want to make an "OVERWRITE" option
