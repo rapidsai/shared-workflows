@@ -9,6 +9,9 @@ on:
       cuda:
         type: string
         default: '["12.0"]'
+      python_package_manager:
+        type: string
+        default: '["conda", "pip"]'
       repo:
         type: string
       node_type:
@@ -55,7 +58,7 @@ jobs:
       matrix:
         arch: ${{ fromJSON(inputs.arch) }}
         cuda: ${{ fromJSON(inputs.cuda) }}
-        pkgr: ["conda", "pip"]
+        pkgr: ${{ fromJSON(inputs.python_package_manager) }}
     runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
     steps:
       - uses: actions/checkout@v4
