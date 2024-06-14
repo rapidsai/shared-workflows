@@ -32,10 +32,10 @@ jobs:
       ITEM_PROJECT_ID: ${{ steps.get_item_id.outputs.ITEM_PROJECT_ID }}
 
     steps:
-      - name: Sleep 1s
+      - name: Sleep 10s
         id: sleep_1s
         run: |
-          sleep 1 # Ensure the PR is added to the project before we query its ID
+          sleep 10 # Ensure the PR is added to the project before we query its ID
 
       - name: Get Item Project ID
         id: get_item_id
