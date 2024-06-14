@@ -33,7 +33,7 @@ jobs:
 
     steps:
       - name: Sleep 10s
-        id: sleep_1s
+        id: sleep
         run: |
           sleep 10 # Ensure the PR is added to the project before we query its ID
 
