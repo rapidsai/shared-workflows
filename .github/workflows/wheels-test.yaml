@@ -134,10 +134,6 @@ jobs:
 
     - name: checkout code repo
       uses: actions/checkout@v4
-      env:
-        GIT_TRACE_PACKET: 1
-        GIT_TRACE: 1
-        GIT_CURL_VERBOSE: 1
       with:
         repository: ${{ inputs.repo }}
         ref: ${{ inputs.sha }}
