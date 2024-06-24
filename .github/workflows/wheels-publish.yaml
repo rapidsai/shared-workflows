@@ -71,8 +71,16 @@ jobs:
         branch: ${{ inputs.branch }}
         date: ${{ inputs.date }}
         sha: ${{ inputs.sha }}
+    - name: mint API token
+      run: ci/mint-pypi-token.sh
 
     - name: Download wheels from downloads.rapids.ai and publish to anaconda repository
-      run: rapids-wheels-anaconda "${{ inputs.package-name }}" "${{ inputs.package-type }}"
+      run: ci/rapids-wheels-anaconda "${{ inputs.package-name }}" "${{ inputs.package-type }}"
       env:
         RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
+      
+    - name: Download wheels from downloads.rapids.ai and publish to PyPI
+      run: ci/rapids-wheels-pypi "${{ inputs.package-name }}" "${{ inputs.package-type }}"
+      env:
+        TWINE_USERNAME: "__token__"
+        TWINE_PASSWORD: ${{ steps.mint-token.outputs.api-token }}
