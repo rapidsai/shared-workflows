@@ -76,11 +76,16 @@ jobs:
 
     - name: Download wheels from downloads.rapids.ai and publish to anaconda repository
       run: ci/rapids-wheels-anaconda "${{ inputs.package-name }}" "${{ inputs.package-type }}"
-      env:
-        RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
+      # env:
+      #   RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
       
-    - name: Download wheels from downloads.rapids.ai and publish to PyPI
-      run: ci/rapids-wheels-pypi "${{ inputs.package-name }}" "${{ inputs.package-type }}"
-      env:
-        TWINE_USERNAME: "__token__"
-        TWINE_PASSWORD: ${{ steps.mint-token.outputs.api-token }}
+    # - name: Download wheels from downloads.rapids.ai and publish to PyPI
+    #   run: ci/rapids-wheels-pypi "${{ inputs.package-name }}" "${{ inputs.package-type }}"
+    #   env:
+    #     TWINE_USERNAME: "__token__"
+    #     TWINE_PASSWORD: ${{ steps.mint-token.outputs.api-token }}
+    - name: Publish package distributions to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+
