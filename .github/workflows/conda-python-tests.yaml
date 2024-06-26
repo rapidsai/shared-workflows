@@ -147,6 +147,8 @@ jobs:
         if: always()
       - name: Run codecov
         if: inputs.run_codecov
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
           codecovcli \
             -v \
