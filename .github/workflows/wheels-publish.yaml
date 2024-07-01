@@ -76,6 +76,11 @@ jobs:
         date: ${{ inputs.date }}
         sha: ${{ inputs.sha }}
 
+    - name: Download wheels from downloads.rapids.ai and publish to anaconda repository
+      run: rapids-wheels-anaconda "${{ inputs.package-name }}" "${{ inputs.package-type }}"
+      env:
+        RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
+
     - name: Check if build is release
       id: check_if_release
       shell: bash
@@ -84,13 +89,13 @@ jobs:
         #!/bin/bash
         set -e
         if [[ "${GITHUB_REF}" =~ ^refs/tags/v[0-9]{1,2}.[0-9]{2}.[0-9]{2}$ ]]; then
-          echo "is-release-build=true" >> $GITHUB_OUTPUT
+          echo "is_release_build=true" | tee -a ${GITHUB_OUTPUT}
         else
-          echo "is-release-build=false" >> $GITHUB_OUTPUT
+          echo "is_release_build=true" | tee -a ${GITHUB_OUTPUT}
         fi
 
     - name: Publish package to TestPyPI
-      if: ${{ inputs.publish_to_pypi && steps.check_if_release.outputs.is-release-build == true }}
+      if: ${{ inputs.publish_to_pypi && steps.check_if_release.outputs.is_release_build == 'true' }}
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.TEST_PYPI_API_TOKEN }}
