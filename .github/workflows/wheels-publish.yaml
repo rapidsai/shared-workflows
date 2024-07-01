@@ -96,5 +96,5 @@ jobs:
       if: ${{ inputs.publish_to_pypi && steps.check_if_release.outputs.is_release_build == 'true' }}
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
+        password: ${{ secrets.RAPIDSAI_PYPI_TOKEN }}
         repository-url: https://pypi.org/legacy/
