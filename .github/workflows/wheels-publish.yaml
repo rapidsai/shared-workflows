@@ -24,6 +24,10 @@ on:
         required: false
         default: python
         type: string
+      publish_to_pypi:
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   actions: read
@@ -76,3 +80,21 @@ jobs:
       run: rapids-wheels-anaconda "${{ inputs.package-name }}" "${{ inputs.package-type }}"
       env:
         RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
+
+    - name: Check if build is release
+      id: check_if_release
+      shell: bash
+      if: ${{ inputs.publish_to_pypi }}
+      run: |
+        if rapids-is-release-build; then
+          echo "is_release_build=true" | tee -a ${GITHUB_OUTPUT}
+        else
+          echo "is_release_build=false" | tee -a ${GITHUB_OUTPUT}
+        fi
+
+    - name: Publish the downloaded wheels to PyPI
+      if: ${{ inputs.publish_to_pypi && steps.check_if_release.outputs.is_release_build == 'true' }}
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.RAPIDSAI_PYPI_TOKEN }}
+        repository-url: https://pypi.org/legacy/
