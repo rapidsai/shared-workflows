@@ -71,22 +71,22 @@ jobs:
           export MATRICES="
             pull-request:
               # amd64
-              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', GPU: 'v100', DRIVER: 'earliest', DEPENDENCIES: 'earliest' }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'v100', DRIVER: 'latest',   DEPENDENCIES: 'latest'   }
+              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', GPU: 'v100', DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
+              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'v100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               # arm64
-              - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest'   }
+              - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
             nightly:
               # amd64
-              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.4.3', LINUX_VER: 'rockylinux8', GPU: 'v100', DRIVER: 'earliest', DEPENDENCIES: 'earliest' }
-              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.4.3', LINUX_VER: 'ubuntu20.04', GPU: 'v100', DRIVER: 'latest',   DEPENDENCIES: 'latest'   }
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', GPU: 'v100', DRIVER: 'latest',   DEPENDENCIES: 'latest'   }
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'rockylinux8', GPU: 'v100', DRIVER: 'latest',   DEPENDENCIES: 'latest'   }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'v100', DRIVER: 'latest',   DEPENDENCIES: 'latest'   }
+              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.4.3', LINUX_VER: 'rockylinux8', GPU: 'v100', DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
+              - { ARCH: 'amd64', PY_VER: '3.9',  CUDA_VER: '11.4.3', LINUX_VER: 'ubuntu20.04', GPU: 'v100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', GPU: 'v100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'rockylinux8', GPU: 'v100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'v100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               # arm64
-              - { ARCH: 'arm64', PY_VER: '3.9',  CUDA_VER: '11.4.3', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest'   }
-              - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu22.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'earliest' }
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest'   }
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest'   }
+              - { ARCH: 'arm64', PY_VER: '3.9',  CUDA_VER: '11.4.3', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu22.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
+              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
           "
 
           TEST_MATRIX=$(yq -n 'env(MATRICES) | .[strenv(BUILD_TYPE)]')
@@ -99,6 +99,7 @@ jobs:
 
           echo "MATRIX=${MATRIX}" | tee --append "${GITHUB_OUTPUT}"
   tests:
+    name: ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}, ${{ matrix.GPU }}, ${{ matrix.DRIVER }}-driver, ${{ matrix.DEPENDENCIES }}-deps
     needs: compute-matrix
     strategy:
       fail-fast: false
