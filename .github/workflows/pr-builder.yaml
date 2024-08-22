@@ -1,9 +1,17 @@
 on:
   workflow_call:
+    inputs:
+      needs:
+        required: false
+        type: string
+        default: '{}'
 
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
       # This reusable workflow should depend on all other jobs in the calling workflow.
-      - run: exit 0
+      - name: "Check all dependent jobs"
+        env:
+          NEEDS: ${{ inputs.needs }}
+        run: echo "$NEEDS" | jq -e 'any((.result as $result | ["success", "skipped"] | any($result == .)) | not) | not'
