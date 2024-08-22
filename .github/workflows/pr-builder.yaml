@@ -2,7 +2,7 @@ on:
   workflow_call:
     inputs:
       needs:
-        description: 'Value should always be `${{ needs }}`'
+        description: 'Value should always be `${{ toJSON(needs) }}`'
         required: false
         type: string
         default: '{}'
