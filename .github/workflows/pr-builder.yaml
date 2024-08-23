@@ -14,4 +14,4 @@ jobs:
       - name: "Check all dependent jobs"
         env:
           NEEDS: ${{ inputs.needs }}
-        run: echo "$NEEDS" | jq -e 'any((.result as $result | ["success", "skipped"] | any($result == .)) | not) | not'
+        run: jq -en 'env.NEEDS | fromjson | all(.result as $result | ["success", "skipped"] | any($result == .))'
