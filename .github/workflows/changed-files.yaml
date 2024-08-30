@@ -7,7 +7,19 @@ on:
       transform_expr:
         type: string
         required: false
-        default: '.'
+        default: |
+          to_entries |
+          map(
+            select(
+              .key |
+              endswith("_any_changed")
+            ) |
+            {
+              "key": ("test_" + (.key | rtrimstr("_any_changed"))),
+              "value": (.value == "true"),
+            }
+          ) |
+          from_entries
     outputs:
       transformed_output:
         value: ${{ jobs.changed-files.outputs.transformed_output }}
