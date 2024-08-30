@@ -6,7 +6,8 @@ on:
         required: true
       transform_expr:
         type: string
-        required: true
+        required: false
+        default: '.'
     outputs:
       transformed_output:
         value: ${{ jobs.changed-files.outputs.transformed_output }}
