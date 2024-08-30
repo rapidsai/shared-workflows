@@ -10,10 +10,7 @@ on:
         default: |
           to_entries |
           map(
-            select(
-              .key |
-              endswith("_any_changed")
-            ) |
+            select(.key | endswith("_any_changed")) |
             {
               "key": ("test_" + (.key | rtrimstr("_any_changed"))),
               "value": (.value == "true"),
