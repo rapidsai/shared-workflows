@@ -65,4 +65,4 @@ jobs:
           CHANGED_FILES: ${{ toJSON(steps.changed-files.outputs) }}
           TRANSFORM_EXPR: ${{ inputs.transform_expr }}
         run: |
-          (echo -n "transformed-output="; jq -c -n "env.CHANGED_FILES | $TRANSFORM_EXPR") | tee --append "$GITHUB_OUTPUT"
+          (echo -n "transformed-output="; jq -c -n "env.CHANGED_FILES | fromjson | $TRANSFORM_EXPR") | tee --append "$GITHUB_OUTPUT"
