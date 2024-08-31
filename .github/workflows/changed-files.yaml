@@ -12,7 +12,7 @@ on:
           map(
             select(.key | endswith("_any_changed")) |
             {
-              "key": ("test_" + (.key | rtrimstr("_any_changed"))),
+              "key": (.key | rtrimstr("_any_changed")),
               "value": (.value == "true"),
             }
           ) |
