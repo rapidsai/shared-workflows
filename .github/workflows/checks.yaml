@@ -48,7 +48,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Get PR Info
         id: get-pr-info
-        uses: rapidsai/shared-actions/get-pr-info@main
+        uses: nv-gha-runners/get-pr-info@main
       - name: Run rapids-size-checker
         if: ${{ inputs.enable_check_size }}
         run: rapids-size-checker
@@ -71,7 +71,7 @@ jobs:
           fetch-depth: 0
       - name: Get PR Info
         id: get-pr-info
-        uses: rapidsai/shared-actions/get-pr-info@main
+        uses: nv-gha-runners/get-pr-info@main
       - uses: actions/cache@v4
         with:
           path: ~/.cache/pre-commit
