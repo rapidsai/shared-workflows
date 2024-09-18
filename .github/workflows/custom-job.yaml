@@ -68,7 +68,7 @@ jobs:
       - name: Get PR Info
         if: startsWith(github.ref_name, 'pull-request/')
         id: get-pr-info
-        uses: rapidsai/shared-actions/get-pr-info@main
+        uses: nv-gha-runners/get-pr-info@main
       - name: Add PR Info
         if: startsWith(github.ref_name, 'pull-request/')
         run: |
