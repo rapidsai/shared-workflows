@@ -21,6 +21,40 @@ on:
       matrix_filter:
         type: string
         default: "."
+      # telemetry settings: Destination to send telemetry to
+      default_endpoint:
+        type: string
+      # defaults to <default_endpoint>/v1/traces
+      # Change it if you want to send to a different host or port number
+      traces_endpoint:
+        type: string
+      # defaults to <default_endpoint>/v1/metrics
+      # Change it if you want to send to a different host or port number
+      metrics_endpoint:
+        type: string
+      # defaults to <default_endpoint>/v1/logs
+      # Change it if you want to send to a different host or port number
+      logs_endpoint:
+        type: string
+      traceparent:
+        type: string
+        description: |
+            Opentelemetry traceparent. Format is described in https://medium.com/@mesutatasoy/understanding-traceparent-and-microservices-in-opentelemetry-notepad-series-7-de5c16bf6462
+            Generally, 00-<trace_id 32 chars>-<span_id 16 chars>-01
+      parent_span:
+        type: string
+      traces_exporters:
+        type: string
+        description: Exporter name to send data to. May use 'console' for debugging. Can be multiple, comma-separated, 'console,otlp'
+        default: "otlp"
+      metrics_exporters:
+        type: string
+        description: Exporter name to send data to. May use 'console' for debugging. Can be multiple, comma-separated, 'console,otlp'
+        default: "otlp"
+      logs_exporters:
+        type: string
+        description: Exporter name to send data to. May use 'console' for debugging. Can be multiple, comma-separated, 'console,otlp'
+        default: "otlp"
 
 defaults:
   run:
@@ -41,6 +75,21 @@ permissions:
   security-events: none
   statuses: none
 
+env:
+  TOP_LEVEL_TRACEPARENT: ${{ inputs.traceparent }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: "${{ inputs.default-endpoint }}"
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "${{ inputs.traces-endpoint }}"
+  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: "${{ inputs.metrics-endpoint }}"
+  OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: "${{ inputs.logs-endpoint }}"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+  OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+  OTEL_EXPORTER_OTLP_CERTIFICATE: "/tmp/certs/ca.crt"
+  OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: "/tmp/certs/client.crt"
+  OTEL_EXPORTER_OTLP_CLIENT_KEY: "/tmp/certs/client.key"
+  RAPIDS_OTEL_TRACES_EXPORTER: "${{ inputs.traces-exporters || 'otlp' }}"
+  RAPIDS_OTEL_METRICS_EXPORTER: "${{ inputs.metrics-exporters || 'otlp' }}"
+  RAPIDS_OTEL_LOGS_EXPORTER: "${{ inputs.logs-exporters || 'otlp' }}"
+
 jobs:
   compute-matrix:
     runs-on: ubuntu-latest
@@ -59,10 +108,11 @@ jobs:
           export MATRIX="
           # amd64
           - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04' }
-          - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.5.1', LINUX_VER: 'ubuntu22.04' }
+          # TODO: Uncomment matrix entries here
+          #- { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.5.1', LINUX_VER: 'ubuntu22.04' }
           # arm64
-          - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04' }
-          - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.5.1', LINUX_VER: 'ubuntu22.04' }
+          #- { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04' }
+          #- { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.5.1', LINUX_VER: 'ubuntu22.04' }
           "
 
           MATRIX="$(
@@ -86,11 +136,38 @@ jobs:
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
+      - name: Install OpenTelemetry instrumentation
+        run: |
+          curl -L -o otel-cli-${{ matrix.ARCH }}.deb https://github.com/equinix-labs/otel-cli/releases/download/v0.4.5/otel-cli_0.4.5_linux_${{ matrix.ARCH }}.deb
+          dpkg -i otel-cli-${{ matrix.ARCH }}.deb
+          pip install opentelemetry-distro[otlp] \
+              opentelemetry-exporter-prometheus \
+              git+https://github.com/msarahan/opentelemetry-python-contrib.git@add-conda-build-instrumentation#subdirectory=instrumentation/opentelemetry-instrumentation-conda-build
+          opentelemetry-bootstrap -a install
+      # Replace gha-tools that comes with the image with our hacked one
+      # original install goes to /usr/local/bin
+      # https://github.com/rapidsai/ci-imgs/blob/b1cff14b6d36ab082538fd947ad08f34527a2986/ci-conda.Dockerfile#L178-L180
+      - name: Download gha-tools with git clone
+        run: |
+            git clone https://github.com/msarahan/gha-tools.git -b add-otel-wrapper /tmp/gha-tools
+            cp /tmp/gha-tools/tools/* /usr/local/bin/
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           role-duration-seconds: 43200 # 12h
+      - name: Write certificate files for mTLS
+        run: |
+          mkdir -p /tmp/certs
+          cat << EOF > ${OTEL_EXPORTER_OTLP_CERTIFICATE}
+          ${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }}
+          EOF
+          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE}
+          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }}
+          EOF
+          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_KEY}
+          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}
+          EOF
       - uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repo }}
@@ -102,10 +179,29 @@ jobs:
           echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
           echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
+      - name: Telemetry setup
+        id: job-traceparent
+        # TODO: This is why we need to merge https://github.com/rapidsai/shared-actions/pull/19 before work on shared-workflows can proceed
+        # The build job can't use actions that aren't approved, so we can't test against a personal branch.
+        uses: rapidsai/shared-actions/telemetry-setup@main
       - name: C++ build
         run: ${{ inputs.script }}
         env:
+          # used in telemetry, because step names are not programmatically accessible
+          OTEL_SERVICE_NAME: "C++ build"
           GH_TOKEN: ${{ github.token }}
+          # This traceparent is expected to be the value of a step from the calling workflow (e.g. rmm/.github/workflows/pr.yaml.
+          #   Ideally, this would be something like conda-cpp-build, which is job that calls a shared workflow.)
+          TRACEPARENT: ${{ steps.job-traceparent.outputs.traceparent }}
       - name: Upload additional artifacts
         if: "!cancelled()"
         run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)
+      - name: Telemetry summary
+        id: telemetry-summary
+        if: "always()"
+        uses: rapidsai/shared-actions/telemetry-summarize@main
+        with:
+          endpoint: ${{ inputs.traces_endpoint || inputs.default_endpoint && format('{0}/v1/traces', inputs.default_endpoint) }}
+          # TODO: This is why we need to merge https://github.com/rapidsai/shared-actions/pull/19 before work on shared-workflows can proceed
+          # The build job can't use actions that aren't approved, so we can't test against a personal branch.
+          traceparent: "${{ env.TOP_LEVEL_TRACEPARENT }}"
