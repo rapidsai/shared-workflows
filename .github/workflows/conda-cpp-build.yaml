@@ -127,13 +127,15 @@ jobs:
               opentelemetry-exporter-prometheus \
               git+https://github.com/msarahan/opentelemetry-python-contrib.git@add-conda-build-instrumentation#subdirectory=instrumentation/opentelemetry-instrumentation-conda-build
           opentelemetry-bootstrap -a install
-      # Replace gha-tools that comes with the image with our hacked one
-      # original install goes to /usr/local/bin
-      # https://github.com/rapidsai/ci-imgs/blob/b1cff14b6d36ab082538fd947ad08f34527a2986/ci-conda.Dockerfile#L178-L180
+
+      # Temporary until ci-imgs build with
+      # https://github.com/rapidsai/gha-tools/commit/8bd8fca71b5fae38b1493c547d15e73da40b32e1#diff-f1f054b2906bfd36ad706ed2fa6aa028fa529e65b25167e4ca7ca45546d59ed8R14
+      # is available. The PR is merged, but at time of writing, no ci-imgs builds have been released to pick it up.
       - name: Download gha-tools with git clone
         run: |
-            git clone https://github.com/msarahan/gha-tools.git -b add-telemetry-traceparent-scripts /tmp/gha-tools
-            cp /tmp/gha-tools/tools/* /usr/local/bin/
+            git clone https://github.com/rapidsai/gha-tools.git /tmp/gha-tools
+            echo "/tmp/gha-tools/tools" >> "${GITHUB_PATH}"
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -166,7 +168,7 @@ jobs:
         id: job-traceparent
         # TODO: This is why we need to merge https://github.com/rapidsai/shared-actions/pull/19 before work on shared-workflows can proceed
         # The build job can't use actions that aren't approved, so we can't test against a personal branch.
-        uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
+        uses: rapidsai/shared-actions/telemetry-traceparent@main
       - name: C++ build
         run: ${{ inputs.script }}
         env:
@@ -182,7 +184,7 @@ jobs:
       - name: Telemetry summary
         id: telemetry-summary
         if: "always()"
-        uses: rapidsai/shared-actions/telemetry-summarize@add-telemetry
+        uses: rapidsai/shared-actions/telemetry-summarize@main
         with:
           endpoint: ${{ inputs.traces_endpoint || inputs.default_endpoint && format('{0}/v1/traces', inputs.default_endpoint) }}
           traceparent: "${{ env.TOP_LEVEL_TRACEPARENT }}"
