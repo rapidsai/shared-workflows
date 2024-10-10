@@ -175,6 +175,8 @@ jobs:
       - name: Get job metadata
         id: github-job-metadata
         uses: rapidsai/shared-actions/github-actions-job-info@add-telemetry
+      - name: Echo job metadata
+        run: echo "${{ steps.github-job-metadata.outputs.job-info }}" | jq
 
       - name: C++ build
         run: ${{ inputs.script }}
@@ -191,7 +193,7 @@ jobs:
       - name: Telemetry summary
         id: telemetry-summary
         if: "always()"
-        uses: rapidsai/shared-actions/telemetry-summarize@main
+        uses: rapidsai/shared-actions/telemetry-summarize@add-telemetry
         with:
           endpoint: ${{ inputs.traces_endpoint || inputs.default_endpoint && format('{0}/v1/traces', inputs.default_endpoint) }}
           traceparent: "${{ env.TOP_LEVEL_TRACEPARENT }}"
