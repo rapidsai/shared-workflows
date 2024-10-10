@@ -120,17 +120,6 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
 
-      # Temporary until https://github.com/rapidsai/ci-imgs/pull/196 is merged
-      - name: Install OpenTelemetry instrumentation
-        run: |
-          curl -L -o otel-cli-${{ matrix.ARCH }}.tar.gz https://github.com/equinix-labs/otel-cli/releases/download/v0.4.5/otel-cli_0.4.5_linux_${{ matrix.ARCH }}.tar.gz
-          tar -zxf  otel-cli-${{ matrix.ARCH }}.tar.gz
-          mv otel-cli /usr/local/bin/
-          pip install opentelemetry-distro[otlp] \
-              opentelemetry-exporter-prometheus \
-              git+https://github.com/msarahan/opentelemetry-python-contrib.git@add-conda-build-instrumentation#subdirectory=instrumentation/opentelemetry-instrumentation-conda-build
-          opentelemetry-bootstrap -a install
-
       # Temporary until ci-imgs build with
       # https://github.com/rapidsai/gha-tools/commit/8bd8fca71b5fae38b1493c547d15e73da40b32e1#diff-f1f054b2906bfd36ad706ed2fa6aa028fa529e65b25167e4ca7ca45546d59ed8R14
       # is available. The PR is merged, but at time of writing, no ci-imgs builds have been released to pick it up.
@@ -175,6 +164,17 @@ jobs:
           echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
           echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
+
+      # Temporary until https://github.com/rapidsai/ci-imgs/pull/196 is merged
+      - name: Install OpenTelemetry instrumentation
+        run: |
+          curl -L -o otel-cli-${{ matrix.ARCH }}.tar.gz https://github.com/equinix-labs/otel-cli/releases/download/v0.4.5/otel-cli_0.4.5_linux_${{ matrix.ARCH }}.tar.gz
+          tar -zxf  otel-cli-${{ matrix.ARCH }}.tar.gz
+          mv otel-cli /usr/local/bin/
+          pip install opentelemetry-distro[otlp] \
+              opentelemetry-exporter-prometheus \
+              git+https://github.com/msarahan/opentelemetry-python-contrib.git@add-conda-build-instrumentation#subdirectory=instrumentation/opentelemetry-instrumentation-conda-build
+          opentelemetry-bootstrap -a install
 
       - name: C++ build
         run: ${{ inputs.script }}
