@@ -172,17 +172,19 @@ jobs:
         # TODO: This is why we need to merge https://github.com/rapidsai/shared-actions/pull/19 before work on shared-workflows can proceed
         # The build job can't use actions that aren't approved, so we can't test against a personal branch.
         uses: rapidsai/shared-actions/telemetry-traceparent@main
+
       - name: Get job metadata
         id: github-job-metadata
         uses: rapidsai/shared-actions/github-actions-job-info@add-telemetry
       - name: Echo job metadata
-        run: echo "${{ steps.github-job-metadata.outputs.job-info }}" | jq
+        id: echo-name
+        run: echo JOB_NAME=$("${{ steps.github-job-metadata.outputs.job-info }}" | jq .name) >> ${GITHUB_OUTPUT}
 
       - name: C++ build
         run: ${{ inputs.script }}
         env:
           # used in telemetry, because step names are not programmatically accessible
-          OTEL_SERVICE_NAME: "${{steps.github-job-metadata.outputs.job-info.name}}"
+          OTEL_SERVICE_NAME: "${{steps.echo-name.outputs.job-info.JOB_NAME}}"
           STEP_NAME: C++ build
           GH_TOKEN: ${{ github.token }}
           TRACEPARENT: ${{ steps.job-traceparent.outputs.traceparent }}
