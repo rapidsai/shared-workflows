@@ -178,7 +178,7 @@ jobs:
         uses: rapidsai/shared-actions/github-actions-job-info@add-telemetry
       - name: Echo job metadata
         id: echo-name
-        run: echo JOB_NAME=$("${{ steps.github-job-metadata.outputs.job-info }}" | jq .name) >> ${GITHUB_OUTPUT}
+        run: echo JOB_NAME="$(echo "${{ steps.github-job-metadata.outputs.job-info }}" | jq .name)" >> ${GITHUB_OUTPUT}
 
       - name: C++ build
         run: ${{ inputs.script }}
