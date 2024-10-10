@@ -173,18 +173,15 @@ jobs:
         # The build job can't use actions that aren't approved, so we can't test against a personal branch.
         uses: rapidsai/shared-actions/telemetry-traceparent@main
 
-      - name: Get job metadata
-        id: github-job-metadata
-        uses: rapidsai/shared-actions/github-actions-job-info@add-telemetry
-      - name: Echo job metadata
-        id: echo-name
-        run: echo "JOB_NAME=\"$(echo ${{ steps.github-job-metadata.outputs.job-info }} | jq .name)\"" >> ${GITHUB_OUTPUT}
+      - name: Get job
+        id: github-job-name
+        uses: rapidsai/shared-actions/get-github-job-name@add-telemetry
 
       - name: C++ build
         run: ${{ inputs.script }}
         env:
           # used in telemetry, because step names are not programmatically accessible
-          OTEL_SERVICE_NAME: "${{steps.echo-name.outputs.job-info.JOB_NAME}}"
+          OTEL_SERVICE_NAME: ${{ steps.github-job-name.outputs.NAME }}
           STEP_NAME: C++ build
           GH_TOKEN: ${{ github.token }}
           TRACEPARENT: ${{ steps.job-traceparent.outputs.traceparent }}
