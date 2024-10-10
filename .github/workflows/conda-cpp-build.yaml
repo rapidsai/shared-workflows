@@ -182,10 +182,9 @@ jobs:
         run: ${{ inputs.script }}
         env:
           # used in telemetry, because step names are not programmatically accessible
-          OTEL_SERVICE_NAME: "C++ build: ${{fromJson(steps.github-job-metadata.outputs.job-info).name}}"
+          OTEL_SERVICE_NAME: "${{fromJson(steps.github-job-metadata.outputs.job-info).name}}"
+          STEP_NAME: C++ build
           GH_TOKEN: ${{ github.token }}
-          # This traceparent is expected to be the value of a step from the calling workflow (e.g. rmm/.github/workflows/pr.yaml.
-          #   Ideally, this would be something like conda-cpp-build, which is job that calls a shared workflow.)
           TRACEPARENT: ${{ steps.job-traceparent.outputs.traceparent }}
       - name: Upload additional artifacts
         if: "!cancelled()"
