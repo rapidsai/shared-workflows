@@ -41,20 +41,6 @@ on:
         description: |
             Opentelemetry traceparent. Format is described in https://medium.com/@mesutatasoy/understanding-traceparent-and-microservices-in-opentelemetry-notepad-series-7-de5c16bf6462
             Generally, 00-<trace_id 32 chars>-<span_id 16 chars>-01
-      parent_span:
-        type: string
-      traces_exporters:
-        type: string
-        description: Exporter name to send data to. May use 'console' for debugging. Can be multiple, comma-separated, 'console,otlp'
-        default: "otlp"
-      metrics_exporters:
-        type: string
-        description: Exporter name to send data to. May use 'console' for debugging. Can be multiple, comma-separated, 'console,otlp'
-        default: "otlp"
-      logs_exporters:
-        type: string
-        description: Exporter name to send data to. May use 'console' for debugging. Can be multiple, comma-separated, 'console,otlp'
-        default: "otlp"
 
 defaults:
   run:
@@ -77,18 +63,15 @@ permissions:
 
 env:
   TOP_LEVEL_TRACEPARENT: ${{ inputs.traceparent }}
-  OTEL_EXPORTER_OTLP_ENDPOINT: "${{ inputs.default-endpoint }}"
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "${{ inputs.traces-endpoint }}"
-  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: "${{ inputs.metrics-endpoint }}"
-  OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: "${{ inputs.logs-endpoint }}"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "${{ inputs.default_endpoint }}"
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "${{ inputs.traces_endpoint }}"
+  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: "${{ inputs.metrics_endpoint }}"
+  OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: "${{ inputs.logs_endpoint }}"
   OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
   OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
   OTEL_EXPORTER_OTLP_CERTIFICATE: "/tmp/certs/ca.crt"
   OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: "/tmp/certs/client.crt"
   OTEL_EXPORTER_OTLP_CLIENT_KEY: "/tmp/certs/client.key"
-  RAPIDS_OTEL_TRACES_EXPORTER: "${{ inputs.traces-exporters || 'otlp' }}"
-  RAPIDS_OTEL_METRICS_EXPORTER: "${{ inputs.metrics-exporters || 'otlp' }}"
-  RAPIDS_OTEL_LOGS_EXPORTER: "${{ inputs.logs-exporters || 'otlp' }}"
 
 jobs:
   compute-matrix:
@@ -112,7 +95,7 @@ jobs:
           #- { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.5.1', LINUX_VER: 'ubuntu22.04' }
           # arm64
           #- { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04' }
-          #- { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.5.1', LINUX_VER: 'ubuntu22.04' }
+          - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.5.1', LINUX_VER: 'ubuntu22.04' }
           "
 
           MATRIX="$(
@@ -183,7 +166,7 @@ jobs:
         id: job-traceparent
         # TODO: This is why we need to merge https://github.com/rapidsai/shared-actions/pull/19 before work on shared-workflows can proceed
         # The build job can't use actions that aren't approved, so we can't test against a personal branch.
-        uses: rapidsai/shared-actions/telemetry-setup@main
+        uses: msarahan/shared-actions/telemetry-traceparent@telemetry-summarize
       - name: C++ build
         run: ${{ inputs.script }}
         env:
@@ -199,7 +182,7 @@ jobs:
       - name: Telemetry summary
         id: telemetry-summary
         if: "always()"
-        uses: rapidsai/shared-actions/telemetry-summarize@main
+        uses: msarahan/shared-actions/telemetry-summarize@telemetry-summarize
         with:
           endpoint: ${{ inputs.traces_endpoint || inputs.default_endpoint && format('{0}/v1/traces', inputs.default_endpoint) }}
           # TODO: This is why we need to merge https://github.com/rapidsai/shared-actions/pull/19 before work on shared-workflows can proceed
