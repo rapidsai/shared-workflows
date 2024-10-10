@@ -182,7 +182,7 @@ jobs:
         run: ${{ inputs.script }}
         env:
           # used in telemetry, because step names are not programmatically accessible
-          OTEL_SERVICE_NAME: "${{fromJson(steps.github-job-metadata.outputs.job-info).name}}"
+          OTEL_SERVICE_NAME: "${{steps.github-job-metadata.outputs.job-info.name}}"
           STEP_NAME: C++ build
           GH_TOKEN: ${{ github.token }}
           TRACEPARENT: ${{ steps.job-traceparent.outputs.traceparent }}
