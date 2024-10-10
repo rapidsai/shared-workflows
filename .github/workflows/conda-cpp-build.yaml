@@ -130,7 +130,7 @@ jobs:
 
       - name: Telemetry setup
         id: job-traceparent
-        uses: rapidsai/shared-actions/telemetry-traceparent@main
+        uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
 
       - name: Get job name
         id: github-job-name
