@@ -166,7 +166,7 @@ jobs:
         id: job-traceparent
         # TODO: This is why we need to merge https://github.com/rapidsai/shared-actions/pull/19 before work on shared-workflows can proceed
         # The build job can't use actions that aren't approved, so we can't test against a personal branch.
-        uses: msarahan/shared-actions/telemetry-traceparent@telemetry-summarize
+        uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
       - name: C++ build
         run: ${{ inputs.script }}
         env:
@@ -182,9 +182,7 @@ jobs:
       - name: Telemetry summary
         id: telemetry-summary
         if: "always()"
-        uses: msarahan/shared-actions/telemetry-summarize@telemetry-summarize
+        uses: rapidsai/shared-actions/telemetry-summarize@add-telemetry
         with:
           endpoint: ${{ inputs.traces_endpoint || inputs.default_endpoint && format('{0}/v1/traces', inputs.default_endpoint) }}
-          # TODO: This is why we need to merge https://github.com/rapidsai/shared-actions/pull/19 before work on shared-workflows can proceed
-          # The build job can't use actions that aren't approved, so we can't test against a personal branch.
           traceparent: "${{ env.TOP_LEVEL_TRACEPARENT }}"
