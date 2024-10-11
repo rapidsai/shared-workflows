@@ -94,35 +94,6 @@ jobs:
         pkgr: ${{ fromJSON(inputs.python_package_manager) }}
     runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
     steps:
-      # Temporary until ci-imgs build with
-      # https://github.com/rapidsai/gha-tools/commit/8bd8fca71b5fae38b1493c547d15e73da40b32e1#diff-f1f054b2906bfd36ad706ed2fa6aa028fa529e65b25167e4ca7ca45546d59ed8R14
-      # is available. The PR is merged, but at time of writing, no ci-imgs builds have been released to pick it up.
-      - name: Download gha-tools with git clone
-        run: |
-            git clone https://github.com/msarahan/gha-tools.git -b add-telemetry-traceparent-scripts /tmp/gha-tools
-            echo "/tmp/gha-tools/tools" >> "${GITHUB_PATH}"
-
-      - name: Telemetry setup
-        id: job-traceparent
-        uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
-
-      - name: Get job name
-        id: github-job-name
-        uses: rapidsai/shared-actions/get-github-job-name@add-telemetry
-
-      - name: Write certificate files for mTLS
-        run: |
-          mkdir -p /tmp/certs
-          cat << EOF > ${OTEL_EXPORTER_OTLP_CERTIFICATE}
-          ${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }}
-          EOF
-          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE}
-          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }}
-          EOF
-          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_KEY}
-          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}
-          EOF
-
       - uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repo }}
@@ -186,10 +157,12 @@ jobs:
             cd ~/"${REPOSITORY}";
             ${{ inputs.build_command }}
 
-      - name: Telemetry summary
-        id: telemetry-summary
-        if: "always()"
-        uses: rapidsai/shared-actions/telemetry-summarize@add-telemetry
-        with:
-          endpoint: ${{ inputs.traces_endpoint || inputs.default_endpoint && format('{0}/v1/traces', inputs.default_endpoint) }}
-          traceparent: "${{ env.TOP_LEVEL_TRACEPARENT }}"
+    # TODO: otel-cli needs to be installed. This action tries to do so, but can't write to  /usr/local/bin.
+    #   The right way to install it is probably a feature, and that would be a PR to the devcontainers repo.
+    #   - name: Telemetry summary
+    #     id: telemetry-summary
+    #     if: "always()"
+    #     uses: rapidsai/shared-actions/telemetry-summarize@add-telemetry
+    #     with:
+    #       endpoint: ${{ inputs.traces_endpoint || inputs.default_endpoint && format('{0}/v1/traces', inputs.default_endpoint) }}
+    #       traceparent: "${{ env.TOP_LEVEL_TRACEPARENT }}"
