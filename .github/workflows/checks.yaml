@@ -89,7 +89,8 @@ jobs:
       - name: Telemetry setup
         id: job-traceparent
         uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
-
+        with:
+            job_name: "${{env.JOB_NAME}}"
       - name: Write certificate files for mTLS
         run: |
           mkdir -p /tmp/certs
@@ -125,6 +126,7 @@ jobs:
         with:
           endpoint: ${{ inputs.traces_endpoint || inputs.default_endpoint && format('{0}/v1/traces', inputs.default_endpoint) }}
           traceparent: "${{ env.TOP_LEVEL_TRACEPARENT }}"
+          job_name: "${{env.JOB_NAME}}"
 
 
 
@@ -147,7 +149,8 @@ jobs:
       - name: Telemetry setup
         id: job-traceparent
         uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
-
+        with:
+            job_name: "${{env.JOB_NAME}}"
       - name: Write certificate files for mTLS
         run: |
           mkdir -p /tmp/certs
@@ -183,3 +186,4 @@ jobs:
         with:
           endpoint: ${{ inputs.traces_endpoint || inputs.default_endpoint && format('{0}/v1/traces', inputs.default_endpoint) }}
           traceparent: "${{ env.TOP_LEVEL_TRACEPARENT }}"
+          job_name: "${{env.JOB_NAME}}"
