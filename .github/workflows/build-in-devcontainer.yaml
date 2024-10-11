@@ -148,15 +148,6 @@ jobs:
         with:
           node-version: '16'
 
-
-      # Temporary until https://github.com/rapidsai/ci-imgs/pull/196 is merged
-      - name: Install OpenTelemetry instrumentation
-        run: |
-          pip install opentelemetry-distro[otlp] \
-              opentelemetry-exporter-prometheus \
-              git+https://github.com/msarahan/opentelemetry-python-contrib.git@add-conda-build-instrumentation#subdirectory=instrumentation/opentelemetry-instrumentation-conda-build
-          opentelemetry-bootstrap -a install
-
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
         uses: devcontainers/ci@v0.3
@@ -194,6 +185,7 @@ jobs:
 
             cd ~/"${REPOSITORY}";
             ${{ inputs.build_command }}
+
       - name: Telemetry summary
         id: telemetry-summary
         if: "always()"
