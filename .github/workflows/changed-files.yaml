@@ -85,4 +85,4 @@ jobs:
           PR_INFO_LABELS: ${{ toJSON(fromJSON(steps.get-pr-info.outputs.pr-info).labels) }}
         run: |
           (echo -n "changed-file-groups="; jq -c -n "env.CHANGED_FILES | fromjson | $CHANGED_FILES_TRANSFORM_EXPR") | tee --append "$GITHUB_OUTPUT"
-          (echo -n "force-ci-run="; jq -c -n "env.FORCE_CI_RUN_LABEL != "" and (env.PR_INFO_LABELS | fromjson | any(.name == env.FORCE_CI_RUN_LABEL))") | tee --append "$GITHUB_OUTPUT"
+          (echo -n "force-ci-run="; jq -c -n 'env.FORCE_CI_RUN_LABEL != "" and (env.PR_INFO_LABELS | fromjson | any(.name == env.FORCE_CI_RUN_LABEL))') | tee --append "$GITHUB_OUTPUT"
