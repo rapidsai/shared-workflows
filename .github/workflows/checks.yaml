@@ -88,10 +88,6 @@ jobs:
         id: job-traceparent
         uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
 
-      - name: Get job name
-        id: github-job-name
-        uses: rapidsai/shared-actions/get-github-job-name@add-telemetry
-
       - name: Write certificate files for mTLS
         run: |
           mkdir -p /tmp/certs
@@ -147,10 +143,6 @@ jobs:
       - name: Telemetry setup
         id: job-traceparent
         uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
-
-      - name: Get job name
-        id: github-job-name
-        uses: rapidsai/shared-actions/get-github-job-name@add-telemetry
 
       - name: Write certificate files for mTLS
         run: |

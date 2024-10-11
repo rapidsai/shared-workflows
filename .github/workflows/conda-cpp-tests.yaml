@@ -134,6 +134,7 @@ jobs:
     env:
       RAPIDS_TESTS_DIR: ${{ github.workspace }}/test-results
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
+      JOB_NAME: "${{github.job}} / ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}"
     container:
       image: rapidsai/ci-conda:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
       options: ${{ inputs.container-options }}

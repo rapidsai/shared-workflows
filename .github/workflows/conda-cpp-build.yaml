@@ -114,6 +114,7 @@ jobs:
     runs-on: "linux-${{ matrix.ARCH }}-${{ inputs.node_type }}"
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
+      JOB_NAME: "${{github.job}} / ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}"
     container:
       image: rapidsai/ci-conda:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
       env:
@@ -131,10 +132,6 @@ jobs:
       - name: Telemetry setup
         id: job-traceparent
         uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
-
-      - name: Get job name
-        id: github-job-name
-        uses: rapidsai/shared-actions/get-github-job-name@add-telemetry
 
       - name: Write certificate files for mTLS
         run: |
