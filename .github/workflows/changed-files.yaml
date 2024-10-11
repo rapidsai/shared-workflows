@@ -4,7 +4,7 @@ on:
       files_yaml:
         type: string
         required: true
-      transform_expr:
+      changed_files_transform_expr:
         type: string
         required: false
         default: |
@@ -17,9 +17,15 @@ on:
             }
           ) |
           from_entries
+      force_ci_run_label:
+        type: string
+        required: false
+        default: ""
     outputs:
       changed_file_groups:
-        value: ${{ jobs.changed-files.outputs.transformed_output }}
+        value: ${{ jobs.changed-files.outputs.changed_file_groups }}
+      force_ci_run:
+        value: ${{ jobs.changed-files.outputs.force_ci_run }}
 
 defaults:
   run:
@@ -45,7 +51,8 @@ jobs:
     runs-on: ubuntu-latest
     name: "Check changed files"
     outputs:
-      transformed_output: ${{ steps.transform-changed-files.outputs.transformed-output }}
+      changed_file_groups: ${{ steps.transform-output.outputs.changed-file-groups }}
+      force_ci_run: ${{ steps.transform-output.outputs.force-ci-run }}
     steps:
       - name: Get PR info
         id: get-pr-info
@@ -73,6 +80,9 @@ jobs:
         id: transform-changed-files
         env:
           CHANGED_FILES: ${{ toJSON(steps.changed-files.outputs) }}
-          TRANSFORM_EXPR: ${{ inputs.transform_expr }}
+          CHANGED_FILES_TRANSFORM_EXPR: ${{ inputs.changed_files_transform_expr }}
+          FORCE_CI_RUN_LABEL: ${{ inputs.force_ci_run_label }}
+          PR_INFO_LABELS: ${{ toJSON(fromJSON(steps.get-pr-info.outputs.pr-info).labels) }}
         run: |
-          (echo -n "transformed-output="; jq -c -n "env.CHANGED_FILES | fromjson | $TRANSFORM_EXPR") | tee --append "$GITHUB_OUTPUT"
+          (echo -n "changed-file-groups="; jq -c -n "env.CHANGED_FILES | fromjson | $CHANGED_FILES_TRANSFORM_EXPR") | tee --append "$GITHUB_OUTPUT"
+          (echo -n "force-ci-run="; jq -c -n "env.FORCE_CI_RUN_LABEL != "" and (env.PR_INFO_LABELS | fromjson | any(.name == env.FORCE_CI_RUN_LABEL))") | tee --append "$GITHUB_OUTPUT"
