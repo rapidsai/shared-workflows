@@ -78,6 +78,8 @@ jobs:
     name: "Check changed files"
     outputs:
       transformed_output: ${{ steps.transform-changed-files.outputs.transformed-output }}
+    env:
+      JOB_NAME: "changed-files / Check changed files"
     steps:
       # Temporary until ci-imgs build with
       # https://github.com/rapidsai/gha-tools/commit/8bd8fca71b5fae38b1493c547d15e73da40b32e1#diff-f1f054b2906bfd36ad706ed2fa6aa028fa529e65b25167e4ca7ca45546d59ed8R14
