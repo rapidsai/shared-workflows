@@ -72,7 +72,7 @@ jobs:
   other-checks:
     runs-on: ubuntu-latest
     env:
-      JOB_NAME: "checks / other-checks"
+      OTEL_SERVICE_NAME: "checks / other-checks"
     container:
       image: rapidsai/ci-conda:latest
       env:
@@ -89,8 +89,6 @@ jobs:
       - name: Telemetry setup
         id: job-traceparent
         uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
-        with:
-            job_name: "${{env.JOB_NAME}}"
       - name: Write certificate files for mTLS
         run: |
           mkdir -p /tmp/certs
@@ -124,9 +122,7 @@ jobs:
         if: "always()"
         uses: rapidsai/shared-actions/telemetry-summarize@add-telemetry
         with:
-          endpoint: ${{ inputs.traces_endpoint || inputs.default_endpoint && format('{0}/v1/traces', inputs.default_endpoint) }}
           traceparent: "${{ env.TOP_LEVEL_TRACEPARENT }}"
-          job_name: "${{env.JOB_NAME}}"
 
 
 
@@ -136,7 +132,7 @@ jobs:
     container:
       image: rapidsai/ci-conda:latest
     env:
-      JOB_NAME: "checks / check-style"
+      OTEL_SERVICE_NAME: "checks / check-style"
     steps:
       # Temporary until ci-imgs build with
       # https://github.com/rapidsai/gha-tools/commit/8bd8fca71b5fae38b1493c547d15e73da40b32e1#diff-f1f054b2906bfd36ad706ed2fa6aa028fa529e65b25167e4ca7ca45546d59ed8R14
@@ -149,8 +145,7 @@ jobs:
       - name: Telemetry setup
         id: job-traceparent
         uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
-        with:
-            job_name: "${{env.JOB_NAME}}"
+
       - name: Write certificate files for mTLS
         run: |
           mkdir -p /tmp/certs
@@ -184,6 +179,4 @@ jobs:
         if: "always()"
         uses: rapidsai/shared-actions/telemetry-summarize@add-telemetry
         with:
-          endpoint: ${{ inputs.traces_endpoint || inputs.default_endpoint && format('{0}/v1/traces', inputs.default_endpoint) }}
           traceparent: "${{ env.TOP_LEVEL_TRACEPARENT }}"
-          job_name: "${{env.JOB_NAME}}"
