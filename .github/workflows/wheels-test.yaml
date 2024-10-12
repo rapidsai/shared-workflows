@@ -54,6 +54,7 @@ on:
         description: |
             The job name (id, rather) from the calling workflow. This is likely wheel-tests, but verify that in your workflow (i.e. pr.yaml)
             This gets the matrix string appended to it to form the actual OTEL_SERVICE_NAME that links the parsed GitHub Actions logs with other telemetry.
+        default: wheel-tests
     # the use of secrets in shared-workflows is discouraged, especially for public repositories.
     # these values were added for situations where the use of secrets is unavoidable.
     secrets:
@@ -229,6 +230,4 @@ jobs:
       if: "always()"
       uses: rapidsai/shared-actions/telemetry-summarize@add-telemetry
       with:
-        endpoint: ${{ inputs.traces_endpoint || inputs.default_endpoint && format('{0}/v1/traces', inputs.default_endpoint) }}
         traceparent: "${{ env.TOP_LEVEL_TRACEPARENT }}"
-        job_name: "${{env.JOB_NAME}}"

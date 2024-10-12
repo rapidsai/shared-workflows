@@ -49,6 +49,8 @@ on:
         type: string
         description: |
             The job name (id, rather) from the calling workflow. This is likely conda-python-tests, but verify that in your workflow (i.e. pr.yaml)
+            This gets the matrix string appended to it to form the actual OTEL_SERVICE_NAME that links the parsed GitHub Actions logs with other telemetry.
+        default: conda-python-tests
 
 defaults:
   run:
