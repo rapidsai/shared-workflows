@@ -143,6 +143,7 @@ jobs:
       RAPIDS_TESTS_DIR: ${{ github.workspace }}/test-results
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
       OTEL_SERVICE_NAME: "${{inputs.OTEL_SERVICE_NAME_PREFIX}} / ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}"
+      OTEL_RESOURCE_ATTRIBUTES: "rapids.project=${{ github.event.repository.name }},rapids.operation=test-cpp,rapids.package_type=conda,rapids.cuda=${{matrix.CUDA_VER}},rapids.py=${{matrix.PY_VER}},rapids.arch=${{matrix.ARCH}},rapids.linux=${{matrix.LINUX_VER}}"
     container:
       image: rapidsai/ci-conda:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
       options: ${{ inputs.container-options }}

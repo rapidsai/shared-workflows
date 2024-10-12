@@ -148,6 +148,7 @@ jobs:
       RAPIDS_DEPENDENCIES: ${{ matrix.DEPENDENCIES }}
       RAPIDS_TESTS_DIR: ${{ github.workspace }}/test-results
       OTEL_SERVICE_NAME: "${{inputs.OTEL_SERVICE_NAME_PREFIX}} / ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}, ${{ matrix.GPU }}, ${{ matrix.DRIVER }}-driver, ${{ matrix.DEPENDENCIES }}-deps"
+      OTEL_RESOURCE_ATTRIBUTES: "rapids.project=${{ github.event.repository.name }},rapids.operation=${{inputs.OTEL_SERVICE_NAME_PREFIX}},rapids.package_type=wheel,rapids.cuda=${{matrix.CUDA_VER}},rapids.py=${{matrix.PY_VER}},rapids.arch=${{matrix.ARCH}},rapids.linux=${{matrix.LINUX_VER}},rapids.gpu=${{matrix.GPU}},rapids.driver=${{matrix.DRIVER}},rapids.deps=${{matrix.DEPENDENCIES}}"
     container:
       image: rapidsai/ci-conda:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
       options: ${{ inputs.container-options }}
