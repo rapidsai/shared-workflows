@@ -79,6 +79,7 @@ env:
   OTEL_EXPORTER_OTLP_CERTIFICATE: "/tmp/certs/ca.crt"
   OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: "/tmp/certs/client.crt"
   OTEL_EXPORTER_OTLP_CLIENT_KEY: "/tmp/certs/client.key"
+  OTEL_PYTHON_DISABLED_INSTRUMENTATIONS: "jinja2"
 
 jobs:
   compute-matrix:
