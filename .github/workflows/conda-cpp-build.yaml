@@ -122,6 +122,7 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
       - name: Set OTEL_SERVICE_NAME from github actions job info
+        id: otel-service-name
         uses: rapidsai/shared-actions/set-otel-service-name-from-github@add-telemetry
 
       # Temporary until ci-imgs build with
@@ -192,6 +193,7 @@ jobs:
           STEP_NAME: C++ build
           GH_TOKEN: ${{ github.token }}
           TRACEPARENT: ${{ steps.job-traceparent.outputs.traceparent }}
+          OTEL_SERVICE_NAME: ${{ steps.otel-service-name.outputs.name }}
       - name: Upload additional artifacts
         if: "!cancelled()"
         run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)
