@@ -121,6 +121,8 @@ jobs:
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
+      - name: Set OTEL_SERVICE_NAME from github actions job info
+        uses: rapidsai/shared-actions/set-otel-service-name-from-github@add-telemetry
 
       # Temporary until ci-imgs build with
       # https://github.com/rapidsai/gha-tools/commit/8bd8fca71b5fae38b1493c547d15e73da40b32e1#diff-f1f054b2906bfd36ad706ed2fa6aa028fa529e65b25167e4ca7ca45546d59ed8R14
