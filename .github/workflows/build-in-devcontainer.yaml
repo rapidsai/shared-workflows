@@ -30,11 +30,18 @@ on:
         required: false
         type: string
         default: ''
+      default_endpoint:
+        type: string
+        description: "Destination to send telemetry to, not including path like /v1/traces"
+      resource_attributes:
+        type: string
+        description: "comma-separated key-value pairs of classifying metadata"
     # the use of secrets in shared-workflows is discouraged, especially for public repositories.
     # these values were added for situations where the use of secrets is unavoidable.
     secrets:
       RAPIDS_AUX_SECRET_1:
         required: false
+
 
 permissions:
   actions: read
@@ -50,6 +57,14 @@ permissions:
   repository-projects: none
   security-events: none
   statuses: none
+
+env:
+  OTEL_EXPORTER_OTLP_ENDPOINT: "${{ inputs.default_endpoint }}"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+  OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+  OTEL_EXPORTER_OTLP_CERTIFICATE: "/tmp/certs/ca.crt"
+  OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: "/tmp/certs/client.crt"
+  OTEL_EXPORTER_OTLP_CLIENT_KEY: "/tmp/certs/client.key"
 
 jobs:
   build:
@@ -85,6 +100,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '16'
+
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
         uses: devcontainers/ci@v0.3
@@ -122,3 +138,13 @@ jobs:
 
             cd ~/"${REPOSITORY}";
             ${{ inputs.build_command }}
+
+    # TODO: otel-cli needs to be installed. This action tries to do so, but can't write to  /usr/local/bin.
+    #   The right way to install it is probably a feature, and that would be a PR to the devcontainers repo.
+    #   - name: Telemetry summary
+    #     id: telemetry-summary
+    #     if: "always()"
+    #     uses: rapidsai/shared-actions/telemetry-summarize@add-telemetry
+    #     with:
+    #       endpoint: ${{ inputs.default_endpoint }}
+    #       traceparent: "${{ inputs.traceparent }}"

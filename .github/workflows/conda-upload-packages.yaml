@@ -18,6 +18,12 @@ on:
         description: The label that should be applied to packages uploaded to Anaconda.org
         type: string
         default: main
+      default_endpoint:
+        type: string
+        description: "Destination to send telemetry to, not including path like /v1/traces"
+      resource_attributes:
+        type: string
+        description: "comma-separated key-value pairs of classifying metadata"
 
 defaults:
   run:
@@ -38,6 +44,21 @@ permissions:
   security-events: none
   statuses: none
 
+env:
+  # TODO: this should be set as an org-wide variable
+  OTEL_EXPORTER_OTLP_ENDPOINT: "${{ inputs.default_endpoint }}"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+  OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+  # These are where the secrets in github env vars are written to files. These files don't
+  # exist unless you explicitly write them in a step.
+  # The purpose of setting the environment variable is to tell OpenTelemetry tools where to find them.
+  #     We abuse it a bit by also using it as the write destination for the certificate files.
+  OTEL_EXPORTER_OTLP_CERTIFICATE: "/tmp/certs/ca.crt"
+  OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: "/tmp/certs/client.crt"
+  OTEL_EXPORTER_OTLP_CLIENT_KEY: "/tmp/certs/client.key"
+  OTEL_PYTHON_DISABLED_INSTRUMENTATIONS: "jinja2"
+  OTEL_RESOURCE_ATTRIBUTES: "${{inputs.resource_attributes}}"
+
 jobs:
   upload:
     runs-on: linux-amd64-cpu4
@@ -46,6 +67,21 @@ jobs:
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
+      - name: Write certificate files for mTLS
+        run: |
+          mkdir -p /tmp/certs
+          cat << EOF > ${OTEL_EXPORTER_OTLP_CERTIFICATE}
+          ${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }}
+          EOF
+          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE}
+          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }}
+          EOF
+          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_KEY}
+          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}
+          EOF
+      - name: Telemetry setup
+        id: job-traceparent
+        uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -74,3 +110,7 @@ jobs:
         env:
           SKIP_UPLOAD_PKGS: ${{ inputs.skip_upload_pkgs }}
           RAPIDS_CONDA_UPLOAD_LABEL: ${{ inputs.upload_to_label }}
+      - name: Telemetry summary
+        id: telemetry-summary
+        if: "always()"
+        uses: rapidsai/shared-actions/telemetry-summarize@add-telemetry

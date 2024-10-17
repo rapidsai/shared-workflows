@@ -24,6 +24,12 @@ on:
       run_script:
         required: true
         type: string
+      default_endpoint:
+        type: string
+        description: "Destination to send telemetry to, not including path like /v1/traces"
+      resource_attributes:
+        type: string
+        description: "comma-separated key-value pairs of classifying metadata"
 
 defaults:
   run:
@@ -44,6 +50,21 @@ permissions:
   security-events: none
   statuses: none
 
+env:
+  # TODO: this should be set as an org-wide variable
+  OTEL_EXPORTER_OTLP_ENDPOINT: "${{ inputs.default_endpoint }}"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+  OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+  # These are where the secrets in github env vars are written to files. These files don't
+  # exist unless you explicitly write them in a step.
+  # The purpose of setting the environment variable is to tell OpenTelemetry tools where to find them.
+  #     We abuse it a bit by also using it as the write destination for the certificate files.
+  OTEL_EXPORTER_OTLP_CERTIFICATE: "/tmp/certs/ca.crt"
+  OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: "/tmp/certs/client.crt"
+  OTEL_EXPORTER_OTLP_CLIENT_KEY: "/tmp/certs/client.key"
+  OTEL_PYTHON_DISABLED_INSTRUMENTATIONS: "jinja2"
+  OTEL_RESOURCE_ATTRIBUTES: "${{inputs.resource_attributes}}"
+
 jobs:
   build:
     strategy:
@@ -55,6 +76,22 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
+      - name: Write certificate files for mTLS
+        run: |
+          mkdir -p /tmp/certs
+          cat << EOF > ${OTEL_EXPORTER_OTLP_CERTIFICATE}
+          ${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }}
+          EOF
+          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE}
+          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }}
+          EOF
+          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_KEY}
+          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}
+          EOF
+      - name: Telemetry setup
+        id: job-traceparent
+        uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -79,6 +116,15 @@ jobs:
           echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
+
+      # Temporary until https://github.com/rapidsai/ci-imgs/pull/196 is merged
+      - name: Install OpenTelemetry instrumentation
+        run: |
+          pip install opentelemetry-distro[otlp] \
+              opentelemetry-exporter-prometheus \
+              git+https://github.com/msarahan/opentelemetry-python-contrib.git@add-conda-build-instrumentation#subdirectory=instrumentation/opentelemetry-instrumentation-conda-build
+          opentelemetry-bootstrap -a install
+
       - name: Run script
         run: ${{ inputs.run_script }}
         env:
@@ -89,3 +135,7 @@ jobs:
           name: gh-status
           path: gh-status.json
           if-no-files-found: ignore
+      - name: Telemetry summary
+        id: telemetry-summary
+        if: "always()"
+        uses: rapidsai/shared-actions/telemetry-summarize@add-telemetry

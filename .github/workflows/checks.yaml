@@ -31,10 +31,25 @@ on:
         default: ""
         type: string
         required: false
+      default_endpoint:
+        type: string
+        description: "Destination to send telemetry to, not including path like /v1/traces"
+      resource_attributes:
+        type: string
+        description: "comma-separated key-value pairs of classifying metadata"
 
 defaults:
   run:
     shell: bash
+
+env:
+  OTEL_EXPORTER_OTLP_ENDPOINT: "${{ inputs.default_endpoint }}"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+  OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+  OTEL_EXPORTER_OTLP_CERTIFICATE: "/tmp/certs/ca.crt"
+  OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: "/tmp/certs/client.crt"
+  OTEL_EXPORTER_OTLP_CLIENT_KEY: "/tmp/certs/client.key"
+  OTEL_RESOURCE_ATTRIBUTES: "${{inputs.resource_attributes}}"
 
 jobs:
   other-checks:
@@ -44,6 +59,22 @@ jobs:
       env:
         RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      # this only really serves to install from gha-tools and should be removed when those PRs are merged
+      - name: Telemetry setup
+        id: job-traceparent
+        uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
+      - name: Write certificate files for mTLS
+        run: |
+          mkdir -p /tmp/certs
+          cat << EOF > ${OTEL_EXPORTER_OTLP_CERTIFICATE}
+          ${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }}
+          EOF
+          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE}
+          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }}
+          EOF
+          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_KEY}
+          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}
+          EOF
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Get PR Info
@@ -59,12 +90,34 @@ jobs:
         run: rapids-check-pr-job-dependencies "${IGNORED_JOBS}"
         env:
           IGNORED_JOBS: ${{ inputs.ignored_pr_jobs }}
+      - name: Telemetry summary
+        id: telemetry-summary
+        if: "always()"
+        uses: rapidsai/shared-actions/telemetry-summarize@add-telemetry
+
+
   check-style:
     if: ${{ inputs.enable_check_style }}
     runs-on: ubuntu-latest
     container:
       image: rapidsai/ci-conda:latest
     steps:
+      # this only really serves to install from gha-tools and should be removed when those PRs are merged
+      - name: Telemetry setup
+        id: job-traceparent
+        uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
+      - name: Write certificate files for mTLS
+        run: |
+          mkdir -p /tmp/certs
+          cat << EOF > ${OTEL_EXPORTER_OTLP_CERTIFICATE}
+          ${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }}
+          EOF
+          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE}
+          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }}
+          EOF
+          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_KEY}
+          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}
+          EOF
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -80,3 +133,7 @@ jobs:
         run: ci/check_style.sh
         env:
           RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
+      - name: Telemetry summary
+        id: telemetry-summary
+        if: "always()"
+        uses: rapidsai/shared-actions/telemetry-summarize@add-telemetry
