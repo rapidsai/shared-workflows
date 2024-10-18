@@ -77,6 +77,10 @@ jobs:
           CHANGED_FILES: ${{ toJSON(steps.changed-files.outputs) }}
           TRANSFORM_EXPR: ${{ inputs.transform_expr }}
         run: |
-          ls .github/outputs
-          cat .github/outputs/changed_keys.json
+          file_args=()
+          for file in .github/outputs/*.json; do
+            key="$(echo "$file" | sed -E 's/^\.github\/outputs\/(.*)\.json$/\1/g')"
+            file_args=("${file_args[@]}" --slurpfile "$key" "$file")
+          done
+          jq -n '$ARGS.named' "${file_args[@]}"
           (echo -n "transformed-output="; jq -c -n "env.CHANGED_FILES | fromjson | $TRANSFORM_EXPR") | tee --append "$GITHUB_OUTPUT"
