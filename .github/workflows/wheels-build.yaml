@@ -162,6 +162,9 @@ jobs:
           ssh-key: ${{ secrets[inputs.extra-repo-deploy-key] }}
           persist-credentials: false
 
+      - name: Setup proxy cache
+        uses: nv-gha-runners/setup-proxy-cache@main
+
       - name: Build and repair the wheel
         run: |
           ${{ inputs.script }}
