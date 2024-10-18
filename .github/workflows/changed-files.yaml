@@ -82,5 +82,4 @@ jobs:
             key="$(echo "$file" | sed -E 's/^\.github\/outputs\/(.*)\.json$/\1/g')"
             file_args=("${file_args[@]}" --slurpfile "$key" "$file")
           done
-          jq -c -n "$ARGS.named | to_entries | select((.value | length) > 0)" "${file_args[@]}"
-          (echo -n "transformed-output="; jq -c -n "$ARGS.named | to_entries | select((.value | length) > 0) | map({"key": .key, "value": .value[]}) | from_entries | $TRANSFORM_EXPR" "${file_args[@]}") | tee --append "$GITHUB_OUTPUT"
+          (echo -n "transformed-output="; jq -c -n "\$ARGS.named | to_entries | select((.value | length) > 0) | map({"key": .key, "value": .value[]}) | from_entries | $TRANSFORM_EXPR" "${file_args[@]}") | tee --append "$GITHUB_OUTPUT"
