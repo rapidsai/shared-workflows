@@ -13,7 +13,7 @@ on:
             select(.key | endswith("_any_changed")) |
             {
               "key": (.key | rtrimstr("_any_changed")),
-              "value": (.value == "true"),
+              "value": .value,
             }
           ) |
           from_entries
@@ -81,5 +81,4 @@ jobs:
             key="$(echo "$file" | sed -E 's/^\.github\/outputs\/(.*)\.json$/\1/g')"
             file_args=("${file_args[@]}" --slurpfile "$key" "$file")
           done
-          jq -n "\$ARGS.named | to_entries | map(select((.value | length) > 0) | {"key": .key, "value": .value[]}) | from_entries" "${file_args[@]}"
           (echo -n "transformed-output="; jq -c -n "\$ARGS.named | to_entries | map(select((.value | length) > 0) | {"key": .key, "value": .value[]}) | from_entries | $TRANSFORM_EXPR" "${file_args[@]}") | tee --append "$GITHUB_OUTPUT"
