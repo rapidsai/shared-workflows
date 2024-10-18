@@ -70,6 +70,7 @@ jobs:
           sha: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).head.sha }}
           files_yaml: ${{ inputs.files_yaml }}
           write_output_files: true
+          json: true
       - name: Transform changed files into output
         id: transform-changed-files
         env:
