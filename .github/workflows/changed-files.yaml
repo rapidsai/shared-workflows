@@ -78,4 +78,5 @@ jobs:
           TRANSFORM_EXPR: ${{ inputs.transform_expr }}
         run: |
           ls .github/outputs
+          cat .github/outputs/changed_keys.json
           (echo -n "transformed-output="; jq -c -n "env.CHANGED_FILES | fromjson | $TRANSFORM_EXPR") | tee --append "$GITHUB_OUTPUT"
