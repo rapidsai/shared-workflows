@@ -69,10 +69,12 @@ jobs:
           base_sha: ${{ steps.calculate-merge-base.outputs.merge-base }}
           sha: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).head.sha }}
           files_yaml: ${{ inputs.files_yaml }}
+          write_output_files: true
       - name: Transform changed files into output
         id: transform-changed-files
         env:
           CHANGED_FILES: ${{ toJSON(steps.changed-files.outputs) }}
           TRANSFORM_EXPR: ${{ inputs.transform_expr }}
         run: |
+          ls .github/outputs
           (echo -n "transformed-output="; jq -c -n "env.CHANGED_FILES | fromjson | $TRANSFORM_EXPR") | tee --append "$GITHUB_OUTPUT"
