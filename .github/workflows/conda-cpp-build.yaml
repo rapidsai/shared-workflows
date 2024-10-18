@@ -105,9 +105,6 @@ jobs:
 
       - name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
-        with:
-            enable_pip: false
-            enable_conda: true
 
       - name: C++ build
         run: ${{ inputs.script }}
