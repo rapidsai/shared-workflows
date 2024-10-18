@@ -74,7 +74,6 @@ jobs:
       - name: Transform changed files into output
         id: transform-changed-files
         env:
-          CHANGED_FILES: ${{ toJSON(steps.changed-files.outputs) }}
           TRANSFORM_EXPR: ${{ inputs.transform_expr }}
         run: |
           file_args=()
