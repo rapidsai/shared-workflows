@@ -13,7 +13,7 @@ on:
             select(.key | endswith("_any_changed")) |
             {
               "key": (.key | rtrimstr("_any_changed")),
-              "value": (.value == "true"),
+              "value": .value,
             }
           ) |
           from_entries
@@ -69,10 +69,16 @@ jobs:
           base_sha: ${{ steps.calculate-merge-base.outputs.merge-base }}
           sha: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).head.sha }}
           files_yaml: ${{ inputs.files_yaml }}
+          write_output_files: true
+          json: true
       - name: Transform changed files into output
         id: transform-changed-files
         env:
-          CHANGED_FILES: ${{ toJSON(steps.changed-files.outputs) }}
           TRANSFORM_EXPR: ${{ inputs.transform_expr }}
         run: |
-          (echo -n "transformed-output="; jq -c -n "env.CHANGED_FILES | fromjson | $TRANSFORM_EXPR") | tee --append "$GITHUB_OUTPUT"
+          file_args=()
+          for file in .github/outputs/*.json; do
+            key="$(echo "$file" | sed -E 's/^\.github\/outputs\/(.*)\.json$/\1/g')"
+            file_args=("${file_args[@]}" --slurpfile "$key" "$file")
+          done
+          (echo -n "transformed-output="; jq -c -n "\$ARGS.named | to_entries | map({"key": .key, "value": .value[]}) | from_entries | $TRANSFORM_EXPR" "${file_args[@]}") | tee --append "$GITHUB_OUTPUT"
