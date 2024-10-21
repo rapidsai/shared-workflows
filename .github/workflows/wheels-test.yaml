@@ -29,21 +29,9 @@ on:
         required: false
         type: string
         default: "fail"
-      # telemetry settings: Destination to send telemetry to
       default_endpoint:
         type: string
-      # defaults to <default_endpoint>/v1/traces
-      # Change it if you want to send to a different host or port number
-      traces_endpoint:
-        type: string
-      # defaults to <default_endpoint>/v1/metrics
-      # Change it if you want to send to a different host or port number
-      metrics_endpoint:
-        type: string
-      # defaults to <default_endpoint>/v1/logs
-      # Change it if you want to send to a different host or port number
-      logs_endpoint:
-        type: string
+        description: "Destination to send telemetry to, not including path like /v1/traces"
       traceparent:
         type: string
         description: |
@@ -76,15 +64,18 @@ permissions:
 
 env:
   TOP_LEVEL_TRACEPARENT: ${{ inputs.traceparent }}
+  # TODO: this should be set as an org-wide variable
   OTEL_EXPORTER_OTLP_ENDPOINT: "${{ inputs.default_endpoint }}"
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "${{ inputs.traces_endpoint }}"
-  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: "${{ inputs.metrics_endpoint }}"
-  OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: "${{ inputs.logs_endpoint }}"
   OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
   OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+  # These are where the secrets in github env vars are written to files. These files don't
+  # exist unless you explicitly write them in a step.
+  # The purpose of setting the environment variable is to tell OpenTelemetry tools where to find them.
+  #     We abuse it a bit by also using it as the write destination for the certificate files.
   OTEL_EXPORTER_OTLP_CERTIFICATE: "/tmp/certs/ca.crt"
   OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: "/tmp/certs/client.crt"
   OTEL_EXPORTER_OTLP_CLIENT_KEY: "/tmp/certs/client.key"
+  OTEL_PYTHON_DISABLED_INSTRUMENTATIONS: "jinja2"
 
 jobs:
   compute-matrix:
@@ -154,17 +145,13 @@ jobs:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
-    # Temporary until ci-imgs build with
-    # https://github.com/rapidsai/gha-tools/commit/8bd8fca71b5fae38b1493c547d15e73da40b32e1#diff-f1f054b2906bfd36ad706ed2fa6aa028fa529e65b25167e4ca7ca45546d59ed8R14
-    # is available. The PR is merged, but at time of writing, no ci-imgs builds have been released to pick it up.
-    - name: Download gha-tools with git clone
+    - name: Get GitHub job info, to obtain machine info
+      uses: rapidsai/shared-actions/github-actions-job-info@add-telemetry
+      id: job-info
+    - name: Add machine details to attributes metadata
       run: |
-            git clone https://github.com/msarahan/gha-tools.git -b add-telemetry-traceparent-scripts /tmp/gha-tools
-            echo "/tmp/gha-tools/tools" >> "${GITHUB_PATH}"
-
-    - name: Telemetry setup
-      id: job-traceparent
-      uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
+        labels=$(echo "${{steps.job-info.outputs.job-info}}" | jq '.labels | join(" ")')
+        echo OTEL_RESOURCE_ATTRIBUTES="${OTEL_RESOURCE_ATTRIBUTES},labels=${labels}"
     - name: Write certificate files for mTLS
       run: |
         mkdir -p /tmp/certs
@@ -177,7 +164,9 @@ jobs:
         cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_KEY}
         ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}
         EOF
-
+    - name: Telemetry setup
+      id: job-traceparent
+      uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
     - uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ vars.AWS_ROLE_ARN }}

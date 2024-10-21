@@ -21,20 +21,7 @@ on:
       matrix_filter:
         type: string
         default: "."
-      # telemetry settings: Destination to send telemetry to
       default_endpoint:
-        type: string
-      # defaults to <default_endpoint>/v1/traces
-      # Change it if you want to send to a different host or port number
-      traces_endpoint:
-        type: string
-      # defaults to <default_endpoint>/v1/metrics
-      # Change it if you want to send to a different host or port number
-      metrics_endpoint:
-        type: string
-      # defaults to <default_endpoint>/v1/logs
-      # Change it if you want to send to a different host or port number
-      logs_endpoint:
         type: string
       traceparent:
         type: string
@@ -64,9 +51,6 @@ permissions:
 env:
   TOP_LEVEL_TRACEPARENT: ${{ inputs.traceparent }}
   OTEL_EXPORTER_OTLP_ENDPOINT: "${{ inputs.default_endpoint }}"
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "${{ inputs.traces_endpoint }}"
-  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: "${{ inputs.metrics_endpoint }}"
-  OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: "${{ inputs.logs_endpoint }}"
   OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
   OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
   OTEL_EXPORTER_OTLP_CERTIFICATE: "/tmp/certs/ca.crt"
@@ -92,7 +76,6 @@ jobs:
           export MATRIX="
           # amd64
           - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04' }
-          # TODO: Uncomment matrix entries here
           - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.5.1', LINUX_VER: 'ubuntu22.04' }
           # arm64
           - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu22.04' }
@@ -115,28 +98,19 @@ jobs:
     runs-on: "linux-${{ matrix.ARCH }}-${{ inputs.node_type }}"
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
-      OTEL_RESOURCE_ATTRIBUTES: "rapids.project=${{ github.event.repository.name }},rapids.operation=build-cpp,rapids.package_type=conda,rapids.cuda=${{matrix.CUDA_VER}},rapids.py=${{matrix.PY_VER}},rapids.arch=${{matrix.ARCH}},rapids.linux=${{matrix.LINUX_VER}}"
+      OTEL_RESOURCE_ATTRIBUTES: "rapids.project=${{ github.event.repository.name }},rapids.operation=test-cpp,rapids.package_type=conda,rapids.cuda=${{matrix.CUDA_VER}},rapids.py=${{matrix.PY_VER}},rapids.arch=${{matrix.ARCH}},rapids.linux=${{matrix.LINUX_VER}}"
     container:
       image: rapidsai/ci-conda:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
-      - name: Set OTEL_SERVICE_NAME from github actions job info
-        id: otel-service-name
-        uses: rapidsai/shared-actions/set-otel-service-name-from-github@add-telemetry
-
-      # Temporary until ci-imgs build with
-      # https://github.com/rapidsai/gha-tools/commit/8bd8fca71b5fae38b1493c547d15e73da40b32e1#diff-f1f054b2906bfd36ad706ed2fa6aa028fa529e65b25167e4ca7ca45546d59ed8R14
-      # is available. The PR is merged, but at time of writing, no ci-imgs builds have been released to pick it up.
-      - name: Download gha-tools with git clone
+      - name: Get GitHub job info, to obtain machine info
+        uses: rapidsai/shared-actions/github-actions-job-info@add-telemetry
+        id: job-info
+      - name: Add machine details to attributes metadata
         run: |
-            git clone https://github.com/msarahan/gha-tools.git -b add-telemetry-traceparent-scripts /tmp/gha-tools
-            echo "/tmp/gha-tools/tools" >> "${GITHUB_PATH}"
-
-      - name: Telemetry setup
-        id: job-traceparent
-        uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
-
+          labels=$(echo "${{steps.job-info.outputs.job-info}}" | jq '.labels | join(" ")')
+          echo OTEL_RESOURCE_ATTRIBUTES="${OTEL_RESOURCE_ATTRIBUTES},${labels}"
       - name: Write certificate files for mTLS
         run: |
           mkdir -p /tmp/certs
@@ -149,24 +123,11 @@ jobs:
           cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_KEY}
           ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}
           EOF
-
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           role-duration-seconds: 43200 # 12h
-      - name: Write certificate files for mTLS
-        run: |
-          mkdir -p /tmp/certs
-          cat << EOF > ${OTEL_EXPORTER_OTLP_CERTIFICATE}
-          ${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }}
-          EOF
-          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE}
-          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }}
-          EOF
-          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_KEY}
-          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}
-          EOF
       - uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repo }}
@@ -187,10 +148,17 @@ jobs:
               git+https://github.com/msarahan/opentelemetry-python-contrib.git@add-conda-build-instrumentation#subdirectory=instrumentation/opentelemetry-instrumentation-conda-build
           opentelemetry-bootstrap -a install
 
+      - name: Setup proxy cache
+        uses: nv-gha-runners/setup-proxy-cache@main
+
+      - name: Telemetry setup
+        id: job-traceparent
+        uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
+
       - name: C++ build
         run: ${{ inputs.script }}
         env:
-          STEP_NAME: C++ build
+          STEP_NAME: "C++ build"
           GH_TOKEN: ${{ github.token }}
           TRACEPARENT: ${{ steps.job-traceparent.outputs.traceparent }}
       - name: Upload additional artifacts

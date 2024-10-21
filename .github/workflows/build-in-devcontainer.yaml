@@ -30,21 +30,9 @@ on:
         required: false
         type: string
         default: ''
-      # telemetry settings: Destination to send telemetry to
       default_endpoint:
         type: string
-      # defaults to <default_endpoint>/v1/traces
-      # Change it if you want to send to a different host or port number
-      traces_endpoint:
-        type: string
-      # defaults to <default_endpoint>/v1/metrics
-      # Change it if you want to send to a different host or port number
-      metrics_endpoint:
-        type: string
-      # defaults to <default_endpoint>/v1/logs
-      # Change it if you want to send to a different host or port number
-      logs_endpoint:
-        type: string
+        description: "Destination to send telemetry to, not including path like /v1/traces"
       traceparent:
         type: string
         description: |
@@ -75,9 +63,6 @@ permissions:
 env:
   TOP_LEVEL_TRACEPARENT: ${{ inputs.traceparent }}
   OTEL_EXPORTER_OTLP_ENDPOINT: "${{ inputs.default_endpoint }}"
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "${{ inputs.traces_endpoint }}"
-  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: "${{ inputs.metrics_endpoint }}"
-  OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: "${{ inputs.logs_endpoint }}"
   OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
   OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
   OTEL_EXPORTER_OTLP_CERTIFICATE: "/tmp/certs/ca.crt"
@@ -164,5 +149,5 @@ jobs:
     #     if: "always()"
     #     uses: rapidsai/shared-actions/telemetry-summarize@add-telemetry
     #     with:
-    #       endpoint: ${{ inputs.traces_endpoint || inputs.default_endpoint && format('{0}/v1/traces', inputs.default_endpoint) }}
-    #       traceparent: "${{ env.TOP_LEVEL_TRACEPARENT }}"
+    #       endpoint: ${{ inputs.default_endpoint }}
+    #       traceparent: "${{ inputs.traceparent }}"
