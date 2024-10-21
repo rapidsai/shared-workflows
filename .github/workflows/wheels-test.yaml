@@ -150,8 +150,8 @@ jobs:
       id: job-info
     - name: Add machine details to attributes metadata
       run: |
-        labels=$(echo "${{steps.job-info.outputs.job-info}}" | jq '.labels | join(" ")')
-        echo OTEL_RESOURCE_ATTRIBUTES="${OTEL_RESOURCE_ATTRIBUTES},labels=${labels}" >> ${GITHUB_ENV}
+        labels=$(echo "${{steps.job-info.outputs.job-info}}" | jq -r '.labels | join(" ")')
+        echo OTEL_RESOURCE_ATTRIBUTES="${OTEL_RESOURCE_ATTRIBUTES},rapids.labels=${labels}" >> ${GITHUB_ENV}
     - name: Write certificate files for mTLS
       run: |
         mkdir -p /tmp/certs
