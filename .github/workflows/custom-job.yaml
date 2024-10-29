@@ -90,5 +90,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: result
-          path: ${{ file_to_upload }}
+          path: ${{ inputs.file_to_upload }}
           if-no-files-found: ignore
