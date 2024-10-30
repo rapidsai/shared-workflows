@@ -60,6 +60,8 @@ env:
   OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: "/tmp/certs/client.crt"
   OTEL_EXPORTER_OTLP_CLIENT_KEY: "/tmp/certs/client.key"
   OTEL_PYTHON_DISABLED_INSTRUMENTATIONS: "jinja2"
+  # Enables opentelemetry instrumentation inside conda-build via monkeypatching
+  RAPIDS_OTEL_WRAPPER: "rapids-otel-wrap"
 
 jobs:
   upload:
