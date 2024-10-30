@@ -24,6 +24,9 @@ on:
       run_script:
         required: true
         type: string
+      file_to_upload:
+        type: string
+        default: "gh-status.json"
 
 defaults:
   run:
@@ -86,6 +89,6 @@ jobs:
       - name: Upload file to GitHub Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gh-status
-          path: gh-status.json
+          name: result
+          path: ${{ inputs.file_to_upload }}
           if-no-files-found: ignore
