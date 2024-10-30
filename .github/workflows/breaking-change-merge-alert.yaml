@@ -1,0 +1,117 @@
+name: Breaking Change Notifications
+
+on:
+  workflow_call:
+    inputs:
+      sender_login:
+        description: 'Sender login'
+        required: true
+        type: string
+      sender_avatar:
+        description: 'Sender avatar URL'
+        required: true
+        type: string
+      repo:
+        description: 'Repository'
+        required: true
+        type: string
+      pr_number:
+        description: 'Pull request number'
+        required: true
+        type: number
+      pr_title:
+        description: 'Pull request title'
+        required: true
+        type: string
+      pr_body:
+        description: 'Pull request body'
+        required: false
+        default: '_Empty PR description_'
+        type: string
+      pr_base_ref:
+        description: 'Base branch of the pull request'
+        required: true
+        type: string
+      pr_author:
+        description: 'Pull request author'
+        required: true
+        type: string
+      event_action:
+        description: 'Event action'
+        required: true
+        type: string
+      pr_merged:
+        description: 'Pull request merged status'
+        required: true
+        type: boolean
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  notify-breaking-changes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine notification parameters
+        id: notification
+        run: |
+          if [[ "${{ inputs.event_action }}" == "closed" && "${{ inputs.pr_merged }}" == "true" ]]; then
+            echo "action=merged" >> $GITHUB_OUTPUT
+            echo "color=#D00000" >> $GITHUB_OUTPUT
+            echo "icon=:rocket:" >> $GITHUB_OUTPUT
+          elif [[ "${{ inputs.event_action }}" == "closed" ]]; then
+            echo "action=closed" >> $GITHUB_OUTPUT
+            echo "color=#1d9bd1" >> $GITHUB_OUTPUT
+            echo "icon=:information_source:" >> $GITHUB_OUTPUT
+          else
+            echo "action=reopened" >> $GITHUB_OUTPUT
+            echo "color=warning" >> $GITHUB_OUTPUT
+            echo "icon=:warning:" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          payload: |
+            {
+              "icon_emoji": "${{ steps.notification.outputs.icon }}",
+              "username": "RAPIDS Breaking Change Notifier - ${{ steps.notification.outputs.action }}",
+              "attachments": [
+                {
+                  "author_name": "${{ steps.notification.outputs.action }} PR by ${{ inputs.sender_login }}",
+                  "author_link": "https://github.com/${{ inputs.sender_login }}",
+                  "author_icon": "${{ inputs.sender_avatar }}",
+                  "color": "${{ steps.notification.outputs.color }}",
+                  "fallback": "Breaking change PR ${{ steps.notification.outputs.action }} by ${{ inputs.sender_login }} ${{ inputs.repo }}#${{ inputs.pr_number }}",
+                  "text": "<https://github.com/${{ inputs.repo }}/pull/${{ inputs.pr_number }}|${{ inputs.repo }}#${{ inputs.pr_number }}>",
+                  "fields": [
+                    {
+                      "title": "PR Title",
+                      "value": "${{ inputs.pr_title }}",
+                      "short": false
+                    },
+                    {
+                      "title": "PR Target",
+                      "value": "<https://github.com/${{ inputs.repo }}/tree/${{ inputs.pr_base_ref }}|${{ inputs.pr_base_ref }}>",
+                      "short": true
+                    },
+                    {
+                      "title": "PR Author",
+                      "value": "<https://github.com/${{ inputs.pr_author }}|${{ inputs.pr_author }}>",
+                      "short": true
+                    },
+                    {
+                      "title": "PR Description",
+                      "value": "${{ inputs.pr_body }}",
+                      "short": false
+                    }
+                  ],
+                  "footer": "<https://github.com/${{ inputs.repo }}|${{ inputs.repo }}>",
+                  "footer_icon": "https://avatars0.githubusercontent.com/u/43887749?s=32&v=4"
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.NV_SLACK_BREAKING_CHANGE_NOTIFIER_APP }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
