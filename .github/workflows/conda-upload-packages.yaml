@@ -26,6 +26,10 @@ on:
         description: |
             Opentelemetry traceparent. Format is described in https://medium.com/@mesutatasoy/understanding-traceparent-and-microservices-in-opentelemetry-notepad-series-7-de5c16bf6462
             Generally, 00-<trace_id 32 chars>-<span_id 16 chars>-01
+      otel_resource_attributes:
+        type: string
+        description: |
+          Comma-separated key=value pairs used for storing additional "tags" to better identify data
 
 defaults:
   run:
@@ -62,6 +66,7 @@ env:
   OTEL_PYTHON_DISABLED_INSTRUMENTATIONS: "jinja2"
   # Enables opentelemetry instrumentation inside conda-build via monkeypatching
   RAPIDS_OTEL_WRAPPER: "rapids-otel-wrap"
+  OTEL_RESOURCE_ATTRIBUTES: ${{inputs.otel_resource_attributes}}
 
 jobs:
   upload:

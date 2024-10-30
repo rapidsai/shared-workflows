@@ -13,7 +13,7 @@ on:
             select(.key | endswith("_any_changed")) |
             {
               "key": (.key | rtrimstr("_any_changed")),
-              "value": (.value == "true"),
+              "value": .value,
             }
           ) |
           from_entries
@@ -25,6 +25,10 @@ on:
         description: |
             Opentelemetry traceparent. Format is described in https://medium.com/@mesutatasoy/understanding-traceparent-and-microservices-in-opentelemetry-notepad-series-7-de5c16bf6462
             Generally, 00-<trace_id 32 chars>-<span_id 16 chars>-01
+      otel_resource_attributes:
+        type: string
+        description: |
+          Comma-separated key=value pairs used for storing additional "tags" to better identify data
     outputs:
       changed_file_groups:
         value: ${{ jobs.changed-files.outputs.transformed_output }}
@@ -61,6 +65,7 @@ env:
   OTEL_EXPORTER_OTLP_CERTIFICATE: "/tmp/certs/ca.crt"
   OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: "/tmp/certs/client.crt"
   OTEL_EXPORTER_OTLP_CLIENT_KEY: "/tmp/certs/client.key"
+  OTEL_RESOURCE_ATTRIBUTES: ${{inputs.otel_resource_attributes}}
 
 
 jobs:
@@ -107,13 +112,19 @@ jobs:
           base_sha: ${{ steps.calculate-merge-base.outputs.merge-base }}
           sha: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).head.sha }}
           files_yaml: ${{ inputs.files_yaml }}
+          write_output_files: true
+          json: true
       - name: Transform changed files into output
         id: transform-changed-files
         env:
-          CHANGED_FILES: ${{ toJSON(steps.changed-files.outputs) }}
           TRANSFORM_EXPR: ${{ inputs.transform_expr }}
         run: |
-          (echo -n "transformed-output="; jq -c -n "env.CHANGED_FILES | fromjson | $TRANSFORM_EXPR") | tee --append "$GITHUB_OUTPUT"
+          file_args=()
+          for file in .github/outputs/*.json; do
+            key="$(echo "$file" | sed -E 's/^\.github\/outputs\/(.*)\.json$/\1/g')"
+            file_args=("${file_args[@]}" --slurpfile "$key" "$file")
+          done
+          (echo -n "transformed-output="; jq -c -n "\$ARGS.named | to_entries | map({"key": .key, "value": .value[]}) | from_entries | $TRANSFORM_EXPR" "${file_args[@]}") | tee --append "$GITHUB_OUTPUT"
       - name: Telemetry summary
         id: telemetry-summary
         if: "always()"

@@ -39,6 +39,10 @@ on:
         description: |
             Opentelemetry traceparent. Format is described in https://medium.com/@mesutatasoy/understanding-traceparent-and-microservices-in-opentelemetry-notepad-series-7-de5c16bf6462
             Generally, 00-<trace_id 32 chars>-<span_id 16 chars>-01
+      otel_resource_attributes:
+        type: string
+        description: |
+          Comma-separated key=value pairs used for storing additional "tags" to better identify data
 
 defaults:
   run:
@@ -52,6 +56,7 @@ env:
   OTEL_EXPORTER_OTLP_CERTIFICATE: "/tmp/certs/ca.crt"
   OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: "/tmp/certs/client.crt"
   OTEL_EXPORTER_OTLP_CLIENT_KEY: "/tmp/certs/client.key"
+  OTEL_RESOURCE_ATTRIBUTES: ${{inputs.otel_resource_attributes}}
 
 jobs:
   other-checks:
