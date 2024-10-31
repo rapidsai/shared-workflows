@@ -80,13 +80,6 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
-      - name: Checkout actions
-        uses: actions/checkout@v4
-        with:
-            repository: rapidsai/shared-actions
-            ref: ${{inputs.shared_actions_ref}}
-            path: ./shared-actions
-
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -97,6 +90,12 @@ jobs:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
           fetch-depth: 0
+      - name: Checkout actions
+        uses: actions/checkout@v4
+        with:
+            repository: rapidsai/shared-actions
+            ref: ${{inputs.shared_actions_ref}}
+            path: ./shared-actions
       - name: Get PR Info
         if: startsWith(github.ref_name, 'pull-request/')
         id: get-pr-info

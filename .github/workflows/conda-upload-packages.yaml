@@ -70,13 +70,6 @@ jobs:
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
-      - name: Checkout actions
-        uses: actions/checkout@v4
-        with:
-            repository: rapidsai/shared-actions
-            ref: ${{inputs.shared_actions_ref}}
-            path: ./shared-actions
-
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -87,6 +80,12 @@ jobs:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
           fetch-depth: 0
+      - name: Checkout actions
+        uses: actions/checkout@v4
+        with:
+            repository: rapidsai/shared-actions
+            ref: ${{inputs.shared_actions_ref}}
+            path: ./shared-actions
       - name: Standardize repository information
         run: |
           echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
@@ -110,12 +109,6 @@ jobs:
         env:
           SKIP_UPLOAD_PKGS: ${{ inputs.skip_upload_pkgs }}
           RAPIDS_CONDA_UPLOAD_LABEL: ${{ inputs.upload_to_label }}
-      - name: Checkout actions
-        uses: actions/checkout@v4
-        with:
-            repository: rapidsai/shared-actions
-            ref: ${{inputs.shared_actions_ref}}
-            path: ./shared-actions
       - name: Telemetry summary
         id: telemetry-summary
         if: "always()"

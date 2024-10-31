@@ -77,6 +77,12 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Clone shared-actions
+        uses: actions/checkout@v4
+        with:
+            repository: rapidsai/shared-actions
+            ref: ${{inputs.shared_actions_ref}}
+            path: ./shared-actions
       - name: Calculate merge base
         id: calculate-merge-base
         env:
@@ -104,13 +110,6 @@ jobs:
             file_args=("${file_args[@]}" --slurpfile "$key" "$file")
           done
           (echo -n "transformed-output="; jq -c -n "\$ARGS.named | to_entries | map({"key": .key, "value": .value[]}) | from_entries | $TRANSFORM_EXPR" "${file_args[@]}") | tee --append "$GITHUB_OUTPUT"
-
-      - name: Clone shared-actions
-        uses: actions/checkout@v4
-        with:
-            repository: rapidsai/shared-actions
-            ref: ${{inputs.shared_actions_ref}}
-            path: ./shared-actions
 
       - name: Telemetry summary
         id: telemetry-summary

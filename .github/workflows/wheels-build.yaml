@@ -139,13 +139,6 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
 
     steps:
-      - name: Checkout actions
-        uses: actions/checkout@v4
-        with:
-            repository: rapidsai/shared-actions
-            ref: ${{inputs.shared_actions_ref}}
-            path: ./shared-actions
-
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -159,6 +152,13 @@ jobs:
           ref: ${{ inputs.sha }}
           fetch-depth: 0 # unshallow fetch for setuptools-scm
           persist-credentials: false
+
+      - name: Checkout actions
+        uses: actions/checkout@v4
+        with:
+            repository: rapidsai/shared-actions
+            ref: ${{inputs.shared_actions_ref}}
+            path: ./shared-actions
 
       - name: Standardize repository information
         uses: ./shared-actions/rapids-github-info
