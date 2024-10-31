@@ -70,8 +70,7 @@ jobs:
             echo "icon=:warning:" >> $GITHUB_OUTPUT
           else
             action=${{ inputs.event_action }}
-            capitalized_action=$(echo "${action}" | awk '{print toupper(substr($0,0,1)) tolower(substr($0,2))}')
-            echo "action=${capitalized_action}" >> $GITHUB_OUTPUT
+            echo "action=${action^}" >> $GITHUB_OUTPUT
             echo "color=good" >> $GITHUB_OUTPUT
             echo "icon=:information_source:" >> $GITHUB_OUTPUT
           fi
