@@ -155,25 +155,6 @@ jobs:
     - name: Get GitHub job info, to obtain machine info
       uses: rapidsai/shared-actions/github-actions-job-info@add-telemetry
       id: job-info
-    - name: Add machine details to attributes metadata
-      run: |
-        labels=$(echo "${{steps.job-info.outputs.job-info}}" | jq -r '.labels | join(" ")')
-        echo OTEL_RESOURCE_ATTRIBUTES="${OTEL_RESOURCE_ATTRIBUTES},rapids.labels=${labels}" >> ${GITHUB_ENV}
-    - name: Write certificate files for mTLS
-      run: |
-        mkdir -p /tmp/certs
-        cat << EOF > ${OTEL_EXPORTER_OTLP_CERTIFICATE}
-        ${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }}
-        EOF
-        cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE}
-        ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }}
-        EOF
-        cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_KEY}
-        ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}
-        EOF
-    - name: Telemetry setup
-      id: job-traceparent
-      uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
     - uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -214,10 +195,16 @@ jobs:
     - name: Upload additional artifacts
       if: "!cancelled()"
       run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}
-
+    - name: Add machine details to attributes metadata
+      run: |
+        labels=$(echo "${{steps.job-info.outputs.job-info}}" | jq -r '.labels | join(" ")')
+        echo OTEL_RESOURCE_ATTRIBUTES="${OTEL_RESOURCE_ATTRIBUTES},rapids.labels=${labels}" >> ${GITHUB_ENV}
     - name: Telemetry summary
       id: telemetry-summary
       if: "always()"
       uses: ./shared-actions/telemetry-summarize
       with:
         traceparent: "${{ inputs.traceparent }}"
+        ca_cert: "${{inputs.ca_cert}}"
+        client_cert: "${{inputs.client_cert}}"
+        client_key: "${{inputs.client_key}}"

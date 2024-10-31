@@ -232,3 +232,6 @@ jobs:
         uses: ./shared-actions/telemetry-summarize
         with:
           traceparent: "${{ inputs.traceparent }}"
+          ca_cert: "${{inputs.ca_cert}}"
+          client_cert: "${{inputs.client_cert}}"
+          client_key: "${{inputs.client_key}}"

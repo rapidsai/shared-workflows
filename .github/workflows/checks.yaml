@@ -88,6 +88,12 @@ jobs:
         run: rapids-check-pr-job-dependencies "${IGNORED_JOBS}"
         env:
           IGNORED_JOBS: ${{ inputs.ignored_pr_jobs }}
+      - name: Checkout actions
+        uses: actions/checkout@v4
+        with:
+            repository: rapidsai/shared-actions
+            ref: ${{inputs.shared_actions_ref}}
+            path: ./shared-actions
       - name: Telemetry summary
         id: telemetry-summary
         if: "always()"
@@ -116,9 +122,18 @@ jobs:
         run: ci/check_style.sh
         env:
           RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
+      - name: Checkout actions
+        uses: actions/checkout@v4
+        with:
+            repository: rapidsai/shared-actions
+            ref: ${{inputs.shared_actions_ref}}
+            path: ./shared-actions
       - name: Telemetry summary
         id: telemetry-summary
         if: "always()"
         uses: ./shared-actions/telemetry-summarize
         with:
           traceparent: "${{ inputs.traceparent }}"
+          ca_cert: "${{inputs.ca_cert}}"
+          client_cert: "${{inputs.client_cert}}"
+          client_key: "${{inputs.client_key}}"
