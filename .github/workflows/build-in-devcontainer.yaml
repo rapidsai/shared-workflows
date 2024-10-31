@@ -61,13 +61,8 @@ permissions:
   statuses: none
 
 env:
-  TOP_LEVEL_TRACEPARENT: ${{ inputs.traceparent }}
   OTEL_EXPORTER_OTLP_ENDPOINT: "${{ inputs.default_endpoint }}"
   OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
-  OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
-  OTEL_EXPORTER_OTLP_CERTIFICATE: "/tmp/certs/ca.crt"
-  OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: "/tmp/certs/client.crt"
-  OTEL_EXPORTER_OTLP_CLIENT_KEY: "/tmp/certs/client.key"
 
 jobs:
   build:
@@ -141,13 +136,3 @@ jobs:
 
             cd ~/"${REPOSITORY}";
             ${{ inputs.build_command }}
-
-    # TODO: otel-cli needs to be installed. This action tries to do so, but can't write to  /usr/local/bin.
-    #   The right way to install it is probably a feature, and that would be a PR to the devcontainers repo.
-    #   - name: Telemetry summary
-    #     id: telemetry-summary
-    #     if: "always()"
-    #     uses: rapidsai/shared-actions/telemetry-summarize@add-telemetry
-    #     with:
-    #       endpoint: ${{ inputs.default_endpoint }}
-    #       traceparent: "${{ inputs.traceparent }}"

@@ -43,19 +43,26 @@ on:
         type: string
         description: |
           Comma-separated key=value pairs used for storing additional "tags" to better identify data
+      shared_actions_ref:
+        type: string
+        description: git ref of branch/tag/sha for rapidsai/shared-actions repo
+      ca_cert:
+        type: string
+        description: Text of the ca certificate for mTLS. This is NOT the file path. It is the secret value.
+      client_cert:
+        type: string
+        description: Text of the client certificate for mTLS. This is NOT the file path. It is the secret value.
+      client_key:
+        type: string
+        description: Text of the client key for mTLS. This is NOT the file path. It is the secret value.
 
 defaults:
   run:
     shell: bash
 
 env:
-  TOP_LEVEL_TRACEPARENT: ${{ inputs.traceparent }}
   OTEL_EXPORTER_OTLP_ENDPOINT: "${{ inputs.default_endpoint }}"
   OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
-  OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
-  OTEL_EXPORTER_OTLP_CERTIFICATE: "/tmp/certs/ca.crt"
-  OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: "/tmp/certs/client.crt"
-  OTEL_EXPORTER_OTLP_CLIENT_KEY: "/tmp/certs/client.key"
   OTEL_RESOURCE_ATTRIBUTES: ${{inputs.otel_resource_attributes}}
 
 jobs:
@@ -66,22 +73,6 @@ jobs:
       env:
         RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      # this only really serves to install from gha-tools and should be removed when those PRs are merged
-      - name: Telemetry setup
-        id: job-traceparent
-        uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
-      - name: Write certificate files for mTLS
-        run: |
-          mkdir -p /tmp/certs
-          cat << EOF > ${OTEL_EXPORTER_OTLP_CERTIFICATE}
-          ${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }}
-          EOF
-          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE}
-          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }}
-          EOF
-          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_KEY}
-          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}
-          EOF
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Get PR Info
@@ -100,11 +91,9 @@ jobs:
       - name: Telemetry summary
         id: telemetry-summary
         if: "always()"
-        uses: rapidsai/shared-actions/telemetry-summarize@add-telemetry
+        uses: ./shared-actions/telemetry-summarize@add-telemetry
         with:
-          traceparent: "${{ env.TOP_LEVEL_TRACEPARENT }}"
-
-
+          traceparent: "${{ inputs.traceparent }}"
 
   check-style:
     if: ${{ inputs.enable_check_style }}
@@ -112,22 +101,6 @@ jobs:
     container:
       image: rapidsai/ci-conda:latest
     steps:
-      # this only really serves to install from gha-tools and should be removed when those PRs are merged
-      - name: Telemetry setup
-        id: job-traceparent
-        uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
-      - name: Write certificate files for mTLS
-        run: |
-          mkdir -p /tmp/certs
-          cat << EOF > ${OTEL_EXPORTER_OTLP_CERTIFICATE}
-          ${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }}
-          EOF
-          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE}
-          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }}
-          EOF
-          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_KEY}
-          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}
-          EOF
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -146,6 +119,6 @@ jobs:
       - name: Telemetry summary
         id: telemetry-summary
         if: "always()"
-        uses: rapidsai/shared-actions/telemetry-summarize@add-telemetry
+        uses: ./shared-actions/telemetry-summarize
         with:
-          traceparent: "${{ env.TOP_LEVEL_TRACEPARENT }}"
+          traceparent: "${{ inputs.traceparent }}"

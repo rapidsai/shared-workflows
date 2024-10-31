@@ -36,6 +36,18 @@ on:
         type: string
         description: |
           Comma-separated key=value pairs used for storing additional "tags" to better identify data
+      shared_actions_ref:
+        type: string
+        description: git ref of branch/tag/sha for rapidsai/shared-actions repo
+      ca_cert:
+        type: string
+        description: Text of the ca certificate for mTLS. This is NOT the file path. It is the secret value.
+      client_cert:
+        type: string
+        description: Text of the client certificate for mTLS. This is NOT the file path. It is the secret value.
+      client_key:
+        type: string
+        description: Text of the client key for mTLS. This is NOT the file path. It is the secret value.
 
 defaults:
   run:
@@ -57,18 +69,9 @@ permissions:
   statuses: none
 
 env:
-  TOP_LEVEL_TRACEPARENT: ${{ inputs.traceparent }}
   # TODO: this should be set as an org-wide variable
   OTEL_EXPORTER_OTLP_ENDPOINT: "${{ inputs.default_endpoint }}"
   OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
-  OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
-  # These are where the secrets in github env vars are written to files. These files don't
-  # exist unless you explicitly write them in a step.
-  # The purpose of setting the environment variable is to tell OpenTelemetry tools where to find them.
-  #     We abuse it a bit by also using it as the write destination for the certificate files.
-  OTEL_EXPORTER_OTLP_CERTIFICATE: "/tmp/certs/ca.crt"
-  OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: "/tmp/certs/client.crt"
-  OTEL_EXPORTER_OTLP_CLIENT_KEY: "/tmp/certs/client.key"
   OTEL_PYTHON_DISABLED_INSTRUMENTATIONS: "jinja2"
   OTEL_RESOURCE_ATTRIBUTES: ${{inputs.otel_resource_attributes}}
 
@@ -83,22 +86,6 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
-      - name: Write certificate files for mTLS
-        run: |
-          mkdir -p /tmp/certs
-          cat << EOF > ${OTEL_EXPORTER_OTLP_CERTIFICATE}
-          ${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }}
-          EOF
-          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE}
-          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }}
-          EOF
-          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_KEY}
-          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}
-          EOF
-      - name: Telemetry setup
-        id: job-traceparent
-        uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
-
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -142,9 +129,15 @@ jobs:
           name: gh-status
           path: gh-status.json
           if-no-files-found: ignore
+      - name: Checkout actions
+        uses: actions/checkout@v4
+        with:
+            repository: rapidsai/shared-actions
+            ref: ${{inputs.shared_actions_ref}}
+            path: ./shared-actions
       - name: Telemetry summary
         id: telemetry-summary
         if: "always()"
-        uses: rapidsai/shared-actions/telemetry-summarize@add-telemetry
+        uses: ./shared-actions/telemetry-summarize
         with:
-          traceparent: "${{ env.TOP_LEVEL_TRACEPARENT }}"
+          traceparent: "${{ inputs.traceparent }}"
