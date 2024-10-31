@@ -97,7 +97,7 @@ jobs:
       - name: Telemetry summary
         id: telemetry-summary
         if: "always()"
-        uses: ./shared-actions/telemetry-summarize@add-telemetry
+        uses: ./shared-actions/telemetry-summarize
         with:
           traceparent: "${{ inputs.traceparent }}"
 
