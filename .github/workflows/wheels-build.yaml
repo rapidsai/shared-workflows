@@ -56,6 +56,9 @@ on:
         type: string
         description: |
           Comma-separated key=value pairs used for storing additional "tags" to better identify data
+      shared_actions_ref:
+        type: string
+        description: git ref of branch/tag/sha for rapidsai/shared-actions repo
       ca_cert:
         type: string
         description: Text of the ca certificate for mTLS. This is NOT the file path. It is the secret value.
