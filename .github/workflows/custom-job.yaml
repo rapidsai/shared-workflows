@@ -48,6 +48,9 @@ on:
       client_key:
         type: string
         description: Text of the client key for mTLS. This is NOT the file path. It is the secret value.
+      file_to_upload:
+        type: string
+        default: "gh-status.json"
 
 defaults:
   run:
@@ -126,8 +129,8 @@ jobs:
       - name: Upload file to GitHub Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gh-status
-          path: gh-status.json
+          name: result
+          path: ${{ inputs.file_to_upload }}
           if-no-files-found: ignore
       - name: Checkout actions
         uses: actions/checkout@v4
