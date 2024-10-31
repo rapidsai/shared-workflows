@@ -39,15 +39,6 @@ on:
       shared_actions_ref:
         type: string
         description: git ref of branch/tag/sha for rapidsai/shared-actions repo
-      ca_cert:
-        type: string
-        description: Text of the ca certificate for mTLS. This is NOT the file path. It is the secret value.
-      client_cert:
-        type: string
-        description: Text of the client certificate for mTLS. This is NOT the file path. It is the secret value.
-      client_key:
-        type: string
-        description: Text of the client key for mTLS. This is NOT the file path. It is the secret value.
       file_to_upload:
         type: string
         default: "gh-status.json"
@@ -89,6 +80,13 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
+      - name: Checkout actions
+        uses: actions/checkout@v4
+        with:
+            repository: rapidsai/shared-actions
+            ref: ${{inputs.shared_actions_ref}}
+            path: ./shared-actions
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -132,18 +130,13 @@ jobs:
           name: result
           path: ${{ inputs.file_to_upload }}
           if-no-files-found: ignore
-      - name: Checkout actions
-        uses: actions/checkout@v4
-        with:
-            repository: rapidsai/shared-actions
-            ref: ${{inputs.shared_actions_ref}}
-            path: ./shared-actions
+
       - name: Telemetry summary
         id: telemetry-summary
         if: "always()"
         uses: ./shared-actions/telemetry-summarize
         with:
           traceparent: "${{ inputs.traceparent }}"
-          ca_cert: "${{inputs.ca_cert}}"
-          client_cert: "${{inputs.client_cert}}"
-          client_key: "${{inputs.client_key}}"
+          ca_cert: "${{secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE}}"
+          client_cert: "${{secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE}}"
+          client_key: "${{secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY}}"

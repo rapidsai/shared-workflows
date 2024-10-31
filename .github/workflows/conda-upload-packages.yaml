@@ -33,15 +33,6 @@ on:
       shared_actions_ref:
         type: string
         description: git ref of branch/tag/sha for rapidsai/shared-actions repo
-      ca_cert:
-        type: string
-        description: Text of the ca certificate for mTLS. This is NOT the file path. It is the secret value.
-      client_cert:
-        type: string
-        description: Text of the client certificate for mTLS. This is NOT the file path. It is the secret value.
-      client_key:
-        type: string
-        description: Text of the client key for mTLS. This is NOT the file path. It is the secret value.
 
 defaults:
   run:
@@ -79,21 +70,13 @@ jobs:
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
-      - name: Write certificate files for mTLS
-        run: |
-          mkdir -p /tmp/certs
-          cat << EOF > ${OTEL_EXPORTER_OTLP_CERTIFICATE}
-          ${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }}
-          EOF
-          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE}
-          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }}
-          EOF
-          cat << EOF > ${OTEL_EXPORTER_OTLP_CLIENT_KEY}
-          ${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}
-          EOF
-      - name: Telemetry setup
-        id: job-traceparent
-        uses: rapidsai/shared-actions/telemetry-traceparent@add-telemetry
+      - name: Checkout actions
+        uses: actions/checkout@v4
+        with:
+            repository: rapidsai/shared-actions
+            ref: ${{inputs.shared_actions_ref}}
+            path: ./shared-actions
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -110,6 +93,11 @@ jobs:
           echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
           echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
+
+      - name: Telemetry setup
+        id: job-traceparent
+        uses: ./shared-actions/telemetry-traceparent
+
       - name: Set Proper Conda Upload Token
         run: |
           RAPIDS_CONDA_TOKEN=${{ secrets.CONDA_RAPIDSAI_NIGHTLY_TOKEN }}
@@ -134,6 +122,6 @@ jobs:
         uses: ./shared-actions/telemetry-summarize
         with:
           traceparent: "${{ inputs.traceparent }}"
-          ca_cert: "${{inputs.ca_cert}}"
-          client_cert: "${{inputs.client_cert}}"
-          client_key: "${{inputs.client_key}}"
+          ca_cert: "${{secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE}}"
+          client_cert: "${{secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE}}"
+          client_key: "${{secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY}}"

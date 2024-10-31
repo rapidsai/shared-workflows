@@ -32,15 +32,6 @@ on:
       shared_actions_ref:
         type: string
         description: git ref of branch/tag/sha for rapidsai/shared-actions repo
-      ca_cert:
-        type: string
-        description: Text of the ca certificate for mTLS. This is NOT the file path. It is the secret value.
-      client_cert:
-        type: string
-        description: Text of the client certificate for mTLS. This is NOT the file path. It is the secret value.
-      client_key:
-        type: string
-        description: Text of the client key for mTLS. This is NOT the file path. It is the secret value.
     outputs:
       changed_file_groups:
         value: ${{ jobs.changed-files.outputs.transformed_output }}
@@ -77,6 +68,13 @@ jobs:
     outputs:
       transformed_output: ${{ steps.transform-changed-files.outputs.transformed-output }}
     steps:
+      - name: Clone shared-actions
+        uses: actions/checkout@v4
+        with:
+            repository: rapidsai/shared-actions
+            ref: ${{inputs.shared_actions_ref}}
+            path: ./shared-actions
+
       - name: Get PR info
         id: get-pr-info
         uses: nv-gha-runners/get-pr-info@main
@@ -112,18 +110,13 @@ jobs:
             file_args=("${file_args[@]}" --slurpfile "$key" "$file")
           done
           (echo -n "transformed-output="; jq -c -n "\$ARGS.named | to_entries | map({"key": .key, "value": .value[]}) | from_entries | $TRANSFORM_EXPR" "${file_args[@]}") | tee --append "$GITHUB_OUTPUT"
-      - name: Clone shared-actions
-        uses: actions/checkout@v4
-        with:
-            repository: rapidsai/shared-actions
-            ref: ${{inputs.shared_actions_ref}}
-            path: ./shared-actions
+
       - name: Telemetry summary
         id: telemetry-summary
         if: "always()"
         uses: ./shared-actions/telemetry-summarize
         with:
           traceparent: "${{ inputs.traceparent }}"
-          ca_cert: "${{inputs.ca_cert}}"
-          client_cert: "${{inputs.client_cert}}"
-          client_key: "${{inputs.client_key}}"
+          ca_cert: "${{secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE}}"
+          client_cert: "${{secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE}}"
+          client_key: "${{secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY}}"
