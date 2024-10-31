@@ -57,19 +57,20 @@ jobs:
         id: notification
         run: |
           if [[ "${{ inputs.event_action }}" == "closed" && "${{ inputs.pr_merged }}" == "true" ]]; then
-            echo "action=merged" >> $GITHUB_OUTPUT
+            echo "action=Merged" >> $GITHUB_OUTPUT
             echo "color=#D00000" >> $GITHUB_OUTPUT
             echo "icon=:rocket:" >> $GITHUB_OUTPUT
           elif [[ "${{ inputs.event_action }}" == "closed" ]]; then
-            echo "action=closed" >> $GITHUB_OUTPUT
+            echo "action=Closed" >> $GITHUB_OUTPUT
             echo "color=#1d9bd1" >> $GITHUB_OUTPUT
             echo "icon=:information_source:" >> $GITHUB_OUTPUT
           elif [[ "${{ inputs.event_action }}" == "reopened" ]]; then
-            echo "action=reopened" >> $GITHUB_OUTPUT
+            echo "action=Reopened" >> $GITHUB_OUTPUT
             echo "color=warning" >> $GITHUB_OUTPUT
             echo "icon=:warning:" >> $GITHUB_OUTPUT
           else
-            echo "action=${{ inputs.event_action }}" >> $GITHUB_OUTPUT
+            action=${{ inputs.event_action }}
+            echo "action=${action^}" >> $GITHUB_OUTPUT
             echo "color=good" >> $GITHUB_OUTPUT
             echo "icon=:information_source:" >> $GITHUB_OUTPUT
           fi
@@ -83,7 +84,7 @@ jobs:
               "username": "RAPIDS Breaking Change Notifier - ${{ steps.notification.outputs.action }}",
               "attachments": [
                 {
-                  "author_name": "${{ steps.notification.outputs.action }} PR by ${{ inputs.sender_login }}",
+                  "author_name": "${{ steps.notification.outputs.action }} by ${{ inputs.sender_login }}",
                   "author_link": "https://github.com/${{ inputs.sender_login }}",
                   "author_icon": "${{ inputs.sender_avatar }}",
                   "color": "${{ steps.notification.outputs.color }}",
