@@ -64,10 +64,14 @@ jobs:
             echo "action=closed" >> $GITHUB_OUTPUT
             echo "color=#1d9bd1" >> $GITHUB_OUTPUT
             echo "icon=:information_source:" >> $GITHUB_OUTPUT
-          else
+          elif [[ "${{ inputs.event_action }}" == "reopened" ]]; then
             echo "action=reopened" >> $GITHUB_OUTPUT
             echo "color=warning" >> $GITHUB_OUTPUT
             echo "icon=:warning:" >> $GITHUB_OUTPUT
+          else
+            echo "action=${{ inputs.event_action }}" >> $GITHUB_OUTPUT
+            echo "color=good" >> $GITHUB_OUTPUT
+            echo "icon=:information_source:" >> $GITHUB_OUTPUT
           fi
 
       - name: Send Slack notification
