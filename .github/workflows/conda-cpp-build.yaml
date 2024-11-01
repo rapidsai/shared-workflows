@@ -64,7 +64,6 @@ env:
   OTEL_EXPORTER_OTLP_ENDPOINT: "${{ inputs.default_endpoint }}"
   OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
   OTEL_PYTHON_DISABLED_INSTRUMENTATIONS: "jinja2"
-  RAPIDS_OTEL_WRAPPER: "rapids-otel-wrap"
 
 
 jobs:
