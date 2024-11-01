@@ -46,13 +46,11 @@ on:
       shared_actions_repo:
         type: string
         description: git repo for rapidsai/shared-actions code
-        # require this instead of defaulting, so that downstream users supply this with their repo
-        required: true
+        default: rapidsai/shared-actions
       shared_actions_ref:
         type: string
         description: git ref of branch/tag/sha for rapidsai/shared-actions repo
-        # require this instead of defaulting, so that downstream users supply this with their repo branch
-        required: true
+        default: branch-24.12
 
 defaults:
   run:
@@ -76,7 +74,7 @@ jobs:
       - name: Checkout actions
         uses: actions/checkout@v4
         with:
-            repository: rapidsai/shared-actions
+            repository: ${{inputs.shared_actions_repo}}
             ref: ${{inputs.shared_actions_ref}}
             path: ./shared-actions
       - name: Get PR Info
@@ -116,7 +114,7 @@ jobs:
       - name: Checkout actions
         uses: actions/checkout@v4
         with:
-            repository: rapidsai/shared-actions
+            repository: ${{inputs.shared_actions_repo}}
             ref: ${{inputs.shared_actions_ref}}
             path: ./shared-actions
       - name: Get PR Info

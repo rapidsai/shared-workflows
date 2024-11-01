@@ -35,13 +35,11 @@ on:
       shared_actions_repo:
         type: string
         description: git repo for rapidsai/shared-actions code
-        # require this instead of defaulting, so that downstream users supply this with their repo
-        required: true
+        default: rapidsai/shared-actions
       shared_actions_ref:
         type: string
         description: git ref of branch/tag/sha for rapidsai/shared-actions repo
-        # require this instead of defaulting, so that downstream users supply this with their repo branch
-        required: true
+        default: branch-24.12
 
 defaults:
   run:
@@ -146,9 +144,6 @@ jobs:
               opentelemetry-exporter-prometheus \
               git+https://github.com/msarahan/opentelemetry-python-contrib.git@add-conda-build-instrumentation#subdirectory=instrumentation/opentelemetry-instrumentation-conda-build
           opentelemetry-bootstrap -a install
-
-      - name: Setup proxy cache
-        uses: nv-gha-runners/setup-proxy-cache@main
 
       # Sets TRACEPARENT to the value appropriate for this job (which includes the various matrix values)
       - name: Telemetry setup

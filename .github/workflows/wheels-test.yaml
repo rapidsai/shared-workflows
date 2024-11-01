@@ -44,13 +44,11 @@ on:
       shared_actions_repo:
         type: string
         description: git repo for rapidsai/shared-actions code
-        # require this instead of defaulting, so that downstream users supply this with their repo
-        required: true
+        default: rapidsai/shared-actions
       shared_actions_ref:
-        description: git ref of branch/tag/sha for rapidsai/shared-actions repo
         type: string
-        # require this instead of defaulting, so that downstream users supply this with their repo branch
-        required: true
+        description: git ref of branch/tag/sha for rapidsai/shared-actions repo
+        default: branch-24.12
     # the use of secrets in shared-workflows is discouraged, especially for public repositories.
     # these values were added for situations where the use of secrets is unavoidable.
     secrets:
