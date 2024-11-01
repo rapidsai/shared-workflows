@@ -66,11 +66,9 @@ permissions:
   statuses: none
 
 env:
-  # TODO: this should be set as an org-wide variable
   OTEL_EXPORTER_OTLP_ENDPOINT: "${{ inputs.default_endpoint }}"
   OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
   OTEL_PYTHON_DISABLED_INSTRUMENTATIONS: "jinja2"
-  # Enables opentelemetry instrumentation inside conda-build via monkeypatching
   RAPIDS_OTEL_WRAPPER: "rapids-otel-wrap"
 
 jobs:
