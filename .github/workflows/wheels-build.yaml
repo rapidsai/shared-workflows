@@ -191,14 +191,6 @@ jobs:
           ssh-key: ${{ secrets[inputs.extra-repo-deploy-key] }}
           persist-credentials: false
 
-      # Temporary until https://github.com/rapidsai/ci-imgs/pull/196 is merged
-      - name: Install OpenTelemetry instrumentation
-        run: |
-          pip install opentelemetry-distro[otlp] \
-              opentelemetry-exporter-prometheus \
-              git+https://github.com/msarahan/opentelemetry-python-contrib.git@add-conda-build-instrumentation#subdirectory=instrumentation/opentelemetry-instrumentation-conda-build
-          opentelemetry-bootstrap -a install
-
       - name: Get GitHub job info, to obtain machine info
         uses: ./shared-actions/github-actions-job-info
         id: job-info

@@ -116,14 +116,6 @@ jobs:
           echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
 
-      # Temporary until https://github.com/rapidsai/ci-imgs/pull/196 is merged
-      - name: Install OpenTelemetry instrumentation
-        run: |
-          pip install opentelemetry-distro[otlp] \
-              opentelemetry-exporter-prometheus \
-              git+https://github.com/msarahan/opentelemetry-python-contrib.git@add-conda-build-instrumentation#subdirectory=instrumentation/opentelemetry-instrumentation-conda-build
-          opentelemetry-bootstrap -a install
-
       - name: Run script
         run: ${{ inputs.run_script }}
         env:
