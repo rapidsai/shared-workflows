@@ -82,12 +82,6 @@ jobs:
           ref: ${{ inputs.sha }}
           path: "./src/"
           fetch-depth: 0
-      - name: Clone shared-actions
-        uses: actions/checkout@v4
-        with:
-            repository: ${{inputs.shared_actions_repo}}
-            ref: ${{inputs.shared_actions_ref}}
-            path: ./shared-actions
       - name: Standardize repository information
         run: |
           echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
@@ -115,7 +109,12 @@ jobs:
           else
             python ./tool/detect.py ${RAPIDS_EXTRACTED_DIR}/lib
           fi
-
+      - name: Clone shared-actions
+        uses: actions/checkout@v4
+        with:
+            repository: ${{inputs.shared_actions_repo}}
+            ref: ${{inputs.shared_actions_ref}}
+            path: ./shared-actions
       - name: Telemetry summary
         id: telemetry-summary
         if: "always()"
