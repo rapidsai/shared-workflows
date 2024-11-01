@@ -93,12 +93,7 @@ jobs:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
           fetch-depth: 0
-      - name: Clone shared-actions
-        uses: actions/checkout@v4
-        with:
-            repository: ${{inputs.shared_actions_repo}}
-            ref: ${{inputs.shared_actions_ref}}
-            path: ./shared-actions
+
       - name: Check if repo has devcontainer
         run: |
           echo "REPOSITORY=$(basename $(pwd))" | tee -a "${GITHUB_ENV}";
@@ -155,6 +150,12 @@ jobs:
 
             cd ~/"${REPOSITORY}";
             ${{ inputs.build_command }}
+      - name: Clone shared-actions
+        uses: actions/checkout@v4
+        with:
+            repository: ${{inputs.shared_actions_repo}}
+            ref: ${{inputs.shared_actions_ref}}
+            path: ./shared-actions
 
       - name: Telemetry summary
         id: telemetry-summary
