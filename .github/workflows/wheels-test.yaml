@@ -48,7 +48,7 @@ on:
       shared_actions_ref:
         type: string
         description: git ref of branch/tag/sha for rapidsai/shared-actions repo
-        default: branch-24.12
+        default: main
     # the use of secrets in shared-workflows is discouraged, especially for public repositories.
     # these values were added for situations where the use of secrets is unavoidable.
     secrets:

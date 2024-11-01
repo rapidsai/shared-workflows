@@ -39,7 +39,7 @@ on:
       shared_actions_ref:
         type: string
         description: git ref of branch/tag/sha for rapidsai/shared-actions repo
-        default: branch-24.12
+        default: main
 
 defaults:
   run:
