@@ -92,6 +92,9 @@ jobs:
         uses: ./shared-actions/telemetry-summarize
         with:
           traceparent: "${{ inputs.traceparent }}"
+          ca_cert: "${{secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE}}"
+          client_cert: "${{secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE}}"
+          client_key: "${{secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY}}"
 
   check-style:
     if: ${{ inputs.enable_check_style }}
