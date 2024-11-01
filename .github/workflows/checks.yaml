@@ -43,6 +43,11 @@ on:
         type: string
         description: |
           Comma-separated key=value pairs used for storing additional "tags" to better identify data
+      shared_actions_repo:
+        type: string
+        description: git repo for rapidsai/shared-actions code
+        # require this instead of defaulting, so that downstream users supply this with their repo
+        required: true
       shared_actions_ref:
         type: string
         description: git ref of branch/tag/sha for rapidsai/shared-actions repo
