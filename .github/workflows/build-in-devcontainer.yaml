@@ -86,6 +86,7 @@ jobs:
         cuda: ${{ fromJSON(inputs.cuda) }}
         pkgr: ${{ fromJSON(inputs.python_package_manager) }}
     runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
+    name: "${{matrix.arch}}, ${{matrix.cuda}}, ${{matrix.pkgr}}"
     steps:
       - uses: actions/checkout@v4
         with:
