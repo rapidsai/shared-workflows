@@ -57,7 +57,7 @@ jobs:
         id: escape
         run: |
           escape_json() {
-            echo "$1" | jq -R -c .
+            echo "$1" | jq -R -c . | awk '{print substr($0, 2, length($0) - 2)}'
           }
 
           # Escape all input variables
