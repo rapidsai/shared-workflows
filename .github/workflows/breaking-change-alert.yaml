@@ -66,7 +66,7 @@ jobs:
           PR_AUTHOR: ${{ inputs.pr_author }}
         run: |
           escape_json() {
-            echo "$1" | jq -R -c . | awk '{print substr($0, 2, length($0) - 2)}'
+            echo "$1" | jq -R -c . | grep -E '^".*"$' | awk '{print substr($0, 2, length($0) - 2)}' && [ "${PIPESTATUS[2]}" -eq 0 ]
           }
 
           # Escape all input variables
