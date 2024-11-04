@@ -97,7 +97,7 @@ jobs:
             echo "color=warning" >> $GITHUB_OUTPUT
             echo "icon=:warning:" >> $GITHUB_OUTPUT
           else
-            echo "action=Changed" >> $GITHUB_OUTPUT
+            echo "action=Modified" >> $GITHUB_OUTPUT
             echo "color=good" >> $GITHUB_OUTPUT
             echo "icon=:information_source:" >> $GITHUB_OUTPUT
           fi
