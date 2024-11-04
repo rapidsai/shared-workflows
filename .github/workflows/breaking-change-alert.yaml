@@ -53,24 +53,51 @@ jobs:
   notify-breaking-changes:
     runs-on: ubuntu-latest
     steps:
+      - name: Escape inputs for JSON
+        id: escape
+        run: |
+          escape_json() {
+            echo "$1" | jq -R -c .
+          }
+
+          # Escape all input variables
+          echo "sender_login=$(escape_json "${{ inputs.sender_login }}")" >> $GITHUB_OUTPUT
+          echo "sender_avatar=$(escape_json "${{ inputs.sender_avatar }}")" >> $GITHUB_OUTPUT
+          echo "repo=$(escape_json "${{ inputs.repo }}")" >> $GITHUB_OUTPUT
+          echo "pr_number=${{ inputs.pr_number }}" >> $GITHUB_OUTPUT
+          echo "pr_title=$(escape_json "${{ inputs.pr_title }}")" >> $GITHUB_OUTPUT
+          echo "pr_body=$(escape_json "${{ inputs.pr_body }}")" >> $GITHUB_OUTPUT
+          echo "pr_base_ref=$(escape_json "${{ inputs.pr_base_ref }}")" >> $GITHUB_OUTPUT
+          echo "pr_author=$(escape_json "${{ inputs.pr_author }}")" >> $GITHUB_OUTPUT
+          echo "event_action=$(escape_json "${{ inputs.event_action }}")" >> $GITHUB_OUTPUT
+          echo "pr_merged=${{ inputs.pr_merged }}" >> $GITHUB_OUTPUT
+
+          # Create escaped URLs
+          echo "repo_url=$(escape_json "https://github.com/${{ inputs.repo }}")" >> $GITHUB_OUTPUT
+          echo "pr_url=$(escape_json "https://github.com/${{ inputs.repo }}/pull/${{ inputs.pr_number }}")" >> $GITHUB_OUTPUT
+          echo "branch_url=$(escape_json "https://github.com/${{ inputs.repo }}/tree/${{ inputs.pr_base_ref }}")" >> $GITHUB_OUTPUT
+          echo "author_url=$(escape_json "https://github.com/${{ inputs.pr_author }}")" >> $GITHUB_OUTPUT
+
       - name: Determine notification parameters
         id: notification
+        env:
+          EVENT_ACTION: ${{ steps.escape.outputs.event_action }}
+          PR_MERGED: ${{ steps.escape.outputs.pr_merged }}
         run: |
-          if [[ "${{ inputs.event_action }}" == "closed" && "${{ inputs.pr_merged }}" == "true" ]]; then
+          if [[ "$EVENT_ACTION" == "closed" && "$PR_MERGED" == "true" ]]; then
             echo "action=Merged" >> $GITHUB_OUTPUT
             echo "color=#D00000" >> $GITHUB_OUTPUT
             echo "icon=:rocket:" >> $GITHUB_OUTPUT
-          elif [[ "${{ inputs.event_action }}" == "closed" ]]; then
+          elif [[ "$EVENT_ACTION" == "closed" ]]; then
             echo "action=Closed" >> $GITHUB_OUTPUT
             echo "color=#1d9bd1" >> $GITHUB_OUTPUT
             echo "icon=:information_source:" >> $GITHUB_OUTPUT
-          elif [[ "${{ inputs.event_action }}" == "reopened" ]]; then
+          elif [[ "$EVENT_ACTION" == "reopened" ]]; then
             echo "action=Reopened" >> $GITHUB_OUTPUT
             echo "color=warning" >> $GITHUB_OUTPUT
             echo "icon=:warning:" >> $GITHUB_OUTPUT
           else
-            action=${{ inputs.event_action }}
-            echo "action=${action^}" >> $GITHUB_OUTPUT
+            echo "action=Changed" >> $GITHUB_OUTPUT
             echo "color=good" >> $GITHUB_OUTPUT
             echo "icon=:information_source:" >> $GITHUB_OUTPUT
           fi
@@ -84,35 +111,35 @@ jobs:
               "username": "RAPIDS Breaking Change Notifier - ${{ steps.notification.outputs.action }}",
               "attachments": [
                 {
-                  "author_name": "${{ steps.notification.outputs.action }} PR by ${{ inputs.sender_login }}",
-                  "author_link": "https://github.com/${{ inputs.sender_login }}",
-                  "author_icon": "${{ inputs.sender_avatar }}",
+                  "author_name": "${{ steps.notification.outputs.action }} PR by ${{ steps.escape.outputs.sender_login }}",
+                  "author_link": "https://github.com/${{ steps.escape.outputs.sender_login }}",
+                  "author_icon": ${{ steps.escape.outputs.sender_avatar }},
                   "color": "${{ steps.notification.outputs.color }}",
-                  "fallback": "Breaking change PR ${{ steps.notification.outputs.action }} by ${{ inputs.sender_login }} ${{ inputs.repo }}#${{ inputs.pr_number }}",
-                  "text": "<https://github.com/${{ inputs.repo }}/pull/${{ inputs.pr_number }}|${{ inputs.repo }}#${{ inputs.pr_number }}>",
+                  "fallback": "Breaking change PR ${{ steps.notification.outputs.action }} by ${{ steps.escape.outputs.sender_login }} ${{ steps.escape.outputs.repo }}#${{ steps.escape.outputs.pr_number }}",
+                  "text": "<${{ steps.escape.outputs.pr_url }}|${{ steps.escape.outputs.repo }}#${{ steps.escape.outputs.pr_number }}>",
                   "fields": [
                     {
                       "title": "PR Title",
-                      "value": "${{ inputs.pr_title }}",
+                      "value": ${{ steps.escape.outputs.pr_title }},
                       "short": false
                     },
                     {
                       "title": "PR Target",
-                      "value": "<https://github.com/${{ inputs.repo }}/tree/${{ inputs.pr_base_ref }}|${{ inputs.pr_base_ref }}>",
+                      "value": "<${{ steps.escape.outputs.branch_url }}|${{ steps.escape.outputs.pr_base_ref }}>",
                       "short": true
                     },
                     {
                       "title": "PR Author",
-                      "value": "<https://github.com/${{ inputs.pr_author }}|${{ inputs.pr_author }}>",
+                      "value": "<${{ steps.escape.outputs.author_url }}|${{ steps.escape.outputs.pr_author }}>",
                       "short": true
                     },
                     {
                       "title": "PR Description",
-                      "value": "${{ inputs.pr_body }}",
+                      "value": ${{ steps.escape.outputs.pr_body }},
                       "short": false
                     }
                   ],
-                  "footer": "<https://github.com/${{ inputs.repo }}|${{ inputs.repo }}>",
+                  "footer": "<${{ steps.escape.outputs.repo_url }}|${{ steps.escape.outputs.repo }}>",
                   "footer_icon": "https://avatars0.githubusercontent.com/u/43887749?s=32&v=4"
                 }
               ]
