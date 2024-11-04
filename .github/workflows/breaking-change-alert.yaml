@@ -69,8 +69,6 @@ jobs:
           echo "pr_body=$(escape_json "${{ inputs.pr_body }}")" >> $GITHUB_OUTPUT
           echo "pr_base_ref=$(escape_json "${{ inputs.pr_base_ref }}")" >> $GITHUB_OUTPUT
           echo "pr_author=$(escape_json "${{ inputs.pr_author }}")" >> $GITHUB_OUTPUT
-          echo "event_action=$(escape_json "${{ inputs.event_action }}")" >> $GITHUB_OUTPUT
-          echo "pr_merged=${{ inputs.pr_merged }}" >> $GITHUB_OUTPUT
 
           # Create escaped URLs
           echo "repo_url=$(escape_json "https://github.com/${{ inputs.repo }}")" >> $GITHUB_OUTPUT
@@ -81,8 +79,8 @@ jobs:
       - name: Determine notification parameters
         id: notification
         env:
-          EVENT_ACTION: ${{ steps.escape.outputs.event_action }}
-          PR_MERGED: ${{ steps.escape.outputs.pr_merged }}
+          EVENT_ACTION: ${{ inputs.event_action }}
+          PR_MERGED: ${{ inputs.pr_merged }}
         run: |
           if [[ "$EVENT_ACTION" == "closed" && "$PR_MERGED" == "true" ]]; then
             echo "action=Merged" >> $GITHUB_OUTPUT
