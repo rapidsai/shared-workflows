@@ -55,26 +55,35 @@ jobs:
     steps:
       - name: Escape inputs for JSON
         id: escape
+        env:
+          SENDER_LOGIN: ${{ inputs.sender_login }}
+          SENDER_AVATAR: ${{ inputs.sender_avatar }}
+          REPO: ${{ inputs.repo }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          PR_TITLE: ${{ inputs.pr_title }}
+          PR_BODY: ${{ inputs.pr_body }}
+          PR_BASE_REF: ${{ inputs.pr_base_ref }}
+          PR_AUTHOR: ${{ inputs.pr_author }}
         run: |
           escape_json() {
             echo "$1" | jq -R -c . | awk '{print substr($0, 2, length($0) - 2)}'
           }
 
           # Escape all input variables
-          echo "sender_login=$(escape_json "${{ inputs.sender_login }}")" >> $GITHUB_OUTPUT
-          echo "sender_avatar=$(escape_json "${{ inputs.sender_avatar }}")" >> $GITHUB_OUTPUT
-          echo "repo=$(escape_json "${{ inputs.repo }}")" >> $GITHUB_OUTPUT
-          echo "pr_number=${{ inputs.pr_number }}" >> $GITHUB_OUTPUT
-          echo "pr_title=$(escape_json "${{ inputs.pr_title }}")" >> $GITHUB_OUTPUT
-          echo "pr_body=$(escape_json "${{ inputs.pr_body }}")" >> $GITHUB_OUTPUT
-          echo "pr_base_ref=$(escape_json "${{ inputs.pr_base_ref }}")" >> $GITHUB_OUTPUT
-          echo "pr_author=$(escape_json "${{ inputs.pr_author }}")" >> $GITHUB_OUTPUT
+          echo "sender_login=$(escape_json "${SENDER_LOGIN}")" >> $GITHUB_OUTPUT
+          echo "sender_avatar=$(escape_json "${SENDER_AVATAR}")" >> $GITHUB_OUTPUT
+          echo "repo=$(escape_json "${REPO}")" >> $GITHUB_OUTPUT
+          echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
+          echo "pr_title=$(escape_json "${PR_TITLE}")" >> $GITHUB_OUTPUT
+          echo "pr_body=$(escape_json "${PR_BODY}")" >> $GITHUB_OUTPUT
+          echo "pr_base_ref=$(escape_json "${PR_BASE_REF}")" >> $GITHUB_OUTPUT
+          echo "pr_author=$(escape_json "${PR_AUTHOR}")" >> $GITHUB_OUTPUT
 
           # Create escaped URLs
-          echo "repo_url=$(escape_json "https://github.com/${{ inputs.repo }}")" >> $GITHUB_OUTPUT
-          echo "pr_url=$(escape_json "https://github.com/${{ inputs.repo }}/pull/${{ inputs.pr_number }}")" >> $GITHUB_OUTPUT
-          echo "branch_url=$(escape_json "https://github.com/${{ inputs.repo }}/tree/${{ inputs.pr_base_ref }}")" >> $GITHUB_OUTPUT
-          echo "author_url=$(escape_json "https://github.com/${{ inputs.pr_author }}")" >> $GITHUB_OUTPUT
+          echo "repo_url=$(escape_json "https://github.com/${REPO}")" >> $GITHUB_OUTPUT
+          echo "pr_url=$(escape_json "https://github.com/${REPO}/pull/${PR_NUMBER}")" >> $GITHUB_OUTPUT
+          echo "branch_url=$(escape_json "https://github.com/${REPO}/tree/${PR_BASE_REF}")" >> $GITHUB_OUTPUT
+          echo "author_url=$(escape_json "https://github.com/${PR_AUTHOR}")" >> $GITHUB_OUTPUT
 
       - name: Determine notification parameters
         id: notification
