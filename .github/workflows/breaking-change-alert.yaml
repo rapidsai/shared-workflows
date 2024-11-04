@@ -113,14 +113,14 @@ jobs:
                 {
                   "author_name": "${{ steps.notification.outputs.action }} PR by ${{ steps.escape.outputs.sender_login }}",
                   "author_link": "https://github.com/${{ steps.escape.outputs.sender_login }}",
-                  "author_icon": ${{ steps.escape.outputs.sender_avatar }},
+                  "author_icon": "${{ steps.escape.outputs.sender_avatar }}",
                   "color": "${{ steps.notification.outputs.color }}",
                   "fallback": "Breaking change PR ${{ steps.notification.outputs.action }} by ${{ steps.escape.outputs.sender_login }} ${{ steps.escape.outputs.repo }}#${{ steps.escape.outputs.pr_number }}",
                   "text": "<${{ steps.escape.outputs.pr_url }}|${{ steps.escape.outputs.repo }}#${{ steps.escape.outputs.pr_number }}>",
                   "fields": [
                     {
                       "title": "PR Title",
-                      "value": ${{ steps.escape.outputs.pr_title }},
+                      "value": "${{ steps.escape.outputs.pr_title }}",
                       "short": false
                     },
                     {
@@ -135,7 +135,7 @@ jobs:
                     },
                     {
                       "title": "PR Description",
-                      "value": ${{ steps.escape.outputs.pr_body }},
+                      "value": "${{ steps.escape.outputs.pr_body }}",
                       "short": false
                     }
                   ],
