@@ -84,6 +84,7 @@ jobs:
           fetch-depth: 0
       - name: Checkout actions
         uses: actions/checkout@v4
+        if: always()
         with:
             repository: ${{inputs.shared_actions_repo}}
             ref: ${{inputs.shared_actions_ref}}
@@ -97,6 +98,7 @@ jobs:
 
       - name: Telemetry setup
         id: job-traceparent
+        if: always()
         uses: ./shared-actions/telemetry-traceparent
 
       - name: Set Proper Conda Upload Token
@@ -113,7 +115,7 @@ jobs:
           RAPIDS_CONDA_UPLOAD_LABEL: ${{ inputs.upload_to_label }}
       - name: Telemetry summary
         id: telemetry-summary
-        if: "always()"
+        if: always()
         uses: ./shared-actions/telemetry-summarize
         with:
           traceparent: "${{ inputs.traceparent }}"

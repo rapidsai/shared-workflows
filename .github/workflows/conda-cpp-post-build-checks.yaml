@@ -110,6 +110,7 @@ jobs:
             python ./tool/detect.py ${RAPIDS_EXTRACTED_DIR}/lib
           fi
       - name: Clone shared-actions
+        if: always()
         uses: actions/checkout@v4
         with:
             repository: ${{inputs.shared_actions_repo}}
@@ -117,7 +118,7 @@ jobs:
             path: ./shared-actions
       - name: Telemetry summary
         id: telemetry-summary
-        if: "always()"
+        if: always()
         uses: ./shared-actions/telemetry-summarize
         with:
             traceparent: "${{ inputs.traceparent }}"
