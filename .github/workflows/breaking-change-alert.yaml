@@ -44,6 +44,10 @@ on:
         description: 'Pull request merged status'
         required: true
         type: boolean
+      webhook_url:
+        description: 'Slack webhook URL'
+        required: true
+        type: string
 
 defaults:
   run:
@@ -156,5 +160,5 @@ jobs:
               ]
             }
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.NV_SLACK_BREAKING_CHANGE_NOTIFIER_APP }}
+          SLACK_WEBHOOK_URL: ${{ inputs.webhook_url }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
