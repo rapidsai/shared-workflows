@@ -2,6 +2,9 @@ name: Breaking Change Notifications
 
 on:
   workflow_call:
+    secrets:
+      NV_SLACK_BREAKING_CHANGE_NOTIFIER_APP:
+        required: true
     inputs:
       sender_login:
         description: 'Sender login'
