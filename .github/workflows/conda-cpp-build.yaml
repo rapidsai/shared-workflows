@@ -124,6 +124,7 @@ jobs:
           fetch-depth: 0
       - name: Checkout actions
         uses: actions/checkout@v4
+        if: always()
         with:
             repository: ${{inputs.shared_actions_repo}}
             ref: ${{inputs.shared_actions_ref}}
@@ -160,7 +161,7 @@ jobs:
         run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)
       - name: Telemetry summary
         id: telemetry-summary
-        if: "always()"
+        if: always()
         continue-on-error: true
         uses: ./shared-actions/telemetry-summarize
         with:

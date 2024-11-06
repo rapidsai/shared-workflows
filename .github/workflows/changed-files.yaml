@@ -84,6 +84,7 @@ jobs:
           persist-credentials: false
       - name: Clone shared-actions
         uses: actions/checkout@v4
+        if: always()
         with:
             repository: ${{inputs.shared_actions_repo}}
             ref: ${{inputs.shared_actions_ref}}
@@ -118,7 +119,7 @@ jobs:
 
       - name: Telemetry summary
         id: telemetry-summary
-        if: "always()"
+        if: always()
         uses: ./shared-actions/telemetry-summarize
         with:
           traceparent: "${{ inputs.traceparent }}"
