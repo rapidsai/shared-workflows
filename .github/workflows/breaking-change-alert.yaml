@@ -66,7 +66,11 @@ jobs:
           PR_AUTHOR: ${{ inputs.pr_author }}
         run: |
           escape_json() {
-            echo "$1" | jq -R -c . | grep -E '^".*"$' | awk '{print substr($0, 2, length($0) - 2)}' && [ "${PIPESTATUS[2]}" -eq 0 ]
+            local flag="-R"
+            if [ "$2" = "slurp" ]; then
+                flag="-sR"
+            fi
+            echo "$1" | jq ${flag} -c . | grep -E '^".*"$' | awk '{print substr($0, 2, length($0) - 2)}' && [ "${PIPESTATUS[2]}" -eq 0 ]
           }
 
           # Escape all input variables
@@ -75,7 +79,7 @@ jobs:
           echo "repo=$(escape_json "${REPO}")" >> $GITHUB_OUTPUT
           echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
           echo "pr_title=$(escape_json "${PR_TITLE}")" >> $GITHUB_OUTPUT
-          echo "pr_body=$(escape_json "${PR_BODY}")" >> $GITHUB_OUTPUT
+          echo "pr_body=$(escape_json "${PR_BODY}" slurp)" >> $GITHUB_OUTPUT
           echo "pr_base_ref=$(escape_json "${PR_BASE_REF}")" >> $GITHUB_OUTPUT
           echo "pr_author=$(escape_json "${PR_AUTHOR}")" >> $GITHUB_OUTPUT
 
