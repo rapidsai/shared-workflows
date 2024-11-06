@@ -139,13 +139,16 @@ jobs:
       # Sets TRACEPARENT to the value appropriate for this job (which includes the various matrix values)
       - name: Telemetry setup
         id: job-traceparent
+        if: always()
         uses: ./shared-actions/telemetry-traceparent
 
       - name: Get GitHub job info, to obtain machine info
         uses: ./shared-actions/github-actions-job-info
+        if: always()
         id: job-info
 
       - name: Add machine details to attributes metadata
+        if: always()
         run: |
           labels=$(echo "${{steps.job-info.outputs.job-info}}" | jq -r '.labels | join(" ")')
           echo OTEL_RESOURCE_ATTRIBUTES="${OTEL_RESOURCE_ATTRIBUTES},${labels}" >> ${GITHUB_ENV}
