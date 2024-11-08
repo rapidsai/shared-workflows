@@ -18,25 +18,6 @@ on:
         required: false
       symbol_exclusions:
         type: string
-      default_endpoint:
-        type: string
-      traceparent:
-        type: string
-        description: |
-            Opentelemetry traceparent. Format is described in https://medium.com/@mesutatasoy/understanding-traceparent-and-microservices-in-opentelemetry-notepad-series-7-de5c16bf6462
-            Generally, 00-<trace_id 32 chars>-<span_id 16 chars>-01
-      otel_resource_attributes:
-        type: string
-        description: |
-          Comma-separated key=value pairs used for storing additional "tags" to better identify data
-      shared_actions_repo:
-        type: string
-        description: git repo for rapidsai/shared-actions code
-        default: rapidsai/shared-actions
-      shared_actions_ref:
-        type: string
-        description: git ref of branch/tag/sha for rapidsai/shared-actions repo
-        default: main
 
 defaults:
   run:
@@ -56,11 +37,6 @@ permissions:
   repository-projects: none
   security-events: none
   statuses: none
-
-env:
-  OTEL_EXPORTER_OTLP_ENDPOINT: "${{ inputs.default_endpoint }}"
-  OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
-  OTEL_PYTHON_DISABLED_INSTRUMENTATIONS: "jinja2"
 
 jobs:
   check-symbols:
@@ -109,19 +85,10 @@ jobs:
           else
             python ./tool/detect.py ${RAPIDS_EXTRACTED_DIR}/lib
           fi
-      - name: Clone shared-actions
+
+      - name: Telemetry summarize
+        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@telemetry-dispatch-actions
+        continue-on-error: true
         if: always()
-        uses: actions/checkout@v4
         with:
-            repository: ${{inputs.shared_actions_repo}}
-            ref: ${{inputs.shared_actions_ref}}
-            path: ./shared-actions
-      - name: Telemetry summary
-        id: telemetry-summary
-        if: always()
-        uses: ./shared-actions/telemetry-summarize
-        with:
-            traceparent: "${{ inputs.traceparent }}"
-            ca_cert: "${{secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE}}"
-            client_cert: "${{secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE}}"
-            client_key: "${{secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY}}"
+          cert_concat: "${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}"
