@@ -122,6 +122,8 @@ jobs:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
+    - name: Telemetry setup
+      uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@telemetry-dispatch-actions
     - uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ vars.AWS_ROLE_ARN }}

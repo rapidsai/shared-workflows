@@ -47,7 +47,8 @@ jobs:
     outputs:
       transformed_output: ${{ steps.transform-changed-files.outputs.transformed-output }}
     steps:
-
+      - name: Telemetry setup
+        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@telemetry-dispatch-actions
       - name: Get PR info
         id: get-pr-info
         uses: nv-gha-runners/get-pr-info@main
