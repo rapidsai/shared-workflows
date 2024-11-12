@@ -133,7 +133,7 @@ jobs:
           persist-credentials: false
 
       - name: Standardize repository information
-        uses: ./shared-actions/rapids-github-info
+        uses: rapidsai/shared-actions/rapids-github-info@main
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
