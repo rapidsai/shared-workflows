@@ -22,6 +22,26 @@ on:
         required: false
         type: string
         default: "-e _NOOP"
+      default_endpoint:
+        type: string
+        description: "Destination to send telemetry to, not including path like /v1/traces"
+      traceparent:
+        type: string
+        description: |
+            Opentelemetry traceparent. Format is described in https://medium.com/@mesutatasoy/understanding-traceparent-and-microservices-in-opentelemetry-notepad-series-7-de5c16bf6462
+            Generally, 00-<trace_id 32 chars>-<span_id 16 chars>-01w
+      otel_resource_attributes:
+        type: string
+        description: |
+          Comma-separated key=value pairs used for storing additional "tags" to better identify data
+      shared_actions_repo:
+        type: string
+        description: git repo for rapidsai/shared-actions code
+        default: rapidsai/shared-actions
+      shared_actions_ref:
+        type: string
+        description: git ref of branch/tag/sha for rapidsai/shared-actions repo
+        default: main
 
 defaults:
   run:
@@ -41,6 +61,11 @@ permissions:
   repository-projects: none
   security-events: none
   statuses: none
+
+env:
+  OTEL_EXPORTER_OTLP_ENDPOINT: "${{ inputs.default_endpoint }}"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+  OTEL_PYTHON_DISABLED_INSTRUMENTATIONS: "jinja2"
 
 jobs:
   compute-matrix:
@@ -102,6 +127,7 @@ jobs:
     runs-on: "linux-${{ matrix.ARCH }}-gpu-${{ matrix.GPU }}-${{ matrix.DRIVER }}-1"
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
+      OTEL_RESOURCE_ATTRIBUTES: "${{inputs.otel_resource_attributes}},rapids.package_type=wheel,rapids.cuda=${{matrix.CUDA_VER}},rapids.py=${{matrix.PY_VER}},rapids.arch=${{matrix.ARCH}},rapids.linux=${{matrix.LINUX_VER}},rapids.gpu=${{matrix.GPU}},rapids.driver=${{matrix.DRIVER}},rapids.deps=${{matrix.DEPENDENCIES}}"
       RAPIDS_DEPENDENCIES: ${{ matrix.DEPENDENCIES }}
       RAPIDS_TESTS_DIR: ${{ github.workspace }}/test-results
     container:
@@ -111,8 +137,6 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
-      - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -124,13 +148,30 @@ jobs:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
           fetch-depth: 0
-
+      - name: Checkout actions
+        uses: actions/checkout@v4
+        if: always()
+        with:
+            repository: ${{inputs.shared_actions_repo}}
+            ref: ${{inputs.shared_actions_ref}}
+            path: ./shared-actions
       - name: Standardize repository information
         run: |
           echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
           echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
+
+      - name: Get GitHub job info, to obtain machine info
+        if: always()
+        uses: ./shared-actions/github-actions-job-info
+        id: job-info
+
+      - name: Add machine details to attributes metadata
+        if: always()
+        run: |
+          labels=$(echo "${{steps.job-info.outputs.job-info}}" | jq -r '.labels | join(" ")')
+          echo OTEL_RESOURCE_ATTRIBUTES="${OTEL_RESOURCE_ATTRIBUTES},rapids.labels=${labels}" >> ${GITHUB_ENV}
 
       - name: C++ tests
         run: ${{ inputs.script }}
@@ -145,10 +186,12 @@ jobs:
         if: "!cancelled()"
         run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)
 
-      - name: Telemetry summarize
-        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@main
-        continue-on-error: true
+      - name: Telemetry summary
+        id: telemetry-summary
         if: always()
+        uses: ./shared-actions/telemetry-summarize
         with:
-          cert_concat: "${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}"
-          extra_attributes: "rapids.package_type=wheel,rapids.cuda=${{matrix.CUDA_VER}},rapids.py=${{matrix.PY_VER}},rapids.arch=${{matrix.ARCH}},rapids.linux=${{matrix.LINUX_VER}},rapids.gpu=${{matrix.GPU}},rapids.driver=${{matrix.DRIVER}},rapids.deps=${{matrix.DEPENDENCIES}}"
+          traceparent: "${{ inputs.traceparent }}"
+          ca_cert: "${{secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE}}"
+          client_cert: "${{secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE}}"
+          client_key: "${{secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY}}"
