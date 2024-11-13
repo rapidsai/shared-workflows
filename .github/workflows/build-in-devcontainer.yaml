@@ -70,6 +70,7 @@ jobs:
 
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
+        continue-on-error: true
 
       - name: Check if repo has devcontainer
         run: |
