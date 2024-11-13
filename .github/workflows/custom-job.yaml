@@ -24,6 +24,9 @@ on:
       run_script:
         required: true
         type: string
+      file_to_upload:
+        type: string
+        default: "gh-status.json"
 
 defaults:
   run:
