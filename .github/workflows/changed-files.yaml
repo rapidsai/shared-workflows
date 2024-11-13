@@ -48,7 +48,7 @@ jobs:
       transformed_output: ${{ steps.transform-changed-files.outputs.transformed-output }}
     steps:
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@telemetry-dispatch-actions
+        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
       - name: Get PR info
         id: get-pr-info
         uses: nv-gha-runners/get-pr-info@main
@@ -86,7 +86,7 @@ jobs:
           (echo -n "transformed-output="; jq -c -n "\$ARGS.named | to_entries | map({"key": .key, "value": .value[]}) | from_entries | $TRANSFORM_EXPR" "${file_args[@]}") | tee --append "$GITHUB_OUTPUT"
 
       - name: Telemetry summarize
-        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@telemetry-dispatch-actions
+        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@main
         continue-on-error: true
         if: always()
         with:

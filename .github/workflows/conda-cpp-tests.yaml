@@ -112,7 +112,7 @@ jobs:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@telemetry-dispatch-actions
+        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -146,7 +146,7 @@ jobs:
         run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)
 
       - name: Telemetry summarize
-        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@telemetry-dispatch-actions
+        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@main
         continue-on-error: true
         if: always()
         with:
