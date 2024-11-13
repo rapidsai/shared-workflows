@@ -113,6 +113,7 @@ jobs:
     steps:
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
+        continue-on-error: true
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}

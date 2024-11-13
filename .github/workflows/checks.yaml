@@ -46,6 +46,7 @@ jobs:
     steps:
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
+        continue-on-error: true
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Get PR Info
@@ -77,6 +78,7 @@ jobs:
     steps:
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
+        continue-on-error: true
       - name: Checkout code
         uses: actions/checkout@v4
         with:
