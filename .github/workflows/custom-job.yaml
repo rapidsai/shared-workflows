@@ -59,9 +59,10 @@ jobs:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@empty-certs
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -97,10 +98,3 @@ jobs:
           name: result
           path: ${{ inputs.file_to_upload }}
           if-no-files-found: ignore
-
-      - name: Telemetry summarize
-        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && !cancelled() }}
-        with:
-          cert_concat: "${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}"

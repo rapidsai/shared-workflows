@@ -69,9 +69,11 @@ jobs:
           fetch-depth: 0
 
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@empty-certs
         continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        with:
+            extra_attributes: "rapids.operation=devcontainer,rapids.package_type=${{matrix.pkgr}},rapids.cuda=${{matrix.cuda}},rapids.arch=${{matrix.arch}}"
 
       - name: Check if repo has devcontainer
         run: |
@@ -129,10 +131,3 @@ jobs:
 
             cd ~/"${REPOSITORY}";
             ${{ inputs.build_command }}
-
-      - name: Telemetry summarize
-        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && !cancelled() }}
-        with:
-          cert_concat: "${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}"

@@ -48,7 +48,7 @@ jobs:
       transformed_output: ${{ steps.transform-changed-files.outputs.transformed-output }}
     steps:
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@empty-certs
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
       - name: Get PR info
@@ -86,10 +86,3 @@ jobs:
             file_args=("${file_args[@]}" --slurpfile "$key" "$file")
           done
           (echo -n "transformed-output="; jq -c -n "\$ARGS.named | to_entries | map({"key": .key, "value": .value[]}) | from_entries | $TRANSFORM_EXPR" "${file_args[@]}") | tee --append "$GITHUB_OUTPUT"
-
-      - name: Telemetry summarize
-        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && !cancelled() }}
-        with:
-          cert_concat: "${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}"
