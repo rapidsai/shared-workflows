@@ -123,7 +123,7 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
     - name: Telemetry setup
-      uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@fluentbit-default-endpoint
+      uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
       continue-on-error: true
       if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
     - uses: aws-actions/configure-aws-credentials@v4
@@ -168,7 +168,7 @@ jobs:
       run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}
 
     - name: Telemetry summarize
-      uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@fluentbit-default-endpoint
+      uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@main
       continue-on-error: true
       if: ${{ vars.TELEMETRY_ENABLED == 'true' && !cancelled() }}
       with:
