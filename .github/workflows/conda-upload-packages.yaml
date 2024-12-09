@@ -47,7 +47,7 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@fluentbit-default-endpoint
         continue-on-error: true
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -81,7 +81,7 @@ jobs:
           RAPIDS_CONDA_UPLOAD_LABEL: ${{ inputs.upload_to_label }}
 
       - name: Telemetry summarize
-        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@fluentbit-default-endpoint
         continue-on-error: true
         if: always()
         with:

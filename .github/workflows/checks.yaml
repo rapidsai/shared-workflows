@@ -45,7 +45,7 @@ jobs:
         RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@fluentbit-default-endpoint
         continue-on-error: true
       - name: Checkout code
         uses: actions/checkout@v4
@@ -64,7 +64,7 @@ jobs:
           IGNORED_JOBS: ${{ inputs.ignored_pr_jobs }}
 
       - name: Telemetry summarize
-        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@fluentbit-default-endpoint
         continue-on-error: true
         if: always()
         with:
@@ -77,7 +77,7 @@ jobs:
       image: rapidsai/ci-conda:latest
     steps:
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@fluentbit-default-endpoint
         continue-on-error: true
       - name: Checkout code
         uses: actions/checkout@v4
@@ -96,7 +96,7 @@ jobs:
           RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
 
       - name: Telemetry summarize
-        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@fluentbit-default-endpoint
         continue-on-error: true
         if: always()
         with:

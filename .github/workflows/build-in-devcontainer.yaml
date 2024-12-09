@@ -69,7 +69,7 @@ jobs:
           fetch-depth: 0
 
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@fluentbit-default-endpoint
         continue-on-error: true
 
       - name: Check if repo has devcontainer
@@ -130,7 +130,7 @@ jobs:
             ${{ inputs.build_command }}
 
       - name: Telemetry summarize
-        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@fluentbit-default-endpoint
         continue-on-error: true
         if: always()
         with:

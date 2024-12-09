@@ -59,7 +59,7 @@ jobs:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@fluentbit-default-endpoint
         continue-on-error: true
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -98,7 +98,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Telemetry summarize
-        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@fluentbit-default-endpoint
         continue-on-error: true
         if: always()
         with:
