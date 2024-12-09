@@ -50,6 +50,7 @@ jobs:
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
         continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -93,6 +94,6 @@ jobs:
       - name: Telemetry summarize
         uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@main
         continue-on-error: true
-        if: always()
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' && !cancelled() }}
         with:
           cert_concat: "${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}"
