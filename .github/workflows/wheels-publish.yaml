@@ -106,6 +106,6 @@ jobs:
     - name: Telemetry summarize
       uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@fluentbit-default-endpoint
       continue-on-error: true
-      if: "${{ vars.TELEMETRY_ENABLED == 'true' }} && !cancelled()"
+      if: ${{ vars.TELEMETRY_ENABLED == 'true' && !cancelled() }}
       with:
         cert_concat: "${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}"

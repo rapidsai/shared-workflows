@@ -165,7 +165,7 @@ jobs:
       - name: Telemetry summarize
         uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@fluentbit-default-endpoint
         continue-on-error: true
-        if: "${{ vars.TELEMETRY_ENABLED == 'true' }} && !cancelled()"
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' && !cancelled() }}
         with:
           cert_concat: "${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}"
           extra_attributes:  "rapids.package_type=wheel,rapids.cuda=${{matrix.CUDA_VER}},rapids.py=${{matrix.PY_VER}},rapids.arch=${{matrix.ARCH}},rapids.linux=${{matrix.LINUX_VER}},rapids.gpu=${{matrix.GPU}},rapids.driver=${{matrix.DRIVER}},rapids.deps=${{matrix.DEPENDENCIES}}"
