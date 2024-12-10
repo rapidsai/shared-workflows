@@ -60,7 +60,7 @@ jobs:
         cuda: ${{ fromJSON(inputs.cuda) }}
         pkgr: ${{ fromJSON(inputs.python_package_manager) }}
     runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
-    name: "${{matrix.arch}}, ${{matrix.cuda}}, ${{matrix.pkgr}}"
+    name: "${{ matrix.arch }}, ${{ matrix.cuda }}, ${{ matrix.pkgr }}"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -73,7 +73,7 @@ jobs:
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         with:
-            extra_attributes: "rapids.operation=devcontainer,rapids.package_type=${{matrix.pkgr}},rapids.cuda=${{matrix.cuda}},rapids.arch=${{matrix.arch}}"
+            extra_attributes: "rapids.operation=devcontainer,rapids.package_type=${{ matrix.pkgr}},rapids.cuda=${{ matrix.cuda }},rapids.arch=${{matrix.arch }}"
 
       - name: Check if repo has devcontainer
         run: |

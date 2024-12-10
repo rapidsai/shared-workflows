@@ -91,7 +91,7 @@ jobs:
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         with:
-            extra_attributes: "rapids.operation=build-cpp,rapids.package_type=conda,rapids.cuda=${{matrix.CUDA_VER}},rapids.py=${{matrix.PY_VER}},rapids.arch=${{matrix.ARCH}},rapids.linux=${{matrix.LINUX_VER}}"
+            extra_attributes: "rapids.operation=build-cpp,rapids.package_type=conda,rapids.cuda=${{ matrix.CUDA_VER}},rapids.py=${{matrix.PY_VER}},rapids.arch=${{matrix.ARCH}},rapids.linux=${{matrix.LINUX_VER }}"
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}

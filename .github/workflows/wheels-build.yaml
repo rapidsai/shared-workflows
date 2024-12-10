@@ -121,7 +121,7 @@ jobs:
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         with:
-          extra_attributes: "rapids.operation=build,rapids.package_type=wheel,rapids.cuda=${{matrix.CUDA_VER}},rapids.py=${{matrix.PY_VER}},rapids.arch=${{matrix.ARCH}},rapids.linux=${{matrix.LINUX_VER}}"
+          extra_attributes: "rapids.operation=build,rapids.package_type=wheel,rapids.cuda=${{ matrix.CUDA_VER}},rapids.py=${{ matrix.PY_VER}},rapids.arch=${{matrix.ARCH }},rapids.linux=${{matrix.LINUX_VER }}"
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
