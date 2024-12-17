@@ -47,7 +47,7 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
       - uses: aws-actions/configure-aws-credentials@v4
@@ -80,10 +80,3 @@ jobs:
         env:
           SKIP_UPLOAD_PKGS: ${{ inputs.skip_upload_pkgs }}
           RAPIDS_CONDA_UPLOAD_LABEL: ${{ inputs.upload_to_label }}
-
-      - name: Telemetry summarize
-        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && !cancelled() }}
-        with:
-          cert_concat: "${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}"

@@ -87,9 +87,11 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-load-base-env-vars@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        with:
+            extra_attributes: "rapids.operation=build-cpp,rapids.package_type=conda,rapids.cuda=${{ matrix.CUDA_VER }},rapids.py=${{ matrix.PY_VER }},rapids.arch=${{ matrix.ARCH }},rapids.linux=${{ matrix.LINUX_VER }}"
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -112,15 +114,6 @@ jobs:
         env:
           STEP_NAME: "C++ build"
           GH_TOKEN: ${{ github.token }}
-          TRACEPARENT: ${{ steps.job-traceparent.outputs.traceparent }}
       - name: Upload additional artifacts
         if: "!cancelled()"
         run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)
-
-      - name: Telemetry summarize
-        uses: rapidsai/shared-actions/telemetry-dispatch-write-summary@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && !cancelled() }}
-        with:
-          cert_concat: "${{ secrets.OTEL_EXPORTER_OTLP_CA_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE }};${{ secrets.OTEL_EXPORTER_OTLP_CLIENT_KEY }}"
-          extra_attributes: "rapids.operation=test-cpp,rapids.package_type=conda,rapids.cuda=${{matrix.CUDA_VER}},rapids.py=${{matrix.PY_VER}},rapids.arch=${{matrix.ARCH}},rapids.linux=${{matrix.LINUX_VER}}"
