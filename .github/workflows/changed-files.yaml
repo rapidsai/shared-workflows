@@ -48,7 +48,7 @@ jobs:
       transformed_output: ${{ steps.transform-changed-files.outputs.transformed-output }}
     steps:
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@empty-certs
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
       - name: Get PR info

@@ -69,7 +69,7 @@ jobs:
           fetch-depth: 0
 
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@empty-certs
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         with:
@@ -94,12 +94,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '16'
+
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
         uses: devcontainers/ci@v0.3
         with:
           push: never
           configFile: .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json
+          # Env vars are NOT automatically passed from our current env into the devcontainer.
+          # We have to pass them in explicitly.
           env: |
             REPOSITORY=${{ env.REPOSITORY }}
             SCCACHE_REGION=${{ vars.AWS_REGION }}
@@ -107,6 +110,11 @@ jobs:
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
             RAPIDS_AUX_SECRET_1=${{ secrets.RAPIDS_AUX_SECRET_1 }}
+            TRACEPARENT=${{ env.TRACEPARENT }}
+            OTEL_SERVICE_NAME=${{ env.OTEL_SERVICE_NAME }}
+            OTEL_EXPORTER_OTLP_ENDPOINT=${{ env.OTEL_EXPORTER_OTLP_ENDPOINT }}
+            OTEL_EXPORTER_OTLP_PROTOCOL=${{ env.OTEL_EXPORTER_OTLP_PROTOCOL }}
+            OTEL_RESOURCE_ATTRIBUTES=${{ env.OTEL_RESOURCE_ATTRIBUTES }}
           runCmd: |
             set -e;
             mkdir -p ~/.config/pip/;
