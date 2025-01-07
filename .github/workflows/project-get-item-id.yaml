@@ -41,13 +41,15 @@ jobs:
         id: get_item_id
         env:
           GH_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
+          ENV_ITEM_NODE_ID: ${{ inputs.ITEM_NODE_ID }}
+          ENV_PROJECT_ID: ${{ inputs.PROJECT_ID }}
         run: |
             # Query up to 10 projects for the PR
             # There's no graphQL filter configured to query by a specific project
             # So we need to query all projects and filter the result ourselves
             gh api graphql -f query='
               query {
-                node(id: "${{ inputs.ITEM_NODE_ID }}") {
+                node(id: "${{ env.ENV_ITEM_NODE_ID }}") {
                   ... on PullRequest {
                     projectItems(first: 10) {
                       nodes {
@@ -73,7 +75,7 @@ jobs:
             
             # Use jq to do the actual filtering
             item_project_id=$(jq -r '.data.node.projectItems.nodes[] |
-                              select(.project.id == "${{ inputs.PROJECT_ID }}") |
+                              select(.project.id == "${{ env.ENV_PROJECT_ID }}") |
                               .id' project_data.json)
             echo "ITEM_PROJECT_ID=$item_project_id" >> $GITHUB_OUTPUT
         continue-on-error: true

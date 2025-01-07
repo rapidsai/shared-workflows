@@ -54,13 +54,18 @@ jobs:
           id: sync_linked_issues
           env:
             GITHUB_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
+            ENV_PR_NODE_ID: ${{ inputs.PR_NODE_ID }}
+            ENV_PROJECT_ID: ${{ inputs.PROJECT_ID }}
+            ENV_UPDATE_FIELD_TYPE: ${{ inputs.UPDATE_FIELD_TYPE }}
+            ENV_UPDATE_FIELD_ID: ${{ inputs.UPDATE_FIELD_ID }}
+            ENV_UPDATE_FIELD_VALUE: ${{ inputs.UPDATE_FIELD_VALUE }}
           run: |
             # Find the linked issues to the PR
             # If an issue is passed in, the json will return null and the for loop won't trigger
             # Potential future improvement could be some nicer error messaging on incorrect input
             gh api graphql -f query='
                 query {
-                    node(id: "${{ inputs.PR_NODE_ID }}") {
+                    node(id: "${{ env.ENV_PR_NODE_ID }}") {
                     ... on PullRequest {
                         closingIssuesReferences(first: 10) {
                         nodes {
@@ -73,43 +78,43 @@ jobs:
                     }
                   }' > linked_issues.json
             issue_ids=$(jq -r '.data.node.closingIssuesReferences.nodes[].projectItems.nodes[] |
-                        select(.project.id == "${{ inputs.PROJECT_ID }}") | .id' linked_issues.json)
+                        select(.project.id == "${{ env.ENV_PROJECT_ID }}") | .id' linked_issues.json)
 
             for issue_id in $issue_ids; do
               # Each field type has a different `value` that is needed by the mutation. 
 
-              if [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "iteration" ]; then
+              if [ "${{ env.ENV_UPDATE_FIELD_TYPE }}" == "iteration" ]; then
                 gh api graphql -f query='
                   mutation {
                     updateProjectV2ItemFieldValue(
                       input: {
-                        projectId: "${{ inputs.PROJECT_ID }}"
+                        projectId: "${{ env.ENV_PROJECT_ID }}"
                         itemId: "'"$issue_id"'"
-                        fieldId: "${{ inputs.UPDATE_FIELD_ID }}"
-                        value: {iterationId: "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
+                        fieldId: "${{ env.ENV_UPDATE_FIELD_ID }}"
+                        value: {iterationId: "${{ env.ENV_UPDATE_FIELD_VALUE }}"}}) 
                     {projectV2Item {id}}}'
                     
-              elif [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "single_select" ]; then
+              elif [ "${{ env.ENV_UPDATE_FIELD_TYPE }}" == "single_select" ]; then
                 gh api graphql -f query='
                   mutation {
                     updateProjectV2ItemFieldValue(
                       input: {
-                        projectId: "${{ inputs.PROJECT_ID }}"
+                        projectId: "${{ env.ENV_PROJECT_ID }}"
                         itemId: "'"$issue_id"'"
-                        fieldId: "${{ inputs.UPDATE_FIELD_ID }}"
-                        value: {singleSelectOptionId: "${{ inputs.UPDATE_FIELD_VALUE }}"}}) 
+                        fieldId: "${{ env.ENV_UPDATE_FIELD_ID }}"
+                        value: {singleSelectOptionId: "${{ env.ENV_UPDATE_FIELD_VALUE }}"}}) 
                     {projectV2Item {id}}}'
 
-              elif [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "date" ] || \
-                   [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "text" ]; then
+              elif [ "${{ env.ENV_UPDATE_FIELD_TYPE }}" == "date" ] || \
+                   [ "${{ env.ENV_UPDATE_FIELD_TYPE }}" == "text" ]; then
                 gh api graphql -f query="
                   mutation {
                     updateProjectV2ItemFieldValue(
                       input: {
-                        projectId: \"${{ inputs.PROJECT_ID }}\"
+                        projectId: \"${{ env.ENV_PROJECT_ID }}\"
                         itemId: \"$issue_id\"
-                        fieldId: \"${{ inputs.UPDATE_FIELD_ID }}\"
-                        value: {${{ inputs.UPDATE_FIELD_TYPE }}: \"${{ inputs.UPDATE_FIELD_VALUE }}\"}
+                        fieldId: \"${{ env.ENV_UPDATE_FIELD_ID }}\"
+                        value: {${{ env.ENV_UPDATE_FIELD_TYPE }}: \"${{ env.ENV_UPDATE_FIELD_VALUE }}\"}
                       }
                     ) {
                       projectV2Item {
@@ -118,15 +123,15 @@ jobs:
                     }
                   }"
 
-              elif [ "${{ inputs.UPDATE_FIELD_TYPE }}" == "number" ]; then
+              elif [ "${{ env.ENV_UPDATE_FIELD_TYPE }}" == "number" ]; then
                 gh api graphql -f query="
                   mutation {
                     updateProjectV2ItemFieldValue(
                       input: {
-                        projectId: \"${{ inputs.PROJECT_ID }}\"
+                        projectId: \"${{ env.ENV_PROJECT_ID }}\"
                         itemId: \"$issue_id\"
-                        fieldId: \"${{ inputs.UPDATE_FIELD_ID }}\"
-                        value: {${{ inputs.UPDATE_FIELD_TYPE }}: ${{ inputs.UPDATE_FIELD_VALUE }}}}
+                        fieldId: \"${{ env.ENV_UPDATE_FIELD_ID }}\"
+                        value: {${{ env.ENV_UPDATE_FIELD_TYPE }}: ${{ env.ENV_UPDATE_FIELD_VALUE }}}}
                     ) {projectV2Item {id}}}"
 
               else

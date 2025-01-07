@@ -70,17 +70,20 @@ jobs:
         id: get_single_select_option_id
         env:
           GH_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
+          ENV_SINGLE_SELECT_OPTION_VALUE: ${{ inputs.SINGLE_SELECT_OPTION_VALUE }}
+          ENV_PROJECT_ID: ${{ inputs.PROJECT_ID }}
+          ENV_SINGLE_SELECT_FIELD_NAME: ${{ inputs.SINGLE_SELECT_FIELD_NAME }}
         run: |
             # Get single_select option id
-            if [ -z "${{ inputs.SINGLE_SELECT_OPTION_VALUE }}" ]; then
+            if [ -z "${{ env.ENV_SINGLE_SELECT_OPTION_VALUE }}" ]; then
               # No option specified, we will get the first option in the list
               # graphQL doesn't appear to provide a wildcard option, so separate queries are necessary
               gh api graphql -f query='
                 query {
-                    node(id: "${{ inputs.PROJECT_ID }}") {
+                    node(id: "${{ env.ENV_PROJECT_ID }}") {
                         ... on ProjectV2 {
                         id
-                        field(name: "${{ inputs.SINGLE_SELECT_FIELD_NAME }}") {
+                        field(name: "${{ env.ENV_SINGLE_SELECT_FIELD_NAME }}") {
                             ... on ProjectV2SingleSelectField {
                             id
                             options {id}
@@ -93,13 +96,13 @@ jobs:
               # Get the specific value only
               gh api graphql -f query='
                 query {
-                    node(id: "${{ inputs.PROJECT_ID }}") {
+                    node(id: "${{ env.ENV_PROJECT_ID }}") {
                         ... on ProjectV2 {
                         id
-                        field(name: "${{ inputs.SINGLE_SELECT_FIELD_NAME }}") {
+                        field(name: "${{ env.ENV_SINGLE_SELECT_FIELD_NAME }}") {
                             ... on ProjectV2SingleSelectField {
                             id
-                            options(names: "${{ inputs.SINGLE_SELECT_OPTION_VALUE }}") {id}
+                            options(names: "${{ env.ENV_SINGLE_SELECT_OPTION_VALUE }}") {id}
                               }
                             }
                           }
@@ -114,6 +117,9 @@ jobs:
         if: ${{ inputs.UPDATE_ITEM == true }}
         env:
           GH_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
+          ENV_PROJECT_ID: ${{ inputs.PROJECT_ID }}
+          ENV_ITEM_PROJECT_ID: ${{ inputs.ITEM_PROJECT_ID }}
+          ENV_SINGLE_SELECT_FIELD_ID: ${{ inputs.SINGLE_SELECT_FIELD_ID }}
         run: |
             # Set the single_select based on the query above
             # This overwrites whatever was in it before, we may want to make an "OVERWRITE" option
@@ -121,9 +127,9 @@ jobs:
               mutation {
                 updateProjectV2ItemFieldValue(
                   input: {
-                    projectId: "${{ inputs.PROJECT_ID }}"
-                    itemId: "${{ inputs.ITEM_PROJECT_ID }}"
-                    fieldId: "${{ inputs.SINGLE_SELECT_FIELD_ID }}"
+                    projectId: "${{ env.ENV_PROJECT_ID }}"
+                    itemId: "${{ env.ENV_ITEM_PROJECT_ID }}"
+                    fieldId: "${{ env.ENV_SINGLE_SELECT_FIELD_ID }}"
                   value: {
                     singleSelectOptionId: "${{ steps.get_single_select_option_id.outputs.SINGLE_SELECT_OPTION_ID }}"
                     }

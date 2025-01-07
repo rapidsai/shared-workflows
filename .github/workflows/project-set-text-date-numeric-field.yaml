@@ -58,19 +58,24 @@ jobs:
         id: update_item_text_date_numeric_field
         env:
           GH_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
+          ENV_FIELD_TYPE: ${{ inputs.FIELD_TYPE }}
+          ENV_PROJECT_ID: ${{ inputs.PROJECT_ID }}
+          ENV_ITEM_PROJECT_ID: ${{ inputs.ITEM_PROJECT_ID }}
+          ENV_FIELD_ID: ${{ inputs.FIELD_ID }}
+          ENV_SET_VALUE: ${{ inputs.SET_VALUE }}
         run: |
             # Set the field based on the inputted desired value
             # This overwrites whatever was in it before, we may want to make an "OVERWRITE" option
-            if [ "${{ inputs.FIELD_TYPE }}" == "date" ] || \
-               [ "${{ inputs.FIELD_TYPE }}" == "text" ]; then
+            if [ "${{ env.ENV_FIELD_TYPE }}" == "date" ] || \
+               [ "${{ env.ENV_FIELD_TYPE }}" == "text" ]; then
               gh api graphql -f query="
                 mutation {
                   updateProjectV2ItemFieldValue(
                     input: {
-                      projectId: \"${{ inputs.PROJECT_ID }}\"
-                      itemId: \"${{ inputs.ITEM_PROJECT_ID }}\"
-                      fieldId: \"${{ inputs.FIELD_ID }}\"
-                      value: { ${{ inputs.FIELD_TYPE }}: \"${{ inputs.SET_VALUE }}\" }
+                      projectId: \"${{ env.ENV_PROJECT_ID }}\"
+                      itemId: \"${{ env.ENV_ITEM_PROJECT_ID }}\"
+                      fieldId: \"${{ env.ENV_FIELD_ID }}\"
+                      value: { ${{ env.ENV_FIELD_TYPE }}: \"${{ env.ENV_SET_VALUE }}\" }
                     }
                   ) {
                     projectV2Item {
@@ -79,15 +84,15 @@ jobs:
                   }
                 }"
 
-            elif [ "${{ inputs.FIELD_TYPE }}" == "number" ]; then
+            elif [ "${{ env.ENV_FIELD_TYPE }}" == "number" ]; then
                gh api graphql -f query="
                  mutation {
                    updateProjectV2ItemFieldValue(
                      input: {
-                       projectId: \"${{ inputs.PROJECT_ID }}\"
-                       itemId: \"${{ inputs.ITEM_PROJECT_ID }}\"
-                       fieldId: \"${{ inputs.FIELD_ID }}\"
-                       value: { ${{ inputs.FIELD_TYPE }}: ${{ inputs.SET_VALUE }} }
+                       projectId: \"${{ env.ENV_PROJECT_ID }}\"
+                       itemId: \"${{ env.ENV_ITEM_PROJECT_ID }}\"
+                       fieldId: \"${{ env.ENV_FIELD_ID }}\"
+                       value: { ${{ env.ENV_FIELD_TYPE }}: ${{ env.ENV_SET_VALUE }} }
                      }
                    ) {
                      projectV2Item {
