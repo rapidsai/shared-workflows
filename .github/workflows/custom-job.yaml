@@ -24,6 +24,9 @@ on:
       run_script:
         required: true
         type: string
+      file_to_upload:
+        type: string
+        default: "gh-status.json"
 
 defaults:
   run:
@@ -55,6 +58,11 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
+      - name: Telemetry setup
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
+        continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -79,6 +87,7 @@ jobs:
           echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
+
       - name: Run script
         run: ${{ inputs.run_script }}
         env:
@@ -86,6 +95,6 @@ jobs:
       - name: Upload file to GitHub Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gh-status
-          path: gh-status.json
+          name: result
+          path: ${{ inputs.file_to_upload }}
           if-no-files-found: ignore

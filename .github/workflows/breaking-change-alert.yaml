@@ -1,0 +1,160 @@
+name: Breaking Change Notifications
+
+on:
+  workflow_call:
+    inputs:
+      sender_login:
+        description: 'Sender login'
+        required: true
+        type: string
+      sender_avatar:
+        description: 'Sender avatar URL'
+        required: true
+        type: string
+      repo:
+        description: 'Repository'
+        required: true
+        type: string
+      pr_number:
+        description: 'Pull request number'
+        required: true
+        type: number
+      pr_title:
+        description: 'Pull request title'
+        required: true
+        type: string
+      pr_body:
+        description: 'Pull request body'
+        required: false
+        default: '_Empty PR description_'
+        type: string
+      pr_base_ref:
+        description: 'Base branch of the pull request'
+        required: true
+        type: string
+      pr_author:
+        description: 'Pull request author'
+        required: true
+        type: string
+      event_action:
+        description: 'Event action'
+        required: true
+        type: string
+      pr_merged:
+        description: 'Pull request merged status'
+        required: true
+        type: boolean
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  notify-breaking-changes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Escape inputs for JSON
+        id: escape
+        env:
+          SENDER_LOGIN: ${{ inputs.sender_login }}
+          SENDER_AVATAR: ${{ inputs.sender_avatar }}
+          REPO: ${{ inputs.repo }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          PR_TITLE: ${{ inputs.pr_title }}
+          PR_BODY: ${{ inputs.pr_body }}
+          PR_BASE_REF: ${{ inputs.pr_base_ref }}
+          PR_AUTHOR: ${{ inputs.pr_author }}
+        run: |
+          escape_json() {
+            local flag="-R"
+            if [ "$2" = "slurp" ]; then
+                flag="-sR"
+            fi
+            echo "$1" | jq ${flag} -c . | grep -E '^".*"$' | awk '{print substr($0, 2, length($0) - 2)}' && [ "${PIPESTATUS[2]}" -eq 0 ]
+          }
+
+          # Escape all input variables
+          echo "sender_login=$(escape_json "${SENDER_LOGIN}")" >> $GITHUB_OUTPUT
+          echo "sender_avatar=$(escape_json "${SENDER_AVATAR}")" >> $GITHUB_OUTPUT
+          echo "repo=$(escape_json "${REPO}")" >> $GITHUB_OUTPUT
+          echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
+          echo "pr_title=$(escape_json "${PR_TITLE}")" >> $GITHUB_OUTPUT
+          echo "pr_body=$(escape_json "${PR_BODY}" slurp)" >> $GITHUB_OUTPUT
+          echo "pr_base_ref=$(escape_json "${PR_BASE_REF}")" >> $GITHUB_OUTPUT
+          echo "pr_author=$(escape_json "${PR_AUTHOR}")" >> $GITHUB_OUTPUT
+
+          # Create escaped URLs
+          echo "repo_url=$(escape_json "https://github.com/${REPO}")" >> $GITHUB_OUTPUT
+          echo "pr_url=$(escape_json "https://github.com/${REPO}/pull/${PR_NUMBER}")" >> $GITHUB_OUTPUT
+          echo "branch_url=$(escape_json "https://github.com/${REPO}/tree/${PR_BASE_REF}")" >> $GITHUB_OUTPUT
+          echo "author_url=$(escape_json "https://github.com/${PR_AUTHOR}")" >> $GITHUB_OUTPUT
+
+      - name: Determine notification parameters
+        id: notification
+        env:
+          EVENT_ACTION: ${{ inputs.event_action }}
+          PR_MERGED: ${{ inputs.pr_merged }}
+        run: |
+          if [[ "$EVENT_ACTION" == "closed" && "$PR_MERGED" == "true" ]]; then
+            echo "action=Merged" >> $GITHUB_OUTPUT
+            echo "color=#D00000" >> $GITHUB_OUTPUT
+            echo "icon=:rocket:" >> $GITHUB_OUTPUT
+          elif [[ "$EVENT_ACTION" == "closed" ]]; then
+            echo "action=Closed" >> $GITHUB_OUTPUT
+            echo "color=#1d9bd1" >> $GITHUB_OUTPUT
+            echo "icon=:information_source:" >> $GITHUB_OUTPUT
+          elif [[ "$EVENT_ACTION" == "reopened" ]]; then
+            echo "action=Reopened" >> $GITHUB_OUTPUT
+            echo "color=warning" >> $GITHUB_OUTPUT
+            echo "icon=:warning:" >> $GITHUB_OUTPUT
+          else
+            echo "action=Modified" >> $GITHUB_OUTPUT
+            echo "color=good" >> $GITHUB_OUTPUT
+            echo "icon=:information_source:" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          payload: |
+            {
+              "icon_emoji": "${{ steps.notification.outputs.icon }}",
+              "username": "RAPIDS Breaking Change Notifier - ${{ steps.notification.outputs.action }}",
+              "attachments": [
+                {
+                  "author_name": "${{ steps.notification.outputs.action }} PR by ${{ steps.escape.outputs.sender_login }}",
+                  "author_link": "https://github.com/${{ steps.escape.outputs.sender_login }}",
+                  "author_icon": "${{ steps.escape.outputs.sender_avatar }}",
+                  "color": "${{ steps.notification.outputs.color }}",
+                  "fallback": "Breaking change PR ${{ steps.notification.outputs.action }} by ${{ steps.escape.outputs.sender_login }} ${{ steps.escape.outputs.repo }}#${{ steps.escape.outputs.pr_number }}",
+                  "text": "<${{ steps.escape.outputs.pr_url }}|${{ steps.escape.outputs.repo }}#${{ steps.escape.outputs.pr_number }}>",
+                  "fields": [
+                    {
+                      "title": "PR Title",
+                      "value": "${{ steps.escape.outputs.pr_title }}",
+                      "short": false
+                    },
+                    {
+                      "title": "PR Target",
+                      "value": "<${{ steps.escape.outputs.branch_url }}|${{ steps.escape.outputs.pr_base_ref }}>",
+                      "short": true
+                    },
+                    {
+                      "title": "PR Author",
+                      "value": "<${{ steps.escape.outputs.author_url }}|${{ steps.escape.outputs.pr_author }}>",
+                      "short": true
+                    },
+                    {
+                      "title": "PR Description",
+                      "value": "${{ steps.escape.outputs.pr_body }}",
+                      "short": false
+                    }
+                  ],
+                  "footer": "<${{ steps.escape.outputs.repo_url }}|${{ steps.escape.outputs.repo }}>",
+                  "footer_icon": "https://avatars0.githubusercontent.com/u/43887749?s=32&v=4"
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.NV_SLACK_BREAKING_CHANGE_NOTIFIER_APP }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

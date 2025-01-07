@@ -44,6 +44,10 @@ jobs:
       env:
         RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - name: Telemetry setup
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
+        continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Get PR Info
@@ -59,12 +63,17 @@ jobs:
         run: rapids-check-pr-job-dependencies "${IGNORED_JOBS}"
         env:
           IGNORED_JOBS: ${{ inputs.ignored_pr_jobs }}
+
   check-style:
     if: ${{ inputs.enable_check_style }}
     runs-on: ubuntu-latest
     container:
       image: rapidsai/ci-conda:latest
     steps:
+      - name: Telemetry setup
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
+        continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
       - name: Checkout code
         uses: actions/checkout@v4
         with:
