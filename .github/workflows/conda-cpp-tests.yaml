@@ -63,25 +63,25 @@ jobs:
 
           # please keep the matrices sorted in ascending order by the following:
           #
-          #     [ARCH, PY_VER, CUDA_VER, LINUX_VER, GPU, DRIVER, DEPENDENCIES]
+          #     [ARCH, PY_VER, CUDA_VER, LINUX_VER, GPU, DRIVER, DEPENDENCIES, RUNNER_SUFFIX]
           #
           export MATRICES="
             pull-request:
               # amd64
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', GPU: 'v100', DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.5.1', LINUX_VER: 'ubuntu24.04', GPU: 'v100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'oldest', RUNNER_SUFFIX: '-testing' }
+              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.5.1', LINUX_VER: 'ubuntu24.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest', RUNNER_SUFFIX: '-testing' }
               # arm64
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest', RUNNER_SUFFIX: '' }
             nightly:
               # amd64
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.4.3', LINUX_VER: 'rockylinux8', GPU: 'v100', DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu20.04', GPU: 'v100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.0.1', LINUX_VER: 'rockylinux8', GPU: 'v100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.5.1', LINUX_VER: 'ubuntu24.04', GPU: 'v100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.4.3', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'oldest', RUNNER_SUFFIX: '-testing' }
+              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu20.04', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'latest', RUNNER_SUFFIX: '-testing' }
+              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.0.1', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'latest', RUNNER_SUFFIX: '-testing' }
+              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.5.1', LINUX_VER: 'ubuntu24.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest', RUNNER_SUFFIX: '-testing' }
               # arm64
-              - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.5.1', LINUX_VER: 'rockylinux8', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'oldest', RUNNER_SUFFIX: '' }
+              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest', RUNNER_SUFFIX: '' }
+              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.5.1', LINUX_VER: 'rockylinux8', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest', RUNNER_SUFFIX: '' }
           "
 
           TEST_MATRIX=$(yq -n 'env(MATRICES) | .[strenv(BUILD_TYPE)]')
@@ -99,7 +99,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
-    runs-on: "linux-${{ matrix.ARCH }}-gpu-${{ matrix.GPU }}-${{ matrix.DRIVER }}-1"
+    runs-on: "linux-${{ matrix.ARCH }}-gpu-${{ matrix.GPU }}-${{ matrix.DRIVER }}-1${{ matrix.RUNNER_SUFFIX }}"
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
       RAPIDS_DEPENDENCIES: ${{ matrix.DEPENDENCIES }}
