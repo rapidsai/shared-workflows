@@ -111,6 +111,7 @@ jobs:
 
       - name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
+        continue-on-error: true
 
       - name: C++ build
         run: ${{ inputs.script }}
