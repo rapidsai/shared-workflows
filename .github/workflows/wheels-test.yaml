@@ -64,8 +64,8 @@ jobs:
     steps:
       - name: Validate test type
         run: |
-          if [[ "$BUILD_TYPE" != "pull-request" ]] && [[ "$BUILD_TYPE" != "nightly" ]]; then
-              echo "Invalid build type! Must be 'nightly' or 'pull-request'."
+          if [[ "$BUILD_TYPE" != "pull-request" ]] && [[ "$BUILD_TYPE" != "nightly" ]] && [[ "$BUILD_TYPE" != "branch" ]]; then
+              echo "Invalid build type! Must be one of 'nightly', 'pull-request', or 'branch'."
               exit 1
           fi
       - name: Compute test matrix
