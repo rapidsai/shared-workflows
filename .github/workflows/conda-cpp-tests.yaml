@@ -89,6 +89,7 @@ jobs:
           if [[ "${MATRIX_TYPE}" == "branch" ]]; then
             MATRIX_TYPE="nightly"
           fi
+          export MATRIX_TYPE
           TEST_MATRIX=$(yq -n 'env(MATRICES) | .[strenv(MATRIX_TYPE)]')
           export TEST_MATRIX
 
