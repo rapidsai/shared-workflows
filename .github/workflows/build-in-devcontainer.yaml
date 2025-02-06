@@ -68,10 +68,12 @@ jobs:
           ref: ${{ inputs.sha }}
           fetch-depth: 0
 
+      # This provides an initial set of metadata tags. Jobs are free to add to the RAPIDS_JOB_ATTRIBUTES
+      # environment variable as they see fit - but remember to export the variable to ${GITHUB_ENV}
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
         with:
             extra_attributes: "rapids.operation=devcontainer,rapids.package_type=${{ matrix.pkgr }},rapids.cuda=${{ matrix.cuda }},rapids.arch=${{ matrix.arch }}"
 
@@ -143,3 +145,7 @@ jobs:
 
             cd ~/"${REPOSITORY}";
             ${{ inputs.build_command }}
+      - name: Telemetry upload attributes
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
+        continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}

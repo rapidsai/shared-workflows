@@ -55,10 +55,6 @@ jobs:
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
-    - name: Telemetry setup
-      uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
-      continue-on-error: true
-      if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
     - uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -72,6 +68,11 @@ jobs:
         ref: ${{ inputs.sha }}
         fetch-depth: 0 # unshallow fetch for setuptools-scm
         persist-credentials: false
+
+    - name: Telemetry setup
+      uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
+      continue-on-error: true
+      if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
 
     - name: Standardize repository information
       uses: rapidsai/shared-actions/rapids-github-info@main
@@ -102,3 +103,7 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.RAPIDSAI_PYPI_TOKEN }}
+    - name: Telemetry upload attributes
+      uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
+      continue-on-error: true
+      if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
