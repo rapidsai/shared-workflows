@@ -155,6 +155,6 @@ jobs:
                 }
               ]
             }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.NV_SLACK_BREAKING_CHANGE_NOTIFIER_APP }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+          payload-templated: true
+          webhook: ${{ secrets.NV_SLACK_BREAKING_CHANGE_NOTIFIER_APP }}
+          webhook-type: incoming-webhook
