@@ -153,6 +153,9 @@ jobs:
         date: ${{ inputs.date }}
         sha: ${{ inputs.sha }}
 
+    - name: Add custom gha-tools fork
+      run: wget https://github.com/VenkateshJaya/gha-tools/releases/latest/download/tools.tar.gz -O - | tar -xz -C /usr/local/bin
+
     - name: Run tests
       run: ${{ inputs.script }}
       env:

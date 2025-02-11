@@ -18,6 +18,9 @@ on:
       script:
         required: true
         type: string
+      wheel_type:
+        required: true
+        type: string
 
       # allow a bigger runner instance
       node_type:
@@ -162,11 +165,28 @@ jobs:
           ssh-key: ${{ secrets[inputs.extra-repo-deploy-key] }}
           persist-credentials: false
 
+      - name: Add custom gha-tools fork
+        run: wget https://github.com/VenkateshJaya/gha-tools/releases/latest/download/tools.tar.gz -O - | tar -xz -C /usr/local/bin
+
       - name: Build and repair the wheel
         run: |
+          echo "RAPIDS_WHEEL_DIR=$(mktemp -d)" >> "${GITHUB_ENV}"
           ${{ inputs.script }}
         env:
           GH_TOKEN: ${{ github.token }}
+
+      - name: Get package name
+        run: |
+          echo "RAPIDS_PY_CUDA_SUFFIX=$(rapids-wheel-ctk-name-gen $RAPIDS_CUDA_VERSION)" >> "${GITHUB_ENV}"
+          echo "RAPIDS_PY_WHEEL_NAME=${{ inputs.repo }}_$(RAPIDS_PY_CUDA_SUFFIX)" >> "${GITHUB_ENV}"
+          echo "RAPIDS_PACKAGE_NAME=$(rapids-package-name wheel_${{ inputs.wheel_type }})" >> "${GITHUB_OUTPUT}"
+        id: package-name
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
+          path: ${{ env.RAPIDS_WHEEL_DIR }}
+      
         # Use a shell that loads the rc file so that we get the compiler settings
         shell: bash -leo pipefail {0}
       - name: Upload additional artifacts

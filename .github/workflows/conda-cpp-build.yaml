@@ -117,8 +117,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - name: Get Package Name and Location
         run: | 
-          echo "RAPIDS_PACKAGE_NAME=$(basename $(rapids-package-name conda_cpp) .tar.gz)" >> $GITHUB_OUTPUT
-          echo "CONDA_OUTPUT_DIR=$(echo $RAPIDS_CONDA_BLD_OUTPUT_DIR)" >> $GITHUB_OUTPUT
+          echo "RAPIDS_PACKAGE_NAME=$(rapids-package-name conda_cpp)" >> "${GITHUB_OUTPUT}"
+          echo "CONDA_OUTPUT_DIR=$(echo $RAPIDS_CONDA_BLD_OUTPUT_DIR)" >> "${GITHUB_OUTPUT}"
         id: package-name
       - uses: actions/upload-artifact@v4
         with:
