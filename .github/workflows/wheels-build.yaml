@@ -174,6 +174,8 @@ jobs:
           ${{ inputs.script }}
         env:
           GH_TOKEN: ${{ github.token }}
+        # Use a shell that loads the rc file so that we get the compiler settings
+        shell: bash -leo pipefail {0}
 
       - name: Get package name
         run: |
@@ -187,8 +189,6 @@ jobs:
           name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
           path: ${{ env.RAPIDS_WHEEL_DIR }}
       
-        # Use a shell that loads the rc file so that we get the compiler settings
-        shell: bash -leo pipefail {0}
       - name: Upload additional artifacts
         if: "!cancelled()"
         run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}
