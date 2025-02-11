@@ -167,6 +167,9 @@ jobs:
 
       - name: Add custom gha-tools fork
         run: wget https://github.com/VenkateshJaya/gha-tools/releases/latest/download/tools.tar.gz -O - | tar -xz -C /usr/local/bin
+      - name: Setup proxy cache
+        uses: nv-gha-runners/setup-proxy-cache@main
+        continue-on-error: true
 
       - name: Build and repair the wheel
         run: |
