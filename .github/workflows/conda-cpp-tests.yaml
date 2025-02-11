@@ -1,4 +1,4 @@
-  on:
+on:
   workflow_call:
     inputs:
       build_type:
