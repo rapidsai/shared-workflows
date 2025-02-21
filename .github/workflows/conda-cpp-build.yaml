@@ -109,10 +109,6 @@ jobs:
           echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
 
-      - name: Setup proxy cache
-        uses: nv-gha-runners/setup-proxy-cache@main
-        continue-on-error: true
-
       - name: C++ build
         run: ${{ inputs.script }}
         env:
