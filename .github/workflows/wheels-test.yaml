@@ -128,13 +128,6 @@ jobs:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
-    - name: Telemetry setup
-      uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
-      continue-on-error: true
-      if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-      with:
-        extra_attributes: "rapids.operation=test-wheel,rapids.package_type=wheel,rapids.cuda=${{ matrix.CUDA_VER }},rapids.py=${{ matrix.PY_VER }},rapids.arch=${{ matrix.ARCH }},rapids.linux=${{ matrix.LINUX_VER }},rapids.gpu=${{ matrix.GPU }},rapids.driver=${{ matrix.DRIVER }},rapids.deps=${{ matrix.DEPENDENCIES }}"
-
     - uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -150,6 +143,13 @@ jobs:
         ref: ${{ inputs.sha }}
         fetch-depth: 0 # unshallow fetch for setuptools-scm
         persist-credentials: false
+
+    - name: Telemetry setup
+      uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
+      continue-on-error: true
+      if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+      with:
+        extra_attributes: "rapids.PACKAGER=wheel,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }},rapids.GPU=${{ matrix.GPU }},rapids.DRIVER=${{ matrix.DRIVER }},rapids.DEPENDENCIES=${{ matrix.DEPENDENCIES }}"
 
     - name: Standardize repository information
       uses: rapidsai/shared-actions/rapids-github-info@main
@@ -181,3 +181,7 @@ jobs:
     - name: Upload additional artifacts
       if: "!cancelled()"
       run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}
+    - name: Telemetry upload attributes
+      uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
+      continue-on-error: true
+      if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
