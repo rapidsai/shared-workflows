@@ -114,7 +114,7 @@ jobs:
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
         with:
-            extra_attributes: "rapids.operation=build-cpp,rapids.package_type=conda,rapids.cuda=${{ matrix.CUDA_VER }},rapids.py=${{ matrix.PY_VER }},rapids.arch=${{ matrix.ARCH }},rapids.linux=${{ matrix.LINUX_VER }}"
+            extra_attributes: "rapids.PACKAGER=conda,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
 
       - name: C++ build
         run: ${{ inputs.script }}

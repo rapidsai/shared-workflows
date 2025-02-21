@@ -135,7 +135,7 @@ jobs:
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1'}}
         with:
-          extra_attributes: "rapids.package_type=conda,rapids.operation=test-cpp,rapids.cuda=${{ matrix.CUDA_VER }},rapids.py=${{ matrix.PY_VER }},rapids.arch=${{ matrix.ARCH }},rapids.linux=${{ matrix.LINUX_VER }},rapids.gpu=${{ matrix.GPU }},rapids.driver=${{ matrix.DRIVER }},rapids.deps=${{ matrix.DEPENDENCIES }}"
+          extra_attributes: "rapids.PACKAGER=conda,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }},rapids.GPU=${{ matrix.GPU }},rapids.DRIVER=${{ matrix.DRIVER }},rapids.DEPENDENCIES=${{ matrix.DEPENDENCIES }}"
       - name: Standardize repository information
         run: |
           echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
