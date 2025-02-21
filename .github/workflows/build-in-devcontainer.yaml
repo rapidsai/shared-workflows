@@ -56,11 +56,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: ${{ fromJSON(inputs.arch) }}
-        cuda: ${{ fromJSON(inputs.cuda) }}
-        pkgr: ${{ fromJSON(inputs.python_package_manager) }}
-    runs-on: "linux-${{ matrix.arch }}-${{ inputs.node_type }}"
-    name: "${{ matrix.arch }}, ${{ matrix.cuda }}, ${{ matrix.pkgr }}"
+        ARCH: ${{ fromJSON(inputs.arch) }}
+        CUDA_VER: ${{ fromJSON(inputs.cuda) }}
+        PACKAGER: ${{ fromJSON(inputs.python_package_manager) }}
+    runs-on: "linux-${{ matrix.ARCH }}-${{ inputs.node_type }}"
+    name: "${{ matrix.ARCH }}, ${{ matrix.CUDA_VER }}, ${{ matrix.PACKAGER }}"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -68,17 +68,19 @@ jobs:
           ref: ${{ inputs.sha }}
           fetch-depth: 0
 
+      # This provides an initial set of metadata tags. Jobs are free to add to the RAPIDS_JOB_ATTRIBUTES
+      # environment variable as they see fit - but remember to export the variable to ${GITHUB_ENV}
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
         with:
-            extra_attributes: "rapids.operation=devcontainer,rapids.package_type=${{ matrix.pkgr }},rapids.cuda=${{ matrix.cuda }},rapids.arch=${{ matrix.arch }}"
+            extra_attributes: "rapids.PACKAGER=${{ matrix.PACKAGER }},rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.ARCH=${{ matrix.ARCH }}"
 
       - name: Check if repo has devcontainer
         run: |
           echo "REPOSITORY=$(basename $(pwd))" | tee -a "${GITHUB_ENV}";
-          if test -f .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json; then
+          if test -f .devcontainer/cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}/devcontainer.json; then
             echo "HAS_DEVCONTAINER=true" >> "${GITHUB_ENV}";
           else
             echo "HAS_DEVCONTAINER=false" >> "${GITHUB_ENV}";
@@ -104,7 +106,7 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           push: never
-          configFile: .devcontainer/cuda${{ matrix.cuda }}-${{ matrix.pkgr }}/devcontainer.json
+          configFile: .devcontainer/cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}/devcontainer.json
           # Env vars are NOT automatically passed from our current env into the devcontainer.
           # We have to pass them in explicitly.
           env: |
@@ -143,3 +145,7 @@ jobs:
 
             cd ~/"${REPOSITORY}";
             ${{ inputs.build_command }}
+      - name: Telemetry upload attributes
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
+        continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
