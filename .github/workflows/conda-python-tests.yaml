@@ -149,11 +149,11 @@ jobs:
         with:
           extra_attributes:  "rapids.PACKAGER=conda,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }},rapids.GPU=${{ matrix.GPU }},rapids.DRIVER=${{ matrix.DRIVER }},rapids.DEPENDENCIES=${{ matrix.DEPENDENCIES }}"
 
-      - name: Setup proxy cache
-        uses: nv-gha-runners/setup-proxy-cache@main
-        continue-on-error: true
-        # Skip the cache on RDS Lab nodes
-        if: ${{ matrix.GPU != 'v100' && matrix.GPU != 'a100' }}
+      # - name: Setup proxy cache
+      #   uses: nv-gha-runners/setup-proxy-cache@main
+      #   continue-on-error: true
+      #   # Skip the cache on RDS Lab nodes
+      #   if: ${{ matrix.GPU != 'v100' && matrix.GPU != 'a100' }}
 
       - name: Python tests
         run: ${{ inputs.script }}
