@@ -192,3 +192,4 @@ jobs:
                 exit 1
               fi
             done
+          continue-on-error: true

@@ -113,6 +113,7 @@ jobs:
             # Use jq with --exit-status to fail if no option is found
             current_single_select_option_id=$(jq --exit-status -r '.data.node.field.options[0].id' single_select_option_data.json)
             echo "SINGLE_SELECT_OPTION_ID=$current_single_select_option_id" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
 
       - name: Update item single_select field
         id: update_item_single_select_field
