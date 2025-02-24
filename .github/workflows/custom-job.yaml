@@ -27,6 +27,10 @@ on:
       file_to_upload:
         type: string
         default: "gh-status.json"
+      continue-on-error:
+        type: boolean
+        required: false
+        default: false
 
 defaults:
   run:
@@ -52,17 +56,13 @@ jobs:
     strategy:
       fail-fast: false
     runs-on: "linux-${{ inputs.arch }}-${{ inputs.node_type }}"
+    continue-on-error: ${{ inputs.continue-on-error }}
     container:
       image: ${{ inputs.container_image }}
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
-      - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -73,6 +73,10 @@ jobs:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
           fetch-depth: 0
+      - name: Telemetry setup
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
+        continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
       - name: Get PR Info
         if: startsWith(github.ref_name, 'pull-request/')
         id: get-pr-info
@@ -98,3 +102,7 @@ jobs:
           name: result
           path: ${{ inputs.file_to_upload }}
           if-no-files-found: ignore
+      - name: Telemetry upload attributes
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
+        continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}

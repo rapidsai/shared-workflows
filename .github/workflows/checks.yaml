@@ -44,12 +44,12 @@ jobs:
       env:
         RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-      - name: Checkout code
-        uses: actions/checkout@v4
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
       - name: Get PR Info
         id: get-pr-info
         uses: nv-gha-runners/get-pr-info@main
@@ -63,6 +63,10 @@ jobs:
         run: rapids-check-pr-job-dependencies "${IGNORED_JOBS}"
         env:
           IGNORED_JOBS: ${{ inputs.ignored_pr_jobs }}
+      - name: Telemetry upload attributes
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
+        continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
 
   check-style:
     if: ${{ inputs.enable_check_style }}
@@ -70,14 +74,14 @@ jobs:
     container:
       image: rapidsai/ci-conda:latest
     steps:
-      - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Telemetry setup
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
+        continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
       - name: Get PR Info
         id: get-pr-info
         uses: nv-gha-runners/get-pr-info@main
@@ -89,3 +93,7 @@ jobs:
         run: ci/check_style.sh
         env:
           RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
+      - name: Telemetry upload attributes
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
+        continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
