@@ -61,80 +61,134 @@ jobs:
             ENV_UPDATE_FIELD_VALUE: ${{ inputs.UPDATE_FIELD_VALUE }}
           run: |
             # Find the linked issues to the PR
-            # If an issue is passed in, the json will return null and the for loop won't trigger
-            # Potential future improvement could be some nicer error messaging on incorrect input
-            gh api graphql -f query='
-                query {
-                    node(id: "${{ env.ENV_PR_NODE_ID }}") {
-                    ... on PullRequest {
-                        closingIssuesReferences(first: 10) {
-                        nodes {
-                            projectItems(first: 10) {
-                            nodes {id, project{id}}
+            gh api graphql -F prNodeId="$ENV_PR_NODE_ID" -f query='
+              query($prNodeId: ID!) {
+                node(id: $prNodeId) {
+                  ... on PullRequest {
+                    closingIssuesReferences(first: 10) {
+                      nodes {
+                        projectItems(first: 10) {
+                          nodes {
+                            id
+                            project {
+                              id
                             }
                           }
                         }
                       }
                     }
-                  }' > linked_issues.json
-            issue_ids=$(jq -r '.data.node.closingIssuesReferences.nodes[].projectItems.nodes[] |
-                        select(.project.id == "${{ env.ENV_PROJECT_ID }}") | .id' linked_issues.json)
+                  }
+                }
+              }' > linked_issues.json
 
-            for issue_id in $issue_ids; do
-              # Each field type has a different `value` that is needed by the mutation. 
+            # Use jq with proper variable handling to get issue IDs
+            issue_ids=$(jq --exit-status --arg project_id "$ENV_PROJECT_ID" -r '
+              .data.node.closingIssuesReferences.nodes[].projectItems.nodes[] |
+              select(.project.id == $project_id) |
+              .id' linked_issues.json)
 
-              if [ "${{ env.ENV_UPDATE_FIELD_TYPE }}" == "iteration" ]; then
-                gh api graphql -f query='
-                  mutation {
-                    updateProjectV2ItemFieldValue(
-                      input: {
-                        projectId: "${{ env.ENV_PROJECT_ID }}"
-                        itemId: "'"$issue_id"'"
-                        fieldId: "${{ env.ENV_UPDATE_FIELD_ID }}"
-                        value: {iterationId: "${{ env.ENV_UPDATE_FIELD_VALUE }}"}}) 
-                    {projectV2Item {id}}}'
-                    
-              elif [ "${{ env.ENV_UPDATE_FIELD_TYPE }}" == "single_select" ]; then
-                gh api graphql -f query='
-                  mutation {
-                    updateProjectV2ItemFieldValue(
-                      input: {
-                        projectId: "${{ env.ENV_PROJECT_ID }}"
-                        itemId: "'"$issue_id"'"
-                        fieldId: "${{ env.ENV_UPDATE_FIELD_ID }}"
-                        value: {singleSelectOptionId: "${{ env.ENV_UPDATE_FIELD_VALUE }}"}}) 
-                    {projectV2Item {id}}}'
+            # Exit if no issues found
+            if [ -z "$issue_ids" ]; then
+              echo "No linked issues found in project" >&2
+              exit 0
+            fi
 
-              elif [ "${{ env.ENV_UPDATE_FIELD_TYPE }}" == "date" ] || \
-                   [ "${{ env.ENV_UPDATE_FIELD_TYPE }}" == "text" ]; then
-                gh api graphql -f query="
-                  mutation {
-                    updateProjectV2ItemFieldValue(
-                      input: {
-                        projectId: \"${{ env.ENV_PROJECT_ID }}\"
-                        itemId: \"$issue_id\"
-                        fieldId: \"${{ env.ENV_UPDATE_FIELD_ID }}\"
-                        value: {${{ env.ENV_UPDATE_FIELD_TYPE }}: \"${{ env.ENV_UPDATE_FIELD_VALUE }}\"}
+            # Process each issue
+            echo "$issue_ids" | while read -r issue_id; do
+              if [ -z "$issue_id" ]; then
+                continue
+              fi
+
+              case "$ENV_UPDATE_FIELD_TYPE" in
+                "iteration")
+                  gh api graphql -F projectId="$ENV_PROJECT_ID" \
+                               -F itemId="$issue_id" \
+                               -F fieldId="$ENV_UPDATE_FIELD_ID" \
+                               -F iterationId="$ENV_UPDATE_FIELD_VALUE" \
+                               -f query='
+                    mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $iterationId: String!) {
+                      updateProjectV2ItemFieldValue(
+                        input: {
+                          projectId: $projectId
+                          itemId: $itemId
+                          fieldId: $fieldId
+                          value: {iterationId: $iterationId}
+                        }
+                      ) {
+                        projectV2Item {id}
                       }
-                    ) {
-                      projectV2Item {
-                        id
+                    }'
+                  ;;
+
+                "single_select")
+                  gh api graphql -F projectId="$ENV_PROJECT_ID" \
+                               -F itemId="$issue_id" \
+                               -F fieldId="$ENV_UPDATE_FIELD_ID" \
+                               -F optionId="$ENV_UPDATE_FIELD_VALUE" \
+                               -f query='
+                    mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                      updateProjectV2ItemFieldValue(
+                        input: {
+                          projectId: $projectId
+                          itemId: $itemId
+                          fieldId: $fieldId
+                          value: {singleSelectOptionId: $optionId}
+                        }
+                      ) {
+                        projectV2Item {id}
                       }
-                    }
-                  }"
+                    }'
+                  ;;
 
-              elif [ "${{ env.ENV_UPDATE_FIELD_TYPE }}" == "number" ]; then
-                gh api graphql -f query="
-                  mutation {
-                    updateProjectV2ItemFieldValue(
-                      input: {
-                        projectId: \"${{ env.ENV_PROJECT_ID }}\"
-                        itemId: \"$issue_id\"
-                        fieldId: \"${{ env.ENV_UPDATE_FIELD_ID }}\"
-                        value: {${{ env.ENV_UPDATE_FIELD_TYPE }}: ${{ env.ENV_UPDATE_FIELD_VALUE }}}}
-                    ) {projectV2Item {id}}}"
+                "date"|"text")
+                  gh api graphql -F projectId="$ENV_PROJECT_ID" \
+                               -F itemId="$issue_id" \
+                               -F fieldId="$ENV_UPDATE_FIELD_ID" \
+                               -F value="$ENV_UPDATE_FIELD_VALUE" \
+                               -F fieldType="$ENV_UPDATE_FIELD_TYPE" \
+                               -f query='
+                    mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: String!, $fieldType: String!) {
+                      updateProjectV2ItemFieldValue(
+                        input: {
+                          projectId: $projectId
+                          itemId: $itemId
+                          fieldId: $fieldId
+                          value: { text: $value }
+                        }
+                      ) {
+                        projectV2Item {id}
+                      }
+                    }'
+                  ;;
 
-              else
-                echo "Invalid field type"
+                "number")
+                  gh api graphql -F projectId="$ENV_PROJECT_ID" \
+                               -F itemId="$issue_id" \
+                               -F fieldId="$ENV_UPDATE_FIELD_ID" \
+                               -F value="$ENV_UPDATE_FIELD_VALUE" \
+                               -f query='
+                    mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: Float!) {
+                      updateProjectV2ItemFieldValue(
+                        input: {
+                          projectId: $projectId
+                          itemId: $itemId
+                          fieldId: $fieldId
+                          value: { number: $value }
+                        }
+                      ) {
+                        projectV2Item {id}
+                      }
+                    }'
+                  ;;
+
+                *)
+                  echo "Error: Invalid field type '$ENV_UPDATE_FIELD_TYPE'" >&2
+                  exit 1
+                  ;;
+              esac
+
+              if [ $? -ne 0 ]; then
+                echo "Error: Failed to update field for issue $issue_id" >&2
+                exit 1
               fi
             done

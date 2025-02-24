@@ -69,12 +69,12 @@ jobs:
         run: |
             # Get current iteration iteration id
             # The current iteration is always the first element in the returned list
-            gh api graphql -f query='
-            query {
-                node(id: "${{ env.ENV_PROJECT_ID }}") {
+            gh api graphql -F projectId="$ENV_PROJECT_ID" -F fieldName="$ENV_ITERATION_FIELD_NAME" -f query='
+            query($projectId: ID!, $fieldName: String!) {
+                node(id: $projectId) {
                     ... on ProjectV2 {
                     id
-                    field(name: "${{ env.ENV_ITERATION_FIELD_NAME }}") {
+                    field(name: $fieldName) {
                         ... on ProjectV2IterationField {
                         id
                         name
@@ -88,7 +88,9 @@ jobs:
                     }
                   }
                 }' > iteration_option_data.json
-            current_iteration_option_id=$(jq -r '.data.node.field.configuration.iterations[0].id' iteration_option_data.json)
+            
+            # Use jq with --arg for safe variable handling
+            current_iteration_option_id=$(jq --exit-status -r '.data.node.field.configuration.iterations[0].id' iteration_option_data.json)
             echo "ITERATION_OPTION_ID=$current_iteration_option_id" >> "$GITHUB_OUTPUT"
 
       - name: Update item iteration field
@@ -100,25 +102,27 @@ jobs:
           ENV_ITEM_PROJECT_ID: ${{ inputs.ITEM_PROJECT_ID }}
           ENV_ITERATION_FIELD_ID: ${{ inputs.ITERATION_FIELD_ID }}
         run: |
-            # Set the iteration based on the query above
-            # This overwrites whatever was in it before, we may want to make an "OVERWRITE" option
-            gh api graphql -f query='
-              mutation {
+            gh api graphql -F projectId="$ENV_PROJECT_ID" \
+                          -F itemId="$ENV_ITEM_PROJECT_ID" \
+                          -F fieldId="$ENV_ITERATION_FIELD_ID" \
+                          -F iterationId="${{ steps.get_iteration_option_id.outputs.ITERATION_OPTION_ID }}" \
+                          -f query='
+              mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $iterationId: String!) {
                 updateProjectV2ItemFieldValue(
                   input: {
-                    projectId: "${{ env.ENV_PROJECT_ID }}"
-                    itemId: "${{ env.ENV_ITEM_PROJECT_ID }}"
-                    fieldId: "${{ env.ENV_ITERATION_FIELD_ID }}"
-                  value: {
-                    iterationId: "${{ steps.get_iteration_option_id.outputs.ITERATION_OPTION_ID }}"
+                    projectId: $projectId
+                    itemId: $itemId
+                    fieldId: $fieldId
+                    value: {
+                      iterationId: $iterationId
                     }
                   }
                 ) {
                     projectV2Item {
-                    id
+                      id
                     }
                 }
-                }'
+              }'
         continue-on-error: true
 
   update_linked_issues:
