@@ -58,46 +58,65 @@ jobs:
         id: update_item_text_date_numeric_field
         env:
           GH_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
+          ENV_FIELD_TYPE: ${{ inputs.FIELD_TYPE }}
+          ENV_PROJECT_ID: ${{ inputs.PROJECT_ID }}
+          ENV_ITEM_PROJECT_ID: ${{ inputs.ITEM_PROJECT_ID }}
+          ENV_FIELD_ID: ${{ inputs.FIELD_ID }}
+          ENV_SET_VALUE: ${{ inputs.SET_VALUE }}
         run: |
             # Set the field based on the inputted desired value
-            # This overwrites whatever was in it before, we may want to make an "OVERWRITE" option
-            if [ "${{ inputs.FIELD_TYPE }}" == "date" ] || \
-               [ "${{ inputs.FIELD_TYPE }}" == "text" ]; then
-              gh api graphql -f query="
-                mutation {
+            if [ "$ENV_FIELD_TYPE" == "date" ] || [ "$ENV_FIELD_TYPE" == "text" ]; then
+              gh api graphql -F projectId="$ENV_PROJECT_ID" \
+                           -F itemId="$ENV_ITEM_PROJECT_ID" \
+                           -F fieldId="$ENV_FIELD_ID" \
+                           -F value="$ENV_SET_VALUE" \
+                           -F fieldType="$ENV_FIELD_TYPE" \
+                           -f query='
+                mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: String!, $fieldType: String!) {
                   updateProjectV2ItemFieldValue(
                     input: {
-                      projectId: \"${{ inputs.PROJECT_ID }}\"
-                      itemId: \"${{ inputs.ITEM_PROJECT_ID }}\"
-                      fieldId: \"${{ inputs.FIELD_ID }}\"
-                      value: { ${{ inputs.FIELD_TYPE }}: \"${{ inputs.SET_VALUE }}\" }
+                      projectId: $projectId
+                      itemId: $itemId
+                      fieldId: $fieldId
+                      value: { text: $value }
                     }
                   ) {
                     projectV2Item {
                       id
                     }
                   }
-                }"
+                }'
 
-            elif [ "${{ inputs.FIELD_TYPE }}" == "number" ]; then
-               gh api graphql -f query="
-                 mutation {
-                   updateProjectV2ItemFieldValue(
-                     input: {
-                       projectId: \"${{ inputs.PROJECT_ID }}\"
-                       itemId: \"${{ inputs.ITEM_PROJECT_ID }}\"
-                       fieldId: \"${{ inputs.FIELD_ID }}\"
-                       value: { ${{ inputs.FIELD_TYPE }}: ${{ inputs.SET_VALUE }} }
-                     }
-                   ) {
-                     projectV2Item {
-                       id
-                     }
-                   }
-                 }"
+            elif [ "$ENV_FIELD_TYPE" == "number" ]; then
+              gh api graphql -F projectId="$ENV_PROJECT_ID" \
+                           -F itemId="$ENV_ITEM_PROJECT_ID" \
+                           -F fieldId="$ENV_FIELD_ID" \
+                           -F value="$ENV_SET_VALUE" \
+                           -f query='
+                mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: Float!) {
+                  updateProjectV2ItemFieldValue(
+                    input: {
+                      projectId: $projectId
+                      itemId: $itemId
+                      fieldId: $fieldId
+                      value: { number: $value }
+                    }
+                  ) {
+                    projectV2Item {
+                      id
+                    }
+                  }
+                }' | jq --exit-status --raw-output '.data.updateProjectV2ItemFieldValue.projectV2Item.id'
 
             else
-              echo "Invalid field type"
+              echo "Error: Invalid field type '$ENV_FIELD_TYPE'. Must be 'date', 'text', or 'number'" >&2
+              exit 1
+            fi
+
+            # Validate the response
+            if [ $? -ne 0 ]; then
+              echo "Error: Failed to update field value" >&2
+              exit 1
             fi
         continue-on-error: true
 
