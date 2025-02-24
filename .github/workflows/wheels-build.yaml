@@ -119,13 +119,6 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
 
     steps:
-      - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        with:
-          extra_attributes: "rapids.operation=build,rapids.package_type=wheel,rapids.cuda=${{ matrix.CUDA_VER }},rapids.py=${{ matrix.PY_VER }},rapids.arch=${{ matrix.ARCH }},rapids.linux=${{ matrix.LINUX_VER }}"
-
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -174,6 +167,12 @@ jobs:
 
       - name: Create a temporary build location
         run: echo "RAPIDS_WHEEL_DIR=$(mktemp -d)" >> "${GITHUB_ENV}"
+      - name: Telemetry setup
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
+        continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        with:
+          extra_attributes: "rapids.PACKAGER=wheel,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
 
       - name: Build and repair the wheel
         run: ${{ inputs.script }}
@@ -197,3 +196,7 @@ jobs:
       - name: Upload additional artifacts
         if: "!cancelled()"
         run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}
+      - name: Telemetry upload attributes
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
+        continue-on-error: true

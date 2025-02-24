@@ -15,11 +15,6 @@ on:
         type: string
         required: true
 
-      SINGLE_SELECT_OPTION_VALUE:
-        description: "The value of the option we'd like to get/set"
-        type: string
-        required: true
-
       SINGLE_SELECT_FIELD_ID:
         description: "The graphQL node ID of the single-select field"
         type: string
@@ -46,6 +41,12 @@ on:
         default: false
         type: boolean
 
+      # Optional, if not specified, we default to the first option in the selector
+      SINGLE_SELECT_OPTION_VALUE:
+        description: "The value of the option we'd like to get/set"
+        type: string
+        default: null
+
     secrets:
       ADD_TO_PROJECT_GITHUB_TOKEN:
         description: "Project Access Token"
@@ -69,42 +70,74 @@ jobs:
         id: get_single_select_option_id
         env:
           GH_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
+          ENV_SINGLE_SELECT_OPTION_VALUE: ${{ inputs.SINGLE_SELECT_OPTION_VALUE }}
+          ENV_PROJECT_ID: ${{ inputs.PROJECT_ID }}
+          ENV_SINGLE_SELECT_FIELD_NAME: ${{ inputs.SINGLE_SELECT_FIELD_NAME }}
         run: |
             # Get single_select option id
-            gh api graphql -f query='
-            query {
-                node(id: "${{ inputs.PROJECT_ID }}") {
-                    ... on ProjectV2 {
-                    id
-                    field(name: "${{ inputs.SINGLE_SELECT_FIELD_NAME }}") {
-                        ... on ProjectV2SingleSelectField {
-                        id
-                        options(names: "${{ inputs.SINGLE_SELECT_OPTION_VALUE }}") {id}
+            if [ -z "$ENV_SINGLE_SELECT_OPTION_VALUE" ]; then
+              # No option specified, get first option in list
+              gh api graphql -F projectId="$ENV_PROJECT_ID" \
+                           -F fieldName="$ENV_SINGLE_SELECT_FIELD_NAME" \
+                           -f query='
+                query($projectId: ID!, $fieldName: String!) {
+                    node(id: $projectId) {
+                        ... on ProjectV2 {
+                        field(name: $fieldName) {
+                            ... on ProjectV2SingleSelectField {
+                            options {id}
+                              }
+                            }
                           }
                         }
-                      }
-                    }
-                  }' > single_select_option_data.json
-            current_single_select_option_id=$(jq -r '.data.node.field.options[0].id' single_select_option_data.json)
+                      }' > single_select_option_data.json
+            else
+              # Get specific value
+              gh api graphql -F projectId="$ENV_PROJECT_ID" \
+                           -F fieldName="$ENV_SINGLE_SELECT_FIELD_NAME" \
+                           -F optionName="$ENV_SINGLE_SELECT_OPTION_VALUE" \
+                           -f query='
+                query($projectId: ID!, $fieldName: String!, $optionName: String!) {
+                    node(id: $projectId) {
+                        ... on ProjectV2 {
+                        field(name: $fieldName) {
+                            ... on ProjectV2SingleSelectField {
+                            options(names: $optionName) {id}
+                              }
+                            }
+                          }
+                        }
+                      }' > single_select_option_data.json
+            fi
+            
+            # Use jq with --exit-status to fail if no option is found
+            current_single_select_option_id=$(jq --exit-status -r '.data.node.field.options[0].id' single_select_option_data.json)
             echo "SINGLE_SELECT_OPTION_ID=$current_single_select_option_id" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
 
       - name: Update item single_select field
         id: update_item_single_select_field
         if: ${{ inputs.UPDATE_ITEM == true }}
         env:
           GH_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
+          ENV_PROJECT_ID: ${{ inputs.PROJECT_ID }}
+          ENV_ITEM_PROJECT_ID: ${{ inputs.ITEM_PROJECT_ID }}
+          ENV_SINGLE_SELECT_FIELD_ID: ${{ inputs.SINGLE_SELECT_FIELD_ID }}
+          ENV_SINGLE_SELECT_OPTION_ID: ${{ steps.get_single_select_option_id.outputs.SINGLE_SELECT_OPTION_ID }}
         run: |
-            # Set the single_select based on the query above
-            # This overwrites whatever was in it before, we may want to make an "OVERWRITE" option
-            gh api graphql -f query='
-              mutation {
+            gh api graphql -F projectId="$ENV_PROJECT_ID" \
+                         -F itemId="$ENV_ITEM_PROJECT_ID" \
+                         -F fieldId="$ENV_SINGLE_SELECT_FIELD_ID" \
+                         -F optionId="$ENV_SINGLE_SELECT_OPTION_ID" \
+                         -f query='
+              mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
                 updateProjectV2ItemFieldValue(
                   input: {
-                    projectId: "${{ inputs.PROJECT_ID }}"
-                    itemId: "${{ inputs.ITEM_PROJECT_ID }}"
-                    fieldId: "${{ inputs.SINGLE_SELECT_FIELD_ID }}"
-                  value: {
-                    singleSelectOptionId: "${{ steps.get_single_select_option_id.outputs.SINGLE_SELECT_OPTION_ID }}"
+                    projectId: $projectId
+                    itemId: $itemId
+                    fieldId: $fieldId
+                    value: {
+                      singleSelectOptionId: $optionId
                     }
                   }
                 ) {

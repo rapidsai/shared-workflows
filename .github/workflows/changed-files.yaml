@@ -50,7 +50,7 @@ jobs:
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
       - name: Get PR info
         id: get-pr-info
         uses: nv-gha-runners/get-pr-info@main
@@ -86,3 +86,7 @@ jobs:
             file_args=("${file_args[@]}" --slurpfile "$key" "$file")
           done
           (echo -n "transformed-output="; jq -c -n "\$ARGS.named | to_entries | map({"key": .key, "value": .value[]}) | from_entries | $TRANSFORM_EXPR" "${file_args[@]}") | tee --append "$GITHUB_OUTPUT"
+      - name: Telemetry upload attributes
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
+        continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
