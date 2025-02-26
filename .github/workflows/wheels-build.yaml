@@ -205,7 +205,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
-          path: ${{ env.RAPIDS_WHEEL_DIR }}
+          path: ${{ env.RAPIDS_WHEEL_BLD_OUTPUT_DIR }}
       
       - name: Upload additional artifacts
         if: "!cancelled()"
