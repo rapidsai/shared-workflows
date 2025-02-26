@@ -68,6 +68,8 @@ jobs:
           echo "RAPIDS_SHA=$(cd ./src && git rev-parse HEAD)" >> "${GITHUB_ENV}"
           echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
+      - name: Add custom gha-tools fork
+        run: wget https://github.com/VenkateshJaya/gha-tools/releases/latest/download/tools.tar.gz -O - | tar -xz -C /usr/local/bin
       - name: Download conda C++ build artifacts
         run: |
           CPP_DIR=$(rapids-download-conda-from-github cpp)
