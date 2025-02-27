@@ -1,0 +1,268 @@
+name: RAPIDS High Level Tracking
+
+on:
+  workflow_call:
+    inputs:
+      PROJECT_ID:
+        description: "Project ID"
+        default: "PVT_kwDOAp2shc4ArK9w"
+        type: string
+      
+      # ------------- Field IDs -------------
+      WEEK_FIELD_ID:
+        description: "Week Field ID"
+        default: "PVTIF_lADOAp2shc4ArK9wzgiTHg8"
+        type: string
+      RELEASE_FIELD_ID:
+        description: "Release Field ID"
+        default: "PVTF_lADOAp2shc4ArK9wzgpEYKw"
+        type: string
+      STAGE_FIELD_ID:
+        description: "Stage Field ID"
+        default: "PVTSSF_lADOAp2shc4ArK9wzgiTH8g"
+        type: string
+      START_DATE_FIELD_ID:
+        description: "Start Date Field ID"
+        default: "PVTF_lADOAp2shc4ArK9wzgiTHmQ"
+        type: string
+      END_DATE_FIELD_ID:
+        description: "End Date Field ID"
+        default: "PVTF_lADOAp2shc4ArK9wzgiTHmU"
+        type: string
+
+      # ------------- Option IDs -------------
+      # Stage options
+      STAGE_PLANNED_ID:
+        description: "📓 Planned option ID"
+        default: "📓 Planned"
+        type: string
+      STAGE_DEVELOPMENT_ID:
+        description: "💻 Development option ID"
+        default: "💻 Development"
+        type: string
+      STAGE_BURNDOWN_ID:
+        description: "🔥 Burndown option ID"
+        default: "🔥 Burndown"
+        type: string
+      STAGE_CODE_FREEZE_ID:
+        description: "❄ Code Freeze option ID"
+        default: "❄ Code Freeze"
+        type: string
+      STAGE_HOTFIX_ID:
+        description: "🩹 Hotfix option ID"
+        default: "🩹 Hotfix"
+        type: string
+
+    secrets:
+      ADD_TO_PROJECT_GITHUB_TOKEN:
+        description: "Project Access Token"
+        required: true
+
+jobs:
+  process-branch-name:
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.process-branch-name.outputs.branch-name }}
+    steps:
+      - name: Extract branch name
+        id: process-branch-name
+        run: |
+          branch=${{ github.event.pull_request.base.ref }}
+          release=${branch#branch-}
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+
+  get-stage-field:
+    runs-on: ubuntu-latest
+    outputs:
+      stage-id: ${{ steps.get-stage-field.outputs.stage-id }}
+    needs:
+      - process-branch-name
+    steps:
+      # Add cache step for releases.json
+      # Pinned to the 4.2 commit SHA
+      - name: Cache releases.json
+        id: cache-releases
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
+        with:
+          path: /tmp/releases.json
+          # Cache key based on date - refresh daily to ensure we get updates
+          key: ${{ runner.os }}-releases-json-${{ github.run_id }}-${{ github.run_number }}
+          restore-keys: |
+            ${{ runner.os }}-releases-json-
+      
+      - name: Get stage field ID
+        id: get-stage-field
+        run: |
+          # Use the "nightly" info from this JSON:
+          # https://raw.githubusercontent.com/rapidsai/docs/refs/heads/main/_data/releases.json
+          # to determine the stage for the new release
+          
+          # Check if cache exists, download only if needed
+          if [ ! -f "/tmp/releases.json" ] || [ "$(find /tmp/releases.json -mtime +1 -print)" ]; then
+            echo "Cache miss or expired. Downloading releases.json..."
+            curl -s https://raw.githubusercontent.com/rapidsai/docs/main/_data/releases.json -o /tmp/releases.json
+            
+            # Validate the downloaded JSON
+            if ! jq empty /tmp/releases.json 2>/dev/null; then
+              echo "Error: Downloaded file is not valid JSON"
+              rm -f /tmp/releases.json
+              exit 1
+            fi
+          else
+            echo "Using cached releases.json"
+          fi
+          
+          # Use the cached file
+          RELEASES_JSON=$(cat /tmp/releases.json)
+          
+          # Extract current repo name from GitHub context
+          REPO_NAME=$(echo "$GITHUB_REPOSITORY" | cut -d '/' -f 2)
+          echo "Repository: \"$REPO_NAME\""
+          
+          # Check if repo is in cudf_dev group
+          CUDF_DEV_REPOS=("cuDF" "RMM" "rapids-cmake" "raft" "dask-cuda" "ucx-py")
+          IS_CUDF_DEV="false"
+          for repo in "${CUDF_DEV_REPOS[@]}"; do
+            if [[ "$REPO_NAME" == "$repo" ]]; then
+              IS_CUDF_DEV="true"
+              break
+            fi
+          done
+          echo "Is cudf_dev group: \"$IS_CUDF_DEV\""
+          
+          # Get the release from branch name
+          RELEASE="${{ needs.process-branch-name.outputs.release }}"
+          echo "Release: $RELEASE"
+          
+          # Get current date in YYYY-MM-DD format
+          CURRENT_DATE=$(date +%Y-%m-%d)
+          echo "Current date: $CURRENT_DATE"
+          
+          # Extract dates from the releases.json for the current release
+          if [[ "$IS_CUDF_DEV" == "true" ]]; then
+            PLANNING_START=$(echo "$RELEASES_JSON" | jq -r --arg rel "$RELEASE" '.[$rel].cudf_dev.planning.start')
+            DEV_START=$(echo "$RELEASES_JSON" | jq -r --arg rel "$RELEASE" '.[$rel].cudf_dev.development.start')
+            BURNDOWN_START=$(echo "$RELEASES_JSON" | jq -r --arg rel "$RELEASE" '.[$rel].cudf_dev.burndown.start')
+            FREEZE_START=$(echo "$RELEASES_JSON" | jq -r --arg rel "$RELEASE" '.[$rel].cudf_dev.freeze.start')
+            RELEASE_DATE=$(echo "$RELEASES_JSON" | jq -r --arg rel "$RELEASE" '.[$rel].date')
+          else
+            PLANNING_START=$(echo "$RELEASES_JSON" | jq -r --arg rel "$RELEASE" '.[$rel].planning.start')
+            DEV_START=$(echo "$RELEASES_JSON" | jq -r --arg rel "$RELEASE" '.[$rel].development.start')
+            BURNDOWN_START=$(echo "$RELEASES_JSON" | jq -r --arg rel "$RELEASE" '.[$rel].burndown.start')
+            FREEZE_START=$(echo "$RELEASES_JSON" | jq -r --arg rel "$RELEASE" '.[$rel].freeze.start')
+            RELEASE_DATE=$(echo "$RELEASES_JSON" | jq -r --arg rel "$RELEASE" '.[$rel].date')
+          fi
+          
+          echo "Planning start: $PLANNING_START"
+          echo "Development start: $DEV_START"
+          echo "Burndown start: $BURNDOWN_START"
+          echo "Freeze start: $FREEZE_START"
+          echo "Release date: $RELEASE_DATE"
+          
+          # Determine stage based on current date
+          STAGE_ID="${{ inputs.STAGE_PLANNED_ID }}"
+          
+          if [[ "$CURRENT_DATE" < "$DEV_START" ]]; then
+            STAGE_ID="${{ inputs.STAGE_PLANNED_ID }}"
+            echo "Stage: Planned"
+          elif [[ "$CURRENT_DATE" < "$BURNDOWN_START" ]]; then
+            STAGE_ID="${{ inputs.STAGE_DEVELOPMENT_ID }}"
+            echo "Stage: Development"
+          elif [[ "$CURRENT_DATE" < "$FREEZE_START" ]]; then
+            STAGE_ID="${{ inputs.STAGE_BURNDOWN_ID }}"
+            echo "Stage: Burndown"
+          elif [[ "$CURRENT_DATE" < "$RELEASE_DATE" ]]; then
+            STAGE_ID="${{ inputs.STAGE_CODE_FREEZE_ID }}"
+            echo "Stage: Code Freeze"
+          else
+            STAGE_ID="${{ inputs.STAGE_HOTFIX_ID }}"
+            echo "Stage: Hotfix"
+          fi
+          
+          # Set output
+          echo "stage-id=$STAGE_ID" >> "$GITHUB_OUTPUT"
+
+  get-project-id:
+    uses: ./.github/workflows/project-get-item-id.yaml
+    secrets: inherit
+    permissions:
+      contents: read
+    with:
+      PROJECT_ID: ${{ inputs.PROJECT_ID }}
+      ITEM_NODE_ID: "${{ github.event.pull_request.node_id }}"
+
+  update-release-field:
+    uses: ./.github/workflows/project-set-text-date-numeric-field.yaml
+    needs:
+      - get-project-id
+      - process-branch-name
+    with:
+      PROJECT_ID: ${{ inputs.PROJECT_ID }}
+      FIELD_ID: ${{ inputs.RELEASE_FIELD_ID }}
+      FIELD_TYPE: text
+      SET_VALUE: ${{ needs.process-branch-name.outputs.release }}
+      ITEM_PROJECT_ID: "${{ needs.get-project-id.outputs.ITEM_PROJECT_ID }}"
+      ITEM_NODE_ID: "${{ github.event.pull_request.node_id }}"
+      UPDATE_LINKED_ISSUES: true
+    secrets: inherit
+
+  update-stage-field:
+    uses: ./.github/workflows/project-get-set-single-select-field.yaml
+    needs:
+      - get-project-id
+      - process-branch-name
+      - get-stage-field
+    with: 
+      PROJECT_ID: ${{ inputs.PROJECT_ID }}
+      SINGLE_SELECT_FIELD_ID: ${{ inputs.STAGE_FIELD_ID }}
+      SINGLE_SELECT_FIELD_NAME: "Stage"
+      SINGLE_SELECT_OPTION_VALUE: ${{ needs.get-stage-field.outputs.stage-id }}
+      ITEM_PROJECT_ID: "${{ needs.get-project-id.outputs.ITEM_PROJECT_ID }}"
+      ITEM_NODE_ID: "${{ github.event.pull_request.node_id }}"
+      UPDATE_ITEM: true
+      UPDATE_LINKED_ISSUES: true
+    secrets: inherit
+
+  set-opened-date-field:
+    uses: ./.github/workflows/project-set-text-date-numeric-field.yaml
+    if: github.event.action == 'opened'
+    needs:
+      - get-project-id
+    with:
+      PROJECT_ID: ${{ inputs.PROJECT_ID }}  
+      FIELD_ID: ${{ inputs.START_DATE_FIELD_ID }}
+      FIELD_TYPE: date
+      SET_VALUE: ${{ github.event.pull_request.created_at }}
+      ITEM_PROJECT_ID: "${{ needs.get-project-id.outputs.ITEM_PROJECT_ID }}"
+      ITEM_NODE_ID: "${{ github.event.pull_request.node_id }}"
+      UPDATE_LINKED_ISSUES: true
+    secrets: inherit
+
+  set-closed-date-field:
+    uses: ./.github/workflows/project-set-text-date-numeric-field.yaml
+    if: github.event.action == 'closed'
+    needs:
+      - get-project-id
+    with:
+      PROJECT_ID: ${{ inputs.PROJECT_ID }}
+      FIELD_ID: ${{ inputs.END_DATE_FIELD_ID }}
+      FIELD_TYPE: date
+      SET_VALUE: ${{ github.event.pull_request.closed_at }}
+      ITEM_PROJECT_ID: "${{ needs.get-project-id.outputs.ITEM_PROJECT_ID }}"
+      ITEM_NODE_ID: "${{ github.event.pull_request.node_id }}"
+      UPDATE_LINKED_ISSUES: true
+    secrets: inherit
+
+  update-week-field:
+    uses: ./.github/workflows/project-get-set-iteration-field.yaml
+    needs:
+      - get-project-id
+    with:
+      PROJECT_ID: ${{ inputs.PROJECT_ID }}
+      ITERATION_FIELD_ID: ${{ inputs.WEEK_FIELD_ID }}
+      ITERATION_FIELD_NAME: "Week"
+      ITEM_PROJECT_ID: "${{ needs.get-project-id.outputs.ITEM_PROJECT_ID }}"
+      ITEM_NODE_ID: "${{ github.event.pull_request.node_id }}"
+      UPDATE_ITEM: true
+      UPDATE_LINKED_ISSUES: true
+    secrets: inherit
