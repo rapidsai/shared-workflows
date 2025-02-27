@@ -73,8 +73,9 @@ jobs:
       - name: Download conda C++ build artifacts
         run: |
           CPP_DIR=$(rapids-download-conda-from-github cpp)
-          EXTRACTED_DIR=$(rapids-extract-conda-files "${CPP_DIR}")
-          echo "RAPIDS_EXTRACTED_DIR=${EXTRACTED_DIR}" >> "${GITHUB_ENV}"
+          echo "RAPIDS_EXTRACTED_DIR=${CPP_DIR}" >> "${GITHUB_ENV}"
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Get weak detection tool
         uses: actions/checkout@v4
         with:
