@@ -22,7 +22,7 @@ By centralizing this logic in reusable workflows, all RAPIDS repositories mainta
 Using the high-level tracker as an example, the automation is built as a set of reusable workflows that handle different aspects of project management (♻️ denotes a shared workflow):
 
 ```mermaid
-flowchart TD
+flowchart LR
     A[PR Event] --> B[project-high-level-tracker ♻️]
     B --> C[process-branch-name]
     B --> D[get-stage-field]
