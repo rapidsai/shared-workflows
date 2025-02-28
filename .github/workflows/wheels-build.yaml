@@ -202,6 +202,11 @@ jobs:
           fi
           echo "RAPIDS_PACKAGE_NAME=$(rapids-package-name wheel_${{ inputs.wheel_type }})" >> "${GITHUB_OUTPUT}"
         id: package-name
+
+      - name: Show files to be uploaded
+        run: |
+          echo "Contents of directory to be uploaded:"
+          tree -a ${{ env.RAPIDS_WHEEL_BLD_OUTPUT_DIR }}
       
       - uses: actions/upload-artifact@v4
         with:
