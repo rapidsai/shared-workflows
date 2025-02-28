@@ -160,4 +160,5 @@ Ensure your project is set up to auto-add PRs to the project when they are opene
 
 ---
 
-> [!NOTE] These workflows are designed for the RAPIDS ecosystem but can be adapted for any organization using GitHub Projects for development tracking.
+> [!Note]
+> These workflows are designed for the RAPIDS ecosystem but can be adapted for any organization using GitHub Projects for development tracking.
