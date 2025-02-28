@@ -225,7 +225,7 @@ jobs:
 
   set-opened-date-field:
     uses: ./.github/workflows/project-set-text-date-numeric-field.yaml
-    if: github.event.action == 'opened'
+    if: github.event.action == 'opened' || github.event.action == 'workflow_dispatch'
     needs:
       - get-project-id
     with:
@@ -240,7 +240,7 @@ jobs:
 
   set-closed-date-field:
     uses: ./.github/workflows/project-set-text-date-numeric-field.yaml
-    if: github.event.action == 'closed'
+    if: github.event.action == 'closed' || github.event.action == 'workflow_dispatch'
     needs:
       - get-project-id
     with:
