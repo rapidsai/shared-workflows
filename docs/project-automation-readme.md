@@ -19,22 +19,22 @@ GitHub Projects are powerful, but automating them is not straightforward:
 
 By centralizing this logic in reusable workflows, all RAPIDS repositories maintain consistent project tracking without duplicating code.
 
-Using the high-level tracker as an example, the automation is built as a set of reusable workflows that handle different aspects of project management (:recycle: denotes a shared workflow):
+Using the high-level tracker as an example, the automation is built as a set of reusable workflows that handle different aspects of project management (♻️ denotes a shared workflow):
 
 ```mermaid
-graph TD
-    A[PR Event] --> B[project-high-level-tracker :recycle:]
+flowchart TD
+    A[PR Event] --> B[project-high-level-tracker ♻️]
     B --> C[process-branch-name]
     B --> D[get-stage-field]
-    B --> E[get-project-id :recycle:]
-    D --> F[update-stage-field :recycle:]
-    C --> G[update-release-field :recycle:]
+    B --> E[get-project-id ♻️]
+    D --> F[update-stage-field ♻️]
+    C --> G[update-release-field ♻️]
     E --> G
     E --> F
-    E --> H[update-week-field :recycle:]
-    E --> I[set-opened-date-field :recycle:]
-    E --> J[set-closed-date-field :recycle:]
-    F --> K[update-linked-issues :recycle:]
+    E --> H[update-week-field ♻️]
+    E --> I[set-opened-date-field ♻️]
+    E --> J[set-closed-date-field ♻️]
+    F --> K[update-linked-issues ♻️]
     G --> K
     H --> K
     I --> K
