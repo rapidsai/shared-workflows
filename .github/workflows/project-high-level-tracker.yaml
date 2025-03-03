@@ -32,23 +32,23 @@ on:
 
       # ------------- Option IDs -------------
       # Stage options
-      STAGE_PLANNED_ID:
+      STAGE_PLANNED_NAME:
         description: "📓 Planned option ID"
         default: "📓 Planned"
         type: string
-      STAGE_DEVELOPMENT_ID:
+      STAGE_DEVELOPMENT_NAME:
         description: "💻 Development option ID"
         default: "💻 Development"
         type: string
-      STAGE_BURNDOWN_ID:
+      STAGE_BURNDOWN_NAME:
         description: "🔥 Burndown option ID"
         default: "🔥 Burndown"
         type: string
-      STAGE_CODE_FREEZE_ID:
+      STAGE_CODE_FREEZE_NAME:
         description: "❄ Code Freeze option ID"
         default: "❄ Code Freeze"
         type: string
-      STAGE_HOTFIX_ID:
+      STAGE_HOTFIX_NAME:
         description: "🩹 Hotfix option ID"
         default: "🩹 Hotfix"
         type: string
@@ -160,22 +160,22 @@ jobs:
           echo "Release date: $RELEASE_DATE"
           
           # Determine stage based on current date
-          STAGE_ID="${{ inputs.STAGE_PLANNED_ID }}"
+          STAGE_ID="${{ inputs.STAGE_PLANNED_NAME }}"
           
           if [[ "$CURRENT_DATE" < "$DEV_START" ]]; then
-            STAGE_ID="${{ inputs.STAGE_PLANNED_ID }}"
+            STAGE_ID="${{ inputs.STAGE_PLANNED_NAME }}"
             echo "Stage: Planned"
           elif [[ "$CURRENT_DATE" < "$BURNDOWN_START" ]]; then
-            STAGE_ID="${{ inputs.STAGE_DEVELOPMENT_ID }}"
+            STAGE_ID="${{ inputs.STAGE_DEVELOPMENT_NAME }}"
             echo "Stage: Development"
           elif [[ "$CURRENT_DATE" < "$FREEZE_START" ]]; then
-            STAGE_ID="${{ inputs.STAGE_BURNDOWN_ID }}"
+            STAGE_ID="${{ inputs.STAGE_BURNDOWN_NAME }}"
             echo "Stage: Burndown"
           elif [[ "$CURRENT_DATE" < "$RELEASE_DATE" ]]; then
-            STAGE_ID="${{ inputs.STAGE_CODE_FREEZE_ID }}"
+            STAGE_ID="${{ inputs.STAGE_CODE_FREEZE_NAME }}"
             echo "Stage: Code Freeze"
           else
-            STAGE_ID="${{ inputs.STAGE_HOTFIX_ID }}"
+            STAGE_ID="${{ inputs.STAGE_HOTFIX_NAME }}"
             echo "Stage: Hotfix"
           fi
           

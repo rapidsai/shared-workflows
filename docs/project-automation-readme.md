@@ -13,7 +13,13 @@ GitHub Projects are powerful, but automating them is not straightforward:
 - Each item has a **project-specific ID** that's different from its global node ID
 - Different field types (text, date, single-select, iteration) require different GraphQL mutations
 - Linking PRs to issues and keeping them in sync requires complex operations
-   - Work often begins in an Issue, but then is completed in the PR, requiring this synchronization
+   - Work often begins in an Issue, but then is completed in a PR, requiring this synchronization
+
+### PRs can be linked to multiple issues, and issues can be linked to multiple PRs which can lead to challenges in automation
+
+The PR-to-Issue linkage exists within the PR's API, but not within the Issue's API. Additionally, in GitHub if many PRs are linked to an issue, closing _any_ of the PRs will close the issue.
+
+The shared workflows here follow a similar pattern in that if `update-linked-issues` is run, it will update all issues linked to the PR if they are in the same project as the target workflow (ie issues with multiple Projects will only have the matching Project fields updated).
 
 ## 🧩 Workflow Architecture
 
