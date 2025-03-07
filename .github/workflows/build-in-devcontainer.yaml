@@ -101,16 +101,6 @@ jobs:
         uses: nv-gha-runners/setup-proxy-cache@main
         continue-on-error: true
 
-      - name: Checkout gha-tools
-        uses: actions/checkout@v4
-        with:
-          repository: rapidsai/gha-tools
-          path: gha-tools
-
-      - name: Add gha-tools to PATH
-        run: |
-          export PATH="${{ github.workspace }}/gha-tools:${PATH}"
-
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
         uses: devcontainers/ci@v0.3
@@ -152,6 +142,8 @@ jobs:
               fi
               devcontainer-utils-init-ssh-deploy-keys || true;
             fi
+
+            source rapids-telemetry-setup;
 
             cd ~/"${REPOSITORY}";
             ${{ inputs.build_command }}
