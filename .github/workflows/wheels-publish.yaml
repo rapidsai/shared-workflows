@@ -100,9 +100,11 @@ jobs:
 
     - name: Publish the downloaded wheels to PyPI
       if: ${{ inputs.publish_to_pypi && steps.check_if_release.outputs.is_release_build == 'true' }}
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.RAPIDSAI_PYPI_TOKEN }}
+      run: |
+        python3 -m pip install twine
+        python3 -m twine upload -u __token__ dist/*
+      env:
+        TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_TOKEN }}
     - name: Telemetry upload attributes
       uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
       continue-on-error: true
