@@ -82,7 +82,7 @@ jobs:
               # amd64
               - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.8.0', LINUX_VER: 'ubuntu24.04', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
               # arm64
-              # - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
             nightly:
               # amd64
               - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
@@ -90,8 +90,8 @@ jobs:
               - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.8.0', LINUX_VER: 'ubuntu22.04', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'latest' }
               - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.8.0', LINUX_VER: 'ubuntu24.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               # arm64
-              # - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
-              # - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
+              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.8.0', LINUX_VER: 'ubuntu24.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
           "
 
@@ -166,7 +166,7 @@ jobs:
       uses: nv-gha-runners/setup-proxy-cache@main
       continue-on-error: true
       # Skip the cache on RDS Lab nodes
-      if: ${{ matrix.GPU != 'v100' && matrix.GPU != 'a100' }}
+      if: ${{ matrix.GPU != 'v100' }}
 
     - name: Run tests
       run: ${{ inputs.script }}
