@@ -177,7 +177,8 @@ jobs:
           extra_attributes: "rapids.PACKAGER=wheel,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
 
       - name: Build and repair the wheel
-        run: ${{ inputs.script }}
+        run: |
+          ${{ inputs.script }}
         env:
           GH_TOKEN: ${{ github.token }}
         # Use a shell that loads the rc file so that we get the compiler settings
