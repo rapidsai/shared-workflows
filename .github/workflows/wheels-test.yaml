@@ -158,6 +158,7 @@ jobs:
         branch: ${{ inputs.branch }}
         date: ${{ inputs.date }}
         sha: ${{ inputs.sha }}
+
     - name: Setup proxy cache
       uses: nv-gha-runners/setup-proxy-cache@main
       continue-on-error: true
