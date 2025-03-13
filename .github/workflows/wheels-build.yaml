@@ -19,11 +19,13 @@ on:
         required: true
         type: string
       wheel_type:
-        required: true
+        required: false
         type: string
       wheel_name:
+        required: false
         type: string
       pure_wheel:
+        required: false
         type: boolean
         default: false
 
@@ -163,15 +165,9 @@ jobs:
           ssh-key: ${{ secrets[inputs.extra-repo-deploy-key] }}
           persist-credentials: false
 
-      - name: Add custom gha-tools fork
-        run: wget https://github.com/VenkateshJaya/gha-tools/releases/latest/download/tools.tar.gz -O - | tar -xz -C /usr/local/bin
-
       - name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
         continue-on-error: true
-
-      - name: Create a temporary build location
-        run: echo "RAPIDS_WHEEL_BLD_OUTPUT_DIR=/tmp/wheelhouse" >> "${GITHUB_ENV}"
 
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
@@ -188,6 +184,7 @@ jobs:
         shell: bash -leo pipefail {0}
 
       - name: Get package name
+        if: inputs.wheel_type != ''
         env:
           WHEEL_NAME: ${{ inputs.wheel_name }}
           PURE_WHEEL: ${{ inputs.pure_wheel }}
@@ -200,15 +197,17 @@ jobs:
           if [ "${PURE_WHEEL}" = "true" ]; then
             export "RAPIDS_PY_WHEEL_PURE=1"
           fi
-          echo "RAPIDS_PACKAGE_NAME=$(rapids-package-name wheel_${{ inputs.wheel_type }})" >> "${GITHUB_OUTPUT}"
+          echo "RAPIDS_PACKAGE_NAME=$(basename $(rapids-package-name wheel_${{ inputs.wheel_type }}) .tar.gz)" >> "${GITHUB_OUTPUT}"
         id: package-name
 
       - name: Show files to be uploaded
+        if: inputs.wheel_type != ''
         run: |
           echo "Contents of directory to be uploaded:"
           tree -a ${{ env.RAPIDS_WHEEL_BLD_OUTPUT_DIR }}
       
       - uses: actions/upload-artifact@v4
+        if: inputs.wheel_type != ''
         with:
           name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
           path: ${{ env.RAPIDS_WHEEL_BLD_OUTPUT_DIR }}

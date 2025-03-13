@@ -102,8 +102,6 @@ jobs:
           echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
           echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
-      - name: Add custom gha-tools fork
-        run: wget https://github.com/VenkateshJaya/gha-tools/releases/latest/download/tools.tar.gz -O - | tar -xz -C /usr/local/bin
 
       - name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
@@ -125,7 +123,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - name: Get Package Name and Location
         run: | 
-          echo "RAPIDS_PACKAGE_NAME=$(rapids-package-name conda_cpp)" >> "${GITHUB_OUTPUT}"
+          echo "RAPIDS_PACKAGE_NAME=$(basename $(rapids-package-name conda_cpp) .tar.gz)" >> "${GITHUB_OUTPUT}"
           echo "CONDA_OUTPUT_DIR=$(echo $RAPIDS_CONDA_BLD_OUTPUT_DIR)" >> "${GITHUB_OUTPUT}"
         id: package-name
       - name: Show files to be uploaded
