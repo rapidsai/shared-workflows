@@ -47,7 +47,9 @@ permissions:
 jobs:
   wheel-publish:
     name: wheels publish
-    runs-on: ubuntu-latest
+    # Use a self-hosted runner to ensure we have sufficient disk space. Using
+    # cpu8 since we shouldn't need much CPU horsepower.
+    runs-on: "linux-amd64-cpu8"
     container:
       # CUDA toolkit version of the container is irrelevant in the publish step.
       # This just uploads already-built wheels to remote storage.
