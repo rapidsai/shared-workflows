@@ -187,6 +187,7 @@ jobs:
       - name: Get package name
         if: inputs.wheel_type != ''
         env:
+          WHEEL_TYPE: ${{ inputs.wheel_type }}
           WHEEL_NAME: ${{ inputs.wheel_name }}
           PURE_WHEEL: ${{ inputs.pure_wheel }}
         run: |
@@ -198,7 +199,7 @@ jobs:
           if [ "${PURE_WHEEL}" = "true" ]; then
             export "RAPIDS_PY_WHEEL_PURE=1"
           fi
-          echo "RAPIDS_PACKAGE_NAME=$(basename $(rapids-package-name wheel_${{ inputs.wheel_type }}) .tar.gz)" >> "${GITHUB_OUTPUT}"
+          echo "RAPIDS_PACKAGE_NAME=$(RAPIDS_NO_PKG_EXTENSION=true rapids-package-name wheel_${WHEEL_TYPE})" >> "${GITHUB_OUTPUT}"
           echo "WHEEL_OUTPUT_DIR=$(echo $RAPIDS_WHEEL_BLD_OUTPUT_DIR)" >> "${GITHUB_OUTPUT}"
         id: package-name
 
