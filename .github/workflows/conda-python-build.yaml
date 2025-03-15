@@ -129,7 +129,7 @@ jobs:
       - name: Show files to be uploaded
         run: |
           echo "Contents of directory to be uploaded:"
-          tree -a ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
+          ls -R ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
