@@ -68,7 +68,7 @@ jobs:
           (echo -n "merge-base="; git merge-base "$BASE_SHA" "$PR_SHA") | tee --append "$GITHUB_OUTPUT"
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@v46
         with:
           base_sha: ${{ steps.calculate-merge-base.outputs.merge-base }}
           sha: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).head.sha }}
