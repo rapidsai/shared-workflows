@@ -66,6 +66,8 @@ jobs:
             }
           ) |
           from_entries"
+          echo "Default transform expression: $default_transform_expr"
+          echo "Our transform expression: $TRANSFORM_EXPR"
           if [ "$TRANSFORM_EXPR" != "$default_transform_expr" ]; then
             echo "Non-default transform expressions are currently not supported due to https://github.com/rapidsai/shared-workflows/issues/302."
             exit 1
