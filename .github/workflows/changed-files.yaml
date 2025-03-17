@@ -4,19 +4,6 @@ on:
       files_yaml:
         type: string
         required: true
-      transform_expr:
-        type: string
-        required: false
-        default: |
-          to_entries |
-          map(
-            select(.key | endswith("_any_changed")) |
-            {
-              "key": (.key | rtrimstr("_any_changed")),
-              "value": .value,
-            }
-          ) |
-          from_entries
     outputs:
       changed_file_groups:
         value: ${{ jobs.changed-files.outputs.transformed_output }}
@@ -55,23 +42,7 @@ jobs:
         id: transform-changed-files
         env:
           FILES_YAML: ${{ inputs.files_yaml }}
-          TRANSFORM_EXPR: ${{ inputs.transform_expr }}
         run: |
-          default_transform_expr='to_entries |
-          map(
-            select(.key | endswith("_any_changed")) |
-            {
-              "key": (.key | rtrimstr("_any_changed")),
-              "value": .value,
-            }
-          ) |
-          from_entries'
-          echo "Default transform expression:"; echo "$default_transform_expr" | od -tx1
-          echo "Our transform expression:"; echo "$TRANSFORM_EXPR" | od -tx1
-          if [ "$TRANSFORM_EXPR" != "$default_transform_expr" ]; then
-            echo "Non-default transform expressions are currently not supported due to https://github.com/rapidsai/shared-workflows/issues/302."
-            exit 1
-          fi
           (echo -n "transformed-output="; echo "$FILES_YAML" | yq -o json | jq -c 'map_values(true)' | tee --append "$GITHUB_OUTPUT"
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
