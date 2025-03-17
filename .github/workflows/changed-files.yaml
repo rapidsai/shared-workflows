@@ -57,7 +57,7 @@ jobs:
           FILES_YAML: ${{ inputs.files_yaml }}
           TRANSFORM_EXPR: ${{ inputs.transform_expr }}
         run: |
-          default_transform_expr="to_entries |
+          default_transform_expr='to_entries |
           map(
             select(.key | endswith("_any_changed")) |
             {
@@ -65,7 +65,7 @@ jobs:
               "value": .value,
             }
           ) |
-          from_entries"
+          from_entries'
           echo "Default transform expression: $default_transform_expr"
           echo "Our transform expression: $TRANSFORM_EXPR"
           if [ "$TRANSFORM_EXPR" != "$default_transform_expr" ]; then
