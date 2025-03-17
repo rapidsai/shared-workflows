@@ -31,7 +31,7 @@ permissions:
   contents: read
   deployments: none
   discussions: none
-  id-token: write
+  id-token: none
   issues: none
   packages: read
   pages: none
