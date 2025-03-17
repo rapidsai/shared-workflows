@@ -43,7 +43,7 @@ jobs:
         env:
           FILES_YAML: ${{ inputs.files_yaml }}
         run: |
-          (echo -n "transformed-output="; echo "$FILES_YAML" | yq -o json | jq -c 'map_values(true)' | tee --append "$GITHUB_OUTPUT"
+          (echo -n "transformed-output="; echo "$FILES_YAML" | yq -o json | jq -c 'map_values(true)') | tee --append "$GITHUB_OUTPUT"
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
