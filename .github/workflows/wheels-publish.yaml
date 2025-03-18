@@ -14,11 +14,7 @@ on:
         type: string
       build_type:
         required: true
-        type: choice
-        options:
-          - branch
-          - nightly
-          - pull-request
+        type: string
 
       # general settings
       package-name:
@@ -26,11 +22,8 @@ on:
         type: string
       package-type:
         required: false
-        type: choice
-        options:
-          - cpp
-          - python
         default: python
+        type: string
       publish_to_pypi:
         required: false
         type: boolean

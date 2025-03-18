@@ -3,11 +3,7 @@ on:
     inputs:
       build_type:
         required: true
-        type: choice
-        options:
-          - branch
-          - nightly
-          - pull-request
+        type: string
       branch:
         type: string
       date:
