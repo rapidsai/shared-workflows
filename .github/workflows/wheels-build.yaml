@@ -14,7 +14,11 @@ on:
         type: string
       build_type:
         required: true
-        type: string
+        type: choice
+        options:
+          - branch
+          - nightly
+          - pull-request
       script:
         required: true
         type: string

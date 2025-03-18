@@ -3,7 +3,20 @@ on:
     inputs:
       build_type:
         required: true
-        type: string
+        type: choice
+        options:
+          - branch
+          - nightly
+          - pull-request
+      matrix_type:
+        required: true
+        type: choice
+        options:
+          # "auto" = choose a value based on what's provided via 'build_type'
+          - auto
+          - nightly
+          - pull-request
+        default: auto
       branch:
         type: string
       date:
@@ -47,15 +60,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BUILD_TYPE: ${{ inputs.build_type }}
+      MATRIX_TYPE: ${{ inputs.matrix_type }}
     outputs:
       MATRIX: ${{ steps.compute-matrix.outputs.MATRIX }}
     steps:
-      - name: Validate Test Type
-        run: |
-          if [[ "$BUILD_TYPE" != "pull-request" ]] && [[ "$BUILD_TYPE" != "nightly" ]] && [[ "$BUILD_TYPE" != "branch" ]]; then
-              echo "Invalid build type! Must be one of 'nightly', 'pull-request', or 'branch'."
-              exit 1
-          fi
       - name: Compute C++ Test Matrix
         id: compute-matrix
         run: |
@@ -84,10 +92,13 @@ jobs:
               - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
           "
 
-          # Use the nightly matrix for branch tests
-          MATRIX_TYPE="${BUILD_TYPE}"
-          if [[ "${MATRIX_TYPE}" == "branch" ]]; then
-            MATRIX_TYPE="nightly"
+          # only overwrite MATRIX_TYPE if it was set to 'auto'
+          if [[ "${MATRIX_TYPE}" == "auto" ]]; then
+            MATRIX_TYPE="${BUILD_TYPE}"
+            # Use the nightly matrix for branch tests
+            if [[ "${BUILD_TYPE}" == "branch" ]]; then
+              MATRIX_TYPE="nightly"
+            fi
           fi
           export MATRIX_TYPE
           TEST_MATRIX=$(yq -n 'env(MATRICES) | .[strenv(MATRIX_TYPE)]')
