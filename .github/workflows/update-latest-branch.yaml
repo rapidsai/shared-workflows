@@ -3,7 +3,7 @@ name: Update `latest` branch
 on:
   workflow_call:
     inputs:
-      current_branch:
+      current_ref:
         type: string
         required: true
 
@@ -15,10 +15,11 @@ jobs:
         id: update-latest-branch
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         env:
-          CURRENT_BRANCH: ${{ inputs.current_branch }}
+          CURRENT_REF: ${{ inputs.current_ref }}
         with:
           script: |
-            const { CURRENT_BRANCH: currentBranch } = process.env;
+            const { CURRENT_REF: currentRef } = process.env;
+            const currentBranch = /^refs\/heads\/(.*)$/.exec(currentRef)[1];
 
             // Get all branches
             const branches = await github.paginate(github.rest.repos.listBranches, context.repo);
