@@ -4,6 +4,19 @@ on:
       files_yaml:
         type: string
         required: true
+      transform_expr:
+        type: string
+        required: false
+        default: |
+          to_entries |
+          map(
+            select(.key | endswith("_any_changed")) |
+            {
+              "key": (.key | rtrimstr("_any_changed")),
+              "value": .value,
+            }
+          ) |
+          from_entries
     outputs:
       changed_file_groups:
         value: ${{ jobs.changed-files.outputs.transformed_output }}
@@ -18,7 +31,7 @@ permissions:
   contents: read
   deployments: none
   discussions: none
-  id-token: none
+  id-token: write
   issues: none
   packages: read
   pages: none
@@ -38,12 +51,41 @@ jobs:
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
-      - name: Report all files as changed
+      - name: Get PR info
+        id: get-pr-info
+        uses: nv-gha-runners/get-pr-info@main
+      - name: Checkout code repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Calculate merge base
+        id: calculate-merge-base
+        env:
+          PR_SHA: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).head.sha }}
+          BASE_SHA: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.sha }}
+        run: |
+          (echo -n "merge-base="; git merge-base "$BASE_SHA" "$PR_SHA") | tee --append "$GITHUB_OUTPUT"
+      - name: Get changed files
+        id: changed-files
+        uses: step-security/changed-files@3dbe17c78367e7d60f00d78ae6781a35be47b4a1 # v45.0.1
+        with:
+          base_sha: ${{ steps.calculate-merge-base.outputs.merge-base }}
+          sha: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).head.sha }}
+          files_yaml: ${{ inputs.files_yaml }}
+          write_output_files: true
+          json: true
+      - name: Transform changed files into output
         id: transform-changed-files
         env:
-          FILES_YAML: ${{ inputs.files_yaml }}
+          TRANSFORM_EXPR: ${{ inputs.transform_expr }}
         run: |
-          (echo -n "transformed-output="; echo "$FILES_YAML" | yq -o json | jq -c 'map_values(true)') | tee --append "$GITHUB_OUTPUT"
+          file_args=()
+          for file in .github/outputs/*.json; do
+            key="$(echo "$file" | sed -E 's/^\.github\/outputs\/(.*)\.json$/\1/g')"
+            file_args=("${file_args[@]}" --slurpfile "$key" "$file")
+          done
+          (echo -n "transformed-output="; jq -c -n "\$ARGS.named | to_entries | map({"key": .key, "value": .value[]}) | from_entries | $TRANSFORM_EXPR" "${file_args[@]}") | tee --append "$GITHUB_OUTPUT"
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
