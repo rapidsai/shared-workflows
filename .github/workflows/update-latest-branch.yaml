@@ -25,6 +25,7 @@ jobs:
 
             const tryUpdateBranch = async (to, from) => {
               if (currentBranch != to) {
+                console.log(`Skipping branch "${to}" since it is not the current branch`);
                 return;
               }
 
