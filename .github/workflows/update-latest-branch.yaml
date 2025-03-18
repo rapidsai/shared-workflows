@@ -2,6 +2,10 @@ name: Update `latest` branch
 
 on:
   workflow_call:
+    inputs:
+      current_branch:
+        type: string
+        required: true
 
 jobs:
   update-latest-branch:
@@ -10,12 +14,20 @@ jobs:
       - name: Update latest branch
         id: update-latest-branch
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        env:
+          CURRENT_BRANCH: ${{ inputs.current_branch }}
         with:
           script: |
+            const { CURRENT_BRANCH: currentBranch } = process.env;
+
             // Get all branches
             const branches = await github.paginate(github.rest.repos.listBranches, context.repo);
 
-            const updateBranch = async (to, from) => {
+            const tryUpdateBranch = async (to, from) => {
+              if (currentBranch != to) {
+                return;
+              }
+
               const ref = await github.rest.git.getRef({ ...context.repo, ref: `heads/${to}` });
               const sha = ref.data.object.sha;
 
@@ -52,8 +64,8 @@ jobs:
               }
               return prev;
             }, null).name;
-            await updateBranch(latestBranch, "latest");
+            await tryUpdateBranch(latestBranch, "latest");
 
             // Update the `default` branch
             const defaultBranch = (await github.rest.repos.get(context.repo)).data.default_branch;
-            await updateBranch(defaultBranch, "default");
+            await tryUpdateBranch(defaultBranch, "default");
