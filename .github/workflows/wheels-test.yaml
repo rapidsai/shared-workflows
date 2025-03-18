@@ -13,21 +13,14 @@ on:
       sha:
         type: string
       build_type:
+        description: "One of: [branch, nightly, pull-request]"
         required: true
-        type: choice
-        options:
-          - branch
-          - nightly
-          - pull-request
+        type: string
       matrix_type:
-        required: true
-        type: choice
-        options:
-          # "auto" = choose a value based on what's provided via 'build_type'
-          - auto
-          - nightly
-          - pull-request
-        default: auto
+        description: "One of: [auto, nightly, pull-request]. 'auto' means 'choose a value based on what's provided via build_type'."
+        required: false
+        type: string
+        default: "auto"
       script:
         type: string
         default: "ci/test_wheel.sh"
@@ -76,6 +69,16 @@ jobs:
     outputs:
       MATRIX: ${{ steps.compute-matrix.outputs.MATRIX }}
     steps:
+      - name: Validate Inputs
+        run: |
+          if [[ "$BUILD_TYPE" != "branch" ]] && [[ "$BUILD_TYPE" != "nightly" ]] && [[ "$BUILD_TYPE" != "pull-request" ]]; then
+              echo "Invalid build_type! Must be one of 'branch', 'nightly', or 'pull-request'."
+              exit 1
+          fi
+          if [[ "$MATRIX_TYPE" != "auto" ]] && [[ "$MATRIX_TYPE" != "nightly" ]] && [[ "$MATRIX_TYPE" != "pull-request" ]]; then
+              echo "Invalid matrix_type! Must be one of 'auto', 'nightly', or 'pull-request'."
+              exit 1
+          fi
       - name: Compute test matrix
         id: compute-matrix
         run: |

@@ -2,6 +2,7 @@ on:
   workflow_call:
     inputs:
       build_type:
+        description: "One of: [branch, nightly, pull-request]"
         required: true
         type: string
       branch:

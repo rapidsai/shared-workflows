@@ -13,6 +13,7 @@ on:
       sha:
         type: string
       build_type:
+        description: "One of: [branch, nightly, pull-request]"
         required: true
         type: string
       script:
