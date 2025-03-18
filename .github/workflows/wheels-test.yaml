@@ -70,6 +70,8 @@ jobs:
           fi
       - name: Compute test matrix
         id: compute-matrix
+        env:
+          MATRIX_FILTER: ${{ inputs.matrix_filter }}
         run: |
           set -eo pipefail
 
@@ -106,7 +108,7 @@ jobs:
 
           MATRIX="$(
             yq -n -o json 'env(TEST_MATRIX)' | \
-            jq -c '${{ inputs.matrix_filter }} | if (. | length) > 0 then {include: .} else "Error: Empty matrix\n" | halt_error(1) end'
+            jq -c "${MATRIX_FILTER} | if (. | length) > 0 then {include: .} else \"Error: Empty matrix\n\" | halt_error(1) end"
           )"
 
           echo "MATRIX=${MATRIX}" | tee --append "${GITHUB_OUTPUT}"
