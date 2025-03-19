@@ -1,0 +1,13 @@
+name: Update `latest` branch
+
+on:
+  push:
+    branches:
+      - "branch-*"
+
+jobs:
+  update-latest-branch:
+    uses: ./update-latest-branch.yaml
+    with:
+      branch: ${{ github.ref_name }}
+      dry_run: true
