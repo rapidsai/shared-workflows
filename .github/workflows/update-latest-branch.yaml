@@ -25,14 +25,17 @@ jobs:
           script: |
             const { BRANCH: currentBranch, DRY_RUN: dryRunStr } = process.env;
             const dryRun = dryRunStr == "true";
-            console.log(`Dry run: ${dryRun}`);
 
             // Get all branches
             const branches = await github.paginate(github.rest.repos.listBranches, context.repo);
 
             const tryUpdateBranch = async (to, from) => {
               if (currentBranch != to) {
-                console.log(`Skipping branch "${to}" since it is not the current branch (${currentBranch})`);
+                if (dryRun) {
+                  console.log(`Would have skipped branch "${to}" since it is not the current branch ("${currentBranch}"")`);
+                } else {
+                  console.log(`Skipping branch "${to}" since it is not the current branch ("${currentBranch}"")`);
+                }
                 return;
               }
 
@@ -41,9 +44,19 @@ jobs:
 
               // TODO: Do the actual update
               if (branches.some((b) => b.name == from)) {
-                console.log(`Updating branch "${from}" to point to branch "${to}", SHA ${sha}`);
+                if (dryRun) {
+                  console.log(`Would have updated branch "${from}" to point to branch "${to}", SHA ${sha}`);
+                } else {
+                  console.log(`Updating branch "${from}" to point to branch "${to}", SHA ${sha}`);
+                  await github.rest.git.updateRef({ ...context.repo, ref: `heads/${from}`, sha, force: true });
+                }
               } else {
-                console.log(`Creating branch "${from}" to point to branch "${to}", SHA ${sha}`);
+                if (dryRun) {
+                  console.log(`Would have created branch "${from}" to point to branch "${to}", SHA ${sha}`);
+                } else {
+                  console.log(`Creating branch "${from}" to point to branch "${to}", SHA ${sha}`);
+                  await github.rest.git.createRef({ ...context.repo, ref: `refs/heads/${from}`, sha });
+                }
               }
             };
 
