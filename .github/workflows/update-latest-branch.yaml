@@ -42,7 +42,6 @@ jobs:
               const ref = await github.rest.git.getRef({ ...context.repo, ref: `heads/${to}` });
               const sha = ref.data.object.sha;
 
-              // TODO: Do the actual update
               if (branches.some((b) => b.name == from)) {
                 if (dryRun) {
                   console.log(`Would have updated branch "${from}" to point to branch "${to}", SHA ${sha}`);
