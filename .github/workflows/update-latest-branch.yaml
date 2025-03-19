@@ -78,10 +78,8 @@ jobs:
 
             // Update the `latest` branch
             const latestBranch = getLatestBranch();
-            // TODO: Change this to tryUpdateBranch()
-            await updateBranch(currentBranch, latestBranch, "latest");
+            await tryUpdateBranch(currentBranch, latestBranch, "latest");
 
             // Update the `default` branch
             const defaultBranch = (await github.rest.repos.get(context.repo)).data.default_branch;
-            // TODO: Change this to tryUpdateBranch()
-            await updateBranch(currentBranch, defaultBranch, "default");
+            await tryUpdateBranch(currentBranch, defaultBranch, "default");
