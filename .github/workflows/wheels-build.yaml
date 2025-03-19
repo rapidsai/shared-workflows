@@ -19,7 +19,7 @@ on:
       script:
         required: true
         type: string
-      wheel_type:
+      package_type:
         required: false
         type: string
       wheel_name:
@@ -188,9 +188,9 @@ jobs:
         shell: bash -leo pipefail {0}
 
       - name: Get package name
-        if: inputs.wheel_type != ''
+        if: inputs.package_type != ''
         env:
-          WHEEL_TYPE: ${{ inputs.wheel_type }}
+          PACKAGE_TYPE: ${{ inputs.package_type }}
           WHEEL_NAME: ${{ inputs.wheel_name }}
           PURE_WHEEL: ${{ inputs.pure_wheel }}
         run: |
@@ -202,18 +202,18 @@ jobs:
           if [ "${PURE_WHEEL}" = "true" ]; then
             export "RAPIDS_PY_WHEEL_PURE=1"
           fi
-          echo "RAPIDS_PACKAGE_NAME=$(RAPIDS_NO_PKG_EXTENSION=true rapids-package-name wheel_${WHEEL_TYPE})" >> "${GITHUB_OUTPUT}"
+          echo "RAPIDS_PACKAGE_NAME=$(RAPIDS_NO_PKG_EXTENSION=true rapids-package-name wheel_${PACKAGE_TYPE})" >> "${GITHUB_OUTPUT}"
           echo "WHEEL_OUTPUT_DIR=${RAPIDS_WHEEL_BLD_OUTPUT_DIR}" >> "${GITHUB_OUTPUT}"
         id: package-name
 
       - name: Show files to be uploaded
-        if: inputs.wheel_type != ''
+        if: inputs.package_type != ''
         run: |
           echo "Contents of directory to be uploaded:"
           ls -R ${{ steps.package-name.outputs.WHEEL_OUTPUT_DIR }}
       
       - uses: actions/upload-artifact@v4
-        if: inputs.wheel_type != ''
+        if: inputs.package_type != ''
         with:
           name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
           path: ${{ steps.package-name.outputs.WHEEL_OUTPUT_DIR }}
