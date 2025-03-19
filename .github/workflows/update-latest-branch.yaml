@@ -32,9 +32,9 @@ jobs:
             const tryUpdateBranch = async (to, from) => {
               if (currentBranch != to) {
                 if (dryRun) {
-                  console.log(`Would have skipped branch "${to}" since it is not the current branch ("${currentBranch}"")`);
+                  console.log(`Would have skipped branch "${to}" since it is not the current branch ("${currentBranch}")`);
                 } else {
-                  console.log(`Skipping branch "${to}" since it is not the current branch ("${currentBranch}"")`);
+                  console.log(`Skipping branch "${to}" since it is not the current branch ("${currentBranch}")`);
                 }
                 return;
               }
