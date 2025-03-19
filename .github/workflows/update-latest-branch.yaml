@@ -6,6 +6,10 @@ on:
       branch:
         type: string
         required: true
+      dry_run:
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   update-latest-branch:
@@ -16,9 +20,12 @@ jobs:
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         env:
           BRANCH: ${{ inputs.branch }}
+          DRY_RUN: ${{ inputs.dry_run }}
         with:
           script: |
-            const { BRANCH: currentBranch } = process.env;
+            const { BRANCH: currentBranch, DRY_RUN: dryRunStr } = process.env;
+            const dryRun = dryRunStr == "true";
+            console.log(`Dry run: ${dryRun}`);
 
             // Get all branches
             const branches = await github.paginate(github.rest.repos.listBranches, context.repo);
