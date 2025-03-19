@@ -49,31 +49,35 @@ jobs:
               await updateBranch(to, from);
             };
 
+            const getLatestBranch = () => {
+              return branches.reduce((prev, v) => {
+                const match = /^branch-([0-9]+)\.([0-9]+)$/.exec(v.name);
+                if (!match) {
+                  return prev;
+                }
+                const next = {
+                  major: parseInt(match[1]),
+                  minor: parseInt(match[2]),
+                  name: v.name,
+                };
+                if (!prev) {
+                  return next;
+                }
+                if (next.major > prev.major) {
+                  return next;
+                }
+                if (next.major < prev.major) {
+                  return prev;
+                }
+                if (next.minor > prev.minor) {
+                  return next;
+                }
+                return prev;
+              }, null).name;
+            };
+
             // Update the `latest` branch
-            const latestBranch = branches.reduce((prev, v) => {
-              const match = /^branch-([0-9]+)\.([0-9]+)$/.exec(v.name);
-              if (!match) {
-                return prev;
-              }
-              const next = {
-                major: parseInt(match[1]),
-                minor: parseInt(match[2]),
-                name: v.name,
-              };
-              if (!prev) {
-                return next;
-              }
-              if (next.major > prev.major) {
-                return next;
-              }
-              if (next.major < prev.major) {
-                return prev;
-              }
-              if (next.minor > prev.minor) {
-                return next;
-              }
-              return prev;
-            }, null).name;
+            const latestBranch = getLatestBranch();
             await tryUpdateBranch(currentBranch, latestBranch, "latest");
 
             // Update the `default` branch
