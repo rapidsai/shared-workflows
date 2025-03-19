@@ -25,17 +25,16 @@ jobs:
           script: |
             const { BRANCH: currentBranch, DRY_RUN: dryRunStr } = process.env;
             const dryRun = dryRunStr == "true";
+            if (dryRun) {
+              console.log("This is a dry run. No actions will be taken.");
+            }
 
             // Get all branches
             const branches = await github.paginate(github.rest.repos.listBranches, context.repo);
 
             const tryUpdateBranch = async (to, from) => {
               if (currentBranch != to) {
-                if (dryRun) {
-                  console.log(`Would have skipped branch "${to}" since it is not the current branch ("${currentBranch}")`);
-                } else {
-                  console.log(`Skipping branch "${to}" since it is not the current branch ("${currentBranch}")`);
-                }
+                console.log(`Skipping branch "${to}" since it is not the current branch ("${currentBranch}")`);
                 return;
               }
 
@@ -43,17 +42,13 @@ jobs:
               const sha = ref.data.object.sha;
 
               if (branches.some((b) => b.name == from)) {
-                if (dryRun) {
-                  console.log(`Would have updated branch "${from}" to point to branch "${to}", SHA ${sha}`);
-                } else {
-                  console.log(`Updating branch "${from}" to point to branch "${to}", SHA ${sha}`);
+                console.log(`Updating branch "${from}" to point to branch "${to}", SHA ${sha}`);
+                if (!dryRun) {
                   await github.rest.git.updateRef({ ...context.repo, ref: `heads/${from}`, sha, force: true });
                 }
               } else {
-                if (dryRun) {
-                  console.log(`Would have created branch "${from}" to point to branch "${to}", SHA ${sha}`);
-                } else {
-                  console.log(`Creating branch "${from}" to point to branch "${to}", SHA ${sha}`);
+                console.log(`Creating branch "${from}" to point to branch "${to}", SHA ${sha}`);
+                if (!dryRun) {
                   await github.rest.git.createRef({ ...context.repo, ref: `refs/heads/${from}`, sha });
                 }
               }
