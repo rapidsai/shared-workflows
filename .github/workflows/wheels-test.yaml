@@ -13,8 +13,14 @@ on:
       sha:
         type: string
       build_type:
+        description: "One of: [branch, nightly, pull-request]"
         required: true
         type: string
+      matrix_type:
+        description: "One of: [auto, nightly, pull-request]. 'auto' means 'choose a value based on what's provided via build_type'."
+        required: false
+        type: string
+        default: "auto"
       script:
         type: string
         default: "ci/test_wheel.sh"
@@ -59,13 +65,18 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BUILD_TYPE: ${{ inputs.build_type }}
+      MATRIX_TYPE: ${{ inputs.matrix_type }}
     outputs:
       MATRIX: ${{ steps.compute-matrix.outputs.MATRIX }}
     steps:
-      - name: Validate test type
+      - name: Validate Inputs
         run: |
-          if [[ "$BUILD_TYPE" != "pull-request" ]] && [[ "$BUILD_TYPE" != "nightly" ]] && [[ "$BUILD_TYPE" != "branch" ]]; then
-              echo "Invalid build type! Must be one of 'nightly', 'pull-request', or 'branch'."
+          if [[ "$BUILD_TYPE" != "branch" ]] && [[ "$BUILD_TYPE" != "nightly" ]] && [[ "$BUILD_TYPE" != "pull-request" ]]; then
+              echo "Invalid build_type! Must be one of 'branch', 'nightly', or 'pull-request'."
+              exit 1
+          fi
+          if [[ "$MATRIX_TYPE" != "auto" ]] && [[ "$MATRIX_TYPE" != "nightly" ]] && [[ "$MATRIX_TYPE" != "pull-request" ]]; then
+              echo "Invalid matrix_type! Must be one of 'auto', 'nightly', or 'pull-request'."
               exit 1
           fi
       - name: Compute test matrix
@@ -97,10 +108,14 @@ jobs:
               - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.8.0', LINUX_VER: 'ubuntu24.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
           "
 
-          # Use the nightly matrix for branch tests
-          MATRIX_TYPE="${BUILD_TYPE}"
-          if [[ "${MATRIX_TYPE}" == "branch" ]]; then
-            MATRIX_TYPE="nightly"
+          # only overwrite MATRIX_TYPE if it was set to 'auto'
+          if [[ "${MATRIX_TYPE}" == "auto" ]]; then
+            if [[ "${BUILD_TYPE}" == "branch" ]]; then
+              # Use the nightly matrix for branch tests
+              MATRIX_TYPE="nightly"
+            else
+              MATRIX_TYPE="${BUILD_TYPE}"
+            fi
           fi
           export MATRIX_TYPE
           TEST_MATRIX=$(yq -n 'env(MATRICES) | .[strenv(MATRIX_TYPE)]')
