@@ -110,10 +110,11 @@ jobs:
 
           # only overwrite MATRIX_TYPE if it was set to 'auto'
           if [[ "${MATRIX_TYPE}" == "auto" ]]; then
-            MATRIX_TYPE="${BUILD_TYPE}"
-            # Use the nightly matrix for branch tests
             if [[ "${BUILD_TYPE}" == "branch" ]]; then
+              # Use the nightly matrix for branch tests
               MATRIX_TYPE="nightly"
+            else
+              MATRIX_TYPE="${BUILD_TYPE}"
             fi
           fi
           export MATRIX_TYPE
