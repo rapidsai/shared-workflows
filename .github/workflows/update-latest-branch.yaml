@@ -32,26 +32,21 @@ jobs:
             // Get all branches
             const branches = await github.paginate(github.rest.repos.listBranches, context.repo);
 
-            const tryUpdateBranch = async (to, from) => {
+            const updateBranch = async (to, from) => {
+              const sha = branches.find((b) => b.name == to).commit.sha;
+
+              console.log(`Updating branch "${from}" to point to branch "${to}", SHA ${sha}`);
+              if (!dryRun) {
+                await github.rest.git.updateRef({ ...context.repo, ref: `heads/${from}`, sha, force: true });
+              }
+            }
+
+            const tryUpdateBranch = async (currentBranch, to, from) => {
               if (currentBranch != to) {
                 console.log(`Skipping branch "${to}" since it is not the current branch ("${currentBranch}")`);
                 return;
               }
-
-              const ref = await github.rest.git.getRef({ ...context.repo, ref: `heads/${to}` });
-              const sha = ref.data.object.sha;
-
-              if (branches.some((b) => b.name == from)) {
-                console.log(`Updating branch "${from}" to point to branch "${to}", SHA ${sha}`);
-                if (!dryRun) {
-                  await github.rest.git.updateRef({ ...context.repo, ref: `heads/${from}`, sha, force: true });
-                }
-              } else {
-                console.log(`Creating branch "${from}" to point to branch "${to}", SHA ${sha}`);
-                if (!dryRun) {
-                  await github.rest.git.createRef({ ...context.repo, ref: `refs/heads/${from}`, sha });
-                }
-              }
+              await updateBranch(to, from);
             };
 
             // Update the `latest` branch
@@ -79,8 +74,8 @@ jobs:
               }
               return prev;
             }, null).name;
-            await tryUpdateBranch(latestBranch, "latest");
+            await tryUpdateBranch(currentBranch, latestBranch, "latest");
 
             // Update the `default` branch
             const defaultBranch = (await github.rest.repos.get(context.repo)).data.default_branch;
-            await tryUpdateBranch(defaultBranch, "default");
+            await tryUpdateBranch(currentBranch, defaultBranch, "default");
