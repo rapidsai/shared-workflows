@@ -35,11 +35,11 @@ on:
         required: false
         type: string
         default: "fail"
-    # the use of secrets in shared-workflows is discouraged, especially for public repositories.
-    # these values were added for situations where the use of secrets is unavoidable.
-    secrets:
-      RAPIDS_AUX_SECRET_1:
+      # Note that this is the _name_ of a secret containing the key, not the key itself.
+      rapids-aux-secret-1:
         required: false
+        type: string
+        default: ''
 
 defaults:
   run:
@@ -186,7 +186,7 @@ jobs:
       run: ${{ inputs.script }}
       env:
         GH_TOKEN: ${{ github.token }}
-        RAPIDS_AUX_SECRET_1: ${{ secrets.RAPIDS_AUX_SECRET_1 }}
+        RAPIDS_AUX_SECRET_1: ${{ inputs.rapids-aux-secret-1 != '' && secrets[inputs.rapids-aux-secret-1] || '' }}
 
     - name: Generate test report
       uses: test-summary/action@v2.4
