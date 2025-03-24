@@ -29,7 +29,7 @@ on:
         required: false
         type: boolean
         default: false
-      append-cuda-version:
+      append-cuda-suffix:
         required: false
         type: boolean
         default: true
@@ -197,6 +197,7 @@ jobs:
           PACKAGE_TYPE: ${{ inputs.package-type }}
           WHEEL_NAME: ${{ inputs.wheel-name }}
           PURE_WHEEL: ${{ inputs.pure-wheel }}
+          APPEND_CUDA_SUFFIX: ${{ inputs.append-cuda-suffix }}
         run: |
           if [ -z "${WHEEL_NAME}" ]; then
             WHEEL_NAME="${RAPIDS_REPOSITORY#*/}"
