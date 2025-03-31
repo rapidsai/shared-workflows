@@ -10,8 +10,20 @@ jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-      # This reusable workflow should depend on all other jobs in the calling workflow.
       - name: "Check all dependent jobs"
         env:
           NEEDS: ${{ inputs.needs }}
         run: jq -en 'env.NEEDS | fromjson | all(.result as $result | ["success", "skipped"] | any($result == .))'
+      
+      - name: "Check for private token usage"
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          NEEDS: ${{ inputs.needs }}
+          ERROR_MSG: "PR validation failed: Private token access is not allowed to be merged onto the development branch"
+        run: |
+          if jq -en 'env.NEEDS | fromjson | to_entries[] | select(.value.inputs?.use_private_token == true) | length > 0'; then
+            echo "::error::$ERROR_MSG"
+            echo "Jobs using private token:"
+            jq -en 'env.NEEDS | fromjson | to_entries[] | select(.value.inputs?.use_private_token == true) | "- " + .key'
+            exit 1
+          fi

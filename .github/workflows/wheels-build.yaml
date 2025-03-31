@@ -59,6 +59,10 @@ on:
         required: false
         type: string
         default: ''
+      use-private-token:
+        required: false
+        type: boolean
+        default: false
 
 defaults:
   run:
@@ -187,7 +191,7 @@ jobs:
         run: |
           ${{ inputs.script }}
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ inputs.use-private-token && secrets.PRIVATE_GH_TOKEN || github.token }}
         # Use a shell that loads the rc file so that we get the compiler settings
         shell: bash -leo pipefail {0}
 
