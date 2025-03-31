@@ -10,6 +10,7 @@ jobs:
   run:
     runs-on: ubuntu-latest
     steps:
+      # This reusable workflow should depend on all other jobs in the calling workflow.
       - name: "Check all dependent jobs"
         env:
           NEEDS: ${{ inputs.needs }}
