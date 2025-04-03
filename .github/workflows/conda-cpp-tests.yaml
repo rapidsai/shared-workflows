@@ -28,10 +28,9 @@ on:
         required: false
         type: string
         default: "-e _NOOP"
-      use-private-token:
+      artifact-token-name:
         required: false
-        type: boolean
-        default: false
+        type: string
 
 defaults:
   run:
@@ -172,7 +171,8 @@ jobs:
       - name: C++ tests
         run: ${{ inputs.script }}
         env:
-          GH_TOKEN: ${{ inputs.use-private-token && secrets.PRIVATE_GH_TOKEN || github.token }}
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_TOKEN: ${{ secrets[inputs.artifact-token-name] }}
       - name: Generate test report
         uses: test-summary/action@v2.4
         with:

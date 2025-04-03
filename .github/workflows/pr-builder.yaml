@@ -22,9 +22,9 @@ jobs:
           NEEDS: ${{ inputs.needs }}
           ERROR_MSG: "PR validation failed: Private token access is not allowed to be merged onto the development branch"
         run: |
-          if jq -en 'env.NEEDS | fromjson | to_entries[] | select(.value.inputs?.use_private_token == true) | length > 0'; then
+          if jq -en 'env.NEEDS | fromjson | to_entries[] | select(.value.inputs.artifact_token_name and .value.inputs.artifact_token_name != "") | length > 0'; then
             echo "::error::$ERROR_MSG"
             echo "Jobs using private token:"
-            jq -en 'env.NEEDS | fromjson | to_entries[] | select(.value.inputs?.use_private_token == true) | "- " + .key'
+            jq -en 'env.NEEDS | fromjson | to_entries[] | select(.value.inputs.artifact_token_name and .value.inputs.artifact_token_name != "") | "- " + .key'
             exit 1
           fi

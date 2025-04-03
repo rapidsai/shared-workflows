@@ -35,10 +35,9 @@ on:
         required: false
         type: string
         default: "fail"
-      use-private-token:
+      artifact-token-name:
         required: false
-        type: boolean
-        default: false
+        type: string
     # the use of secrets in shared-workflows is discouraged, especially for public repositories.
     # these values were added for situations where the use of secrets is unavoidable.
     secrets:
@@ -187,7 +186,8 @@ jobs:
     - name: Run tests
       run: ${{ inputs.script }}
       env:
-        GH_TOKEN: ${{ inputs.use-private-token && secrets.PRIVATE_GH_TOKEN || github.token }}
+        GH_TOKEN: ${{ github.token }}
+        ARTIFACT_TOKEN: ${{ secrets[inputs.artifact-token-name] }}
         RAPIDS_AUX_SECRET_1: ${{ secrets.RAPIDS_AUX_SECRET_1 }}
 
     - name: Generate test report
