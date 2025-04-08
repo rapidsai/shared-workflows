@@ -30,11 +30,11 @@ on:
         required: false
         type: string
         default: ''
-    # the use of secrets in shared-workflows is discouraged, especially for public repositories.
-    # these values were added for situations where the use of secrets is unavoidable.
-    secrets:
-      RAPIDS_AUX_SECRET_1:
+      # Note that this is the _name_ of a secret containing the key, not the key itself.
+      rapids-aux-secret-1:
         required: false
+        type: string
+        default: ''
 
 permissions:
   actions: read
@@ -115,7 +115,7 @@ jobs:
             AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
-            RAPIDS_AUX_SECRET_1=${{ secrets.RAPIDS_AUX_SECRET_1 }}
+            RAPIDS_AUX_SECRET_1=${{ inputs.rapids-aux-secret-1 != '' && secrets[inputs.rapids-aux-secret-1] || '' }}
             TRACEPARENT=${{ env.TRACEPARENT }}
             OTEL_SERVICE_NAME=${{ env.OTEL_SERVICE_NAME }}
             OTEL_EXPORTER_OTLP_ENDPOINT=${{ env.OTEL_EXPORTER_OTLP_ENDPOINT }}
