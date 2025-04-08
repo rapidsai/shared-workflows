@@ -1,0 +1,92 @@
+name: Update `latest` branch
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        type: string
+        required: true
+      dry_run:
+        type: boolean
+        required: false
+        default: false
+      all:
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  update-latest-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update latest branch
+        id: update-latest-branch
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        env:
+          BRANCH: ${{ inputs.branch }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          ALL: ${{ inputs.all }}
+        with:
+          script: |
+            const { BRANCH: currentBranch, DRY_RUN: dryRunStr, ALL: allStr } = process.env;
+            const dryRun = dryRunStr == "true";
+            const all = allStr == "true";
+
+            if (dryRun) {
+              console.log("This is a dry run. No actions will be taken.");
+            }
+
+            // Get all branches
+            const branches = await github.paginate(github.rest.repos.listBranches, context.repo);
+
+            const updateBranch = async (to, from) => {
+              const sha = branches.find((b) => b.name == to).commit.sha;
+
+              console.log(`Updating branch "${from}" to point to branch "${to}", SHA ${sha}`);
+              if (!dryRun) {
+                await github.rest.git.updateRef({ ...context.repo, ref: `heads/${from}`, sha, force: true });
+              }
+            }
+
+            const tryUpdateBranch = async (currentBranch, to, from) => {
+              if (currentBranch != to && !all) {
+                console.log(`Skipping branch "${to}" since it is not the current branch ("${currentBranch}")`);
+                return;
+              }
+              await updateBranch(to, from);
+            };
+
+            const getLatestBranch = () => {
+              return branches.reduce((prev, v) => {
+                const match = /^branch-([0-9]+)\.([0-9]+)$/.exec(v.name);
+                if (!match) {
+                  return prev;
+                }
+                const next = {
+                  major: parseInt(match[1]),
+                  minor: parseInt(match[2]),
+                  name: v.name,
+                };
+                if (!prev) {
+                  return next;
+                }
+                if (next.major > prev.major) {
+                  return next;
+                }
+                if (next.major < prev.major) {
+                  return prev;
+                }
+                if (next.minor > prev.minor) {
+                  return next;
+                }
+                return prev;
+              }, null).name;
+            };
+
+            // Update the `latest` branch
+            const latestBranch = getLatestBranch();
+            await tryUpdateBranch(currentBranch, latestBranch, "latest");
+
+            // Update the `default` branch
+            const defaultBranch = (await github.rest.repos.get(context.repo)).data.default_branch;
+            await tryUpdateBranch(currentBranch, defaultBranch, "default");
