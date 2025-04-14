@@ -122,7 +122,7 @@ jobs:
             OTEL_EXPORTER_OTLP_PROTOCOL=${{ env.OTEL_EXPORTER_OTLP_PROTOCOL }}
             OTEL_RESOURCE_ATTRIBUTES=${{ env.OTEL_RESOURCE_ATTRIBUTES }}
           runCmd: |
-            set -e;
+            set -euo pipefail;
             mkdir -p ~/.config/pip/;
             cat <<EOF >> ~/.config/pip/pip.conf
             [global]
