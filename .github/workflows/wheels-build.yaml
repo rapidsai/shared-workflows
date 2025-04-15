@@ -31,7 +31,7 @@ on:
         required: false
         type: boolean
         default: false
-        description: "One of [true, false] to indicate if the wheel is a pure wheel"
+        description: "One of [true, false], true if the wheel is not dependent on operating system, Python minor version, or CPU architecture"
       append-cuda-suffix:
         required: false
         type: boolean
