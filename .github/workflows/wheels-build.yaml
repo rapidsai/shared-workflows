@@ -26,7 +26,7 @@ on:
       wheel-name:
         required: false
         type: string
-        description: "The name of the wheel"
+        description: "Distribution name, without any other qualifiers (e.g. 'pylibcudf', not 'pylibcudf-cu12-cp311-manylinux_2_24_aarch64')"
       pure-wheel:
         required: false
         type: boolean
