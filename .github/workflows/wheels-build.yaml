@@ -31,12 +31,12 @@ on:
         required: false
         type: boolean
         default: false
-        description: "Boolean flag to indicate if the wheel is a pure wheel"
+        description: "One of [true, false] to indicate if the wheel is a pure wheel"
       append-cuda-suffix:
         required: false
         type: boolean
         default: true
-        description: "Boolean flag to indicate if CUDA version should be appended to the wheel name"
+        description: "One of [true, false] to indicate if CUDA version should be appended to the wheel name"
 
       # allow a bigger runner instance
       node_type:
