@@ -20,19 +20,23 @@ on:
         required: true
         type: string
       package-type:
+        description: "One of: [cpp, python]"
         required: false
         type: string
       wheel-name:
         required: false
         type: string
+        description: "Distribution name, without any other qualifiers (e.g. 'pylibcudf', not 'pylibcudf-cu12-cp311-manylinux_2_24_aarch64')"
       pure-wheel:
         required: false
         type: boolean
         default: false
+        description: "One of [true, false], true if the wheel is not dependent on operating system, Python minor version, or CPU architecture"
       append-cuda-suffix:
         required: false
         type: boolean
         default: true
+        description: "One of [true, false] to indicate if CUDA version should be appended to the wheel name"
 
       # allow a bigger runner instance
       node_type:
