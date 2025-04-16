@@ -79,7 +79,7 @@ jobs:
 
       - name: Check if repo has devcontainer
         run: |
-          echo "REPOSITORY=$(basename $(pwd))" | tee -a "${GITHUB_ENV}";
+          echo "REPOSITORY=$(basename "$(pwd)")" | tee -a "${GITHUB_ENV}";
           if test -f .devcontainer/cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}/devcontainer.json; then
             echo "HAS_DEVCONTAINER=true" >> "${GITHUB_ENV}";
           else
@@ -144,6 +144,7 @@ jobs:
             fi
 
             cd ~/"${REPOSITORY}";
+            mkdir -p telemetry-artifacts;
             ${{ inputs.build_command }}
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
