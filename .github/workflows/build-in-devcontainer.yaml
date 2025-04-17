@@ -1,6 +1,8 @@
 on:
   workflow_call:
     inputs:
+      env:
+        type: string
       sha:
         type: string
       arch:
@@ -14,6 +16,9 @@ on:
         default: '["conda", "pip"]'
       repo:
         type: string
+      timeout-minutes:
+        type: number
+        default: 360
       node_type:
         type: string
         default: "cpu8"
@@ -53,6 +58,7 @@ permissions:
 
 jobs:
   build:
+    timeout-minutes: ${{ inputs.timeout-minutes }}
     strategy:
       fail-fast: false
       matrix:
@@ -121,6 +127,7 @@ jobs:
             OTEL_EXPORTER_OTLP_ENDPOINT=${{ env.OTEL_EXPORTER_OTLP_ENDPOINT }}
             OTEL_EXPORTER_OTLP_PROTOCOL=${{ env.OTEL_EXPORTER_OTLP_PROTOCOL }}
             OTEL_RESOURCE_ATTRIBUTES=${{ env.OTEL_RESOURCE_ATTRIBUTES }}
+            ${{ inputs.env }}
           runCmd: |
             set -euo pipefail;
             mkdir -p ~/.config/pip/;
