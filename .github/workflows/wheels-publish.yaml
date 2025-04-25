@@ -90,6 +90,7 @@ jobs:
       run: rapids-wheels-anaconda-github "${{ inputs.package-name }}" "${{ inputs.package-type }}"
       env:
         RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
+        GH_TOKEN: ${{ github.token }}
 
     - name: Check if build is release
       id: check_if_release
