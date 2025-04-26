@@ -31,6 +31,10 @@ on:
         required: false
         type: string
         default: "-e _NOOP"
+      nightly_build_repo:
+        description: 'Custom workflow file name (other than build.yaml) to download artifacts from for nightly tests'
+        required: false
+        type: string
 
 defaults:
   run:
@@ -152,11 +156,13 @@ jobs:
           fetch-depth: 0
 
       - name: Standardize repository information
-        run: |
-          echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
-          echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
-          echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
-          echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
+        uses: rapidsai/shared-actions/rapids-github-info@main
+        with:
+          repo: ${{ inputs.repo }}
+          branch: ${{ inputs.branch }}
+          date: ${{ inputs.date }}
+          sha: ${{ inputs.sha }}
+          nightly_build_repo: ${{ inputs.nightly_build_repo }}
 
       # This has to be AFTER the checkout step. It creates a telemetry-artifacts directory,
       # and the checkout step would destroy it.
