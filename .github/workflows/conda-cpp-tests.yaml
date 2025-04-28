@@ -28,8 +28,8 @@ on:
         required: false
         type: string
         default: "-e _NOOP"
-      nightly_build_repo:
-        description: 'Custom workflow file name (other than build.yaml) to download artifacts from for nightly tests'
+      build_workflow_name:
+        description: 'Custom workflow file name (defaults to build.yaml) to download artifacts from for tests'
         required: false
         type: string
 
@@ -166,7 +166,7 @@ jobs:
           branch: ${{ inputs.branch }}
           date: ${{ inputs.date }}
           sha: ${{ inputs.sha }}
-          nightly_build_repo: ${{ inputs.nightly_build_repo }}
+          build_workflow_name: ${{ inputs.build_workflow_name }}
 
       - name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
