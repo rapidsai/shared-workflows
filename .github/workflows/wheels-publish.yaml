@@ -86,7 +86,7 @@ jobs:
         date: ${{ inputs.date }}
         sha: ${{ inputs.sha }}
 
-    - name: Download wheels from downloads.rapids.ai and publish to anaconda repository
+    - name: Download wheels from Github Artifacts and publish to anaconda repository
       run: rapids-wheels-anaconda-github "${{ inputs.package-name }}" "${{ inputs.package-type }}"
       env:
         RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
