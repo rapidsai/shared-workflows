@@ -2,8 +2,14 @@ on:
   workflow_call:
     inputs:
       build_type:
+        description: "One of: [branch, nightly, pull-request]"
         required: true
         type: string
+      matrix_type:
+        description: "One of: [auto, nightly, pull-request]. 'auto' means 'choose a value based on what's provided via build_type'."
+        required: false
+        type: string
+        default: "auto"
       branch:
         type: string
       date:
@@ -47,17 +53,24 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BUILD_TYPE: ${{ inputs.build_type }}
+      MATRIX_TYPE: ${{ inputs.matrix_type }}
     outputs:
       MATRIX: ${{ steps.compute-matrix.outputs.MATRIX }}
     steps:
-      - name: Validate Test Type
+      - name: Validate Inputs
         run: |
-          if [[ "$BUILD_TYPE" != "pull-request" ]] && [[ "$BUILD_TYPE" != "nightly" ]] && [[ "$BUILD_TYPE" != "branch" ]]; then
-              echo "Invalid build type! Must be one of 'nightly', 'pull-request', or 'branch'."
+          if [[ "$BUILD_TYPE" != "branch" ]] && [[ "$BUILD_TYPE" != "nightly" ]] && [[ "$BUILD_TYPE" != "pull-request" ]]; then
+              echo "Invalid build_type! Must be one of 'branch', 'nightly', or 'pull-request'."
+              exit 1
+          fi
+          if [[ "$MATRIX_TYPE" != "auto" ]] && [[ "$MATRIX_TYPE" != "nightly" ]] && [[ "$MATRIX_TYPE" != "pull-request" ]]; then
+              echo "Invalid matrix_type! Must be one of 'auto', 'nightly', or 'pull-request'."
               exit 1
           fi
       - name: Compute C++ Test Matrix
         id: compute-matrix
+        env:
+          MATRIX_FILTER: ${{ inputs.matrix_filter }}
         run: |
           set -eo pipefail
 
@@ -68,6 +81,7 @@ jobs:
           export MATRICES="
             pull-request:
               # amd64
+              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.4.3', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
               - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
               - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.8.0', LINUX_VER: 'ubuntu24.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               # arm64
@@ -84,10 +98,14 @@ jobs:
               - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
           "
 
-          # Use the nightly matrix for branch tests
-          MATRIX_TYPE="${BUILD_TYPE}"
-          if [[ "${MATRIX_TYPE}" == "branch" ]]; then
-            MATRIX_TYPE="nightly"
+          # only overwrite MATRIX_TYPE if it was set to 'auto'
+          if [[ "${MATRIX_TYPE}" == "auto" ]]; then
+            if [[ "${BUILD_TYPE}" == "branch" ]]; then
+              # Use the nightly matrix for branch tests
+              MATRIX_TYPE="nightly"
+            else
+              MATRIX_TYPE="${BUILD_TYPE}"
+            fi
           fi
           export MATRIX_TYPE
           TEST_MATRIX=$(yq -n 'env(MATRICES) | .[strenv(MATRIX_TYPE)]')
@@ -95,7 +113,7 @@ jobs:
 
           MATRIX="$(
             yq -n -o json 'env(TEST_MATRIX)' | \
-            jq -c '${{ inputs.matrix_filter }} | if (. | length) > 0 then {include: .} else "Error: Empty matrix\n" | halt_error(1) end'
+            jq -c "${MATRIX_FILTER} | if (. | length) > 0 then {include: .} else \"Error: Empty matrix\n\" | halt_error(1) end"
           )"
 
           echo "MATRIX=${MATRIX}" | tee --append "${GITHUB_OUTPUT}"
@@ -146,8 +164,6 @@ jobs:
       - name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
         continue-on-error: true
-        # Skip the cache on RDS Lab nodes
-        if: ${{ matrix.GPU != 'v100' }}
 
       - name: C++ tests
         run: ${{ inputs.script }}

@@ -13,6 +13,7 @@ on:
       sha:
         type: string
       build_type:
+        description: "One of: [branch, nightly, pull-request]"
         required: true
         type: string
 
@@ -21,6 +22,7 @@ on:
         required: true
         type: string
       package-type:
+        description: "One of: [cpp, python]"
         required: false
         default: python
         type: string
@@ -47,7 +49,9 @@ permissions:
 jobs:
   wheel-publish:
     name: wheels publish
-    runs-on: linux-amd64-cpu4
+    # Use a self-hosted runner to ensure we have sufficient disk space. Using
+    # cpu8 since we shouldn't need much CPU horsepower.
+    runs-on: "linux-amd64-cpu8"
     container:
       # CUDA toolkit version of the container is irrelevant in the publish step.
       # This just uploads already-built wheels to remote storage.
@@ -100,9 +104,11 @@ jobs:
 
     - name: Publish the downloaded wheels to PyPI
       if: ${{ inputs.publish_to_pypi && steps.check_if_release.outputs.is_release_build == 'true' }}
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.RAPIDSAI_PYPI_TOKEN }}
+      run: |
+        python3 -m pip install twine
+        python3 -m twine upload -u __token__ dist/*
+      env:
+        TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_TOKEN }}
     - name: Telemetry upload attributes
       uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
       continue-on-error: true
