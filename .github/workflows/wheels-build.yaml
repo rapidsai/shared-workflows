@@ -27,10 +27,6 @@ on:
         description: "One of: [cpp, python]"
         required: false
         type: string
-      wheel-name:
-        required: false
-        type: string
-        description: "DEPRECATED: Use package-name instead"
       pure-wheel:
         required: false
         type: boolean
@@ -203,7 +199,7 @@ jobs:
         if: inputs.package-type != ''
         env:
           PACKAGE_TYPE: ${{ inputs.package-type }}
-          WHEEL_NAME: ${{ inputs.package-name != '' && inputs.package-name || inputs.wheel-name }}
+          WHEEL_NAME: ${{ inputs.package-name }}
           PURE_WHEEL: ${{ inputs.pure-wheel }}
           APPEND_CUDA_SUFFIX: ${{ inputs.append-cuda-suffix }}
         run: |
