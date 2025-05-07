@@ -19,6 +19,11 @@ on:
       script:
         type: string
         default: "ci/build_python.sh"
+      upload-artifacts:
+        type: boolean
+        default: true
+        required: false
+        description: "One of [true, false], true if artifacts should be uploaded to GitHub's artifact store"
       matrix_filter:
         type: string
         default: "."
@@ -119,15 +124,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Get Package Name and Location
+        if: ${{ inputs.upload-artifacts }}
         run: | 
           echo "RAPIDS_PACKAGE_NAME=$(RAPIDS_NO_PKG_EXTENSION=true rapids-package-name conda_python)" >> "${GITHUB_OUTPUT}"
           echo "CONDA_OUTPUT_DIR=${RAPIDS_CONDA_BLD_OUTPUT_DIR}" >> "${GITHUB_OUTPUT}"
         id: package-name
       - name: Show files to be uploaded
+        if: ${{ inputs.upload-artifacts }}
         run: |
           echo "Contents of directory to be uploaded:"
           ls -R ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
       - uses: actions/upload-artifact@v4
+        if: ${{ inputs.upload-artifacts }}
         with:
           name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
           path: ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
