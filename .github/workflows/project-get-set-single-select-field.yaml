@@ -102,7 +102,7 @@ jobs:
                         ... on ProjectV2 {
                         field(name: $fieldName) {
                             ... on ProjectV2SingleSelectField {
-                            options(names: $optionName) {id}
+                            options(names: [$optionName]) {id}
                               }
                             }
                           }
