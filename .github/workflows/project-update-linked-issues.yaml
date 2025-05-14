@@ -61,6 +61,7 @@ jobs:
             ENV_UPDATE_FIELD_VALUE: ${{ inputs.UPDATE_FIELD_VALUE }}
           run: |
             # Find the linked issues to the PR
+            # shellcheck disable=SC2016
             gh api graphql -F prNodeId="$ENV_PR_NODE_ID" -f query='
               query($prNodeId: ID!) {
                 node(id: $prNodeId) {
@@ -101,6 +102,7 @@ jobs:
 
               case "$ENV_UPDATE_FIELD_TYPE" in
                 "iteration")
+                  # shellcheck disable=SC2016
                   gh api graphql -F projectId="$ENV_PROJECT_ID" \
                                -F itemId="$issue_id" \
                                -F fieldId="$ENV_UPDATE_FIELD_ID" \
@@ -121,6 +123,7 @@ jobs:
                   ;;
 
                 "single_select")
+                  # shellcheck disable=SC2016
                   gh api graphql -F projectId="$ENV_PROJECT_ID" \
                                -F itemId="$issue_id" \
                                -F fieldId="$ENV_UPDATE_FIELD_ID" \
@@ -141,6 +144,7 @@ jobs:
                   ;;
 
                 "date"|"text")
+                  # shellcheck disable=SC2016
                   gh api graphql -F projectId="$ENV_PROJECT_ID" \
                                -F itemId="$issue_id" \
                                -F fieldId="$ENV_UPDATE_FIELD_ID" \
@@ -162,6 +166,7 @@ jobs:
                   ;;
 
                 "number")
+                  # shellcheck disable=SC2016
                   gh api graphql -F projectId="$ENV_PROJECT_ID" \
                                -F itemId="$issue_id" \
                                -F fieldId="$ENV_UPDATE_FIELD_ID" \
@@ -187,6 +192,7 @@ jobs:
                   ;;
               esac
 
+              # shellcheck disable=SC2181
               if [ $? -ne 0 ]; then
                 echo "Error: Failed to update field for issue $issue_id" >&2
                 exit 1

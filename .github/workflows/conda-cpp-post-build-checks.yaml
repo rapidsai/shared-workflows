@@ -64,11 +64,17 @@ jobs:
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
       - name: Standardize repository information
+        env:
+          RAPIDS_REPOSITORY: ${{ inputs.repo || github.repository }}
+          RAPIDS_REF_NAME: ${{ inputs.branch || github.ref_name }}
+          RAPIDS_NIGHTLY_DATE: ${{ inputs.date }}
         run: |
-          echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
-          echo "RAPIDS_SHA=$(cd ./src && git rev-parse HEAD)" >> "${GITHUB_ENV}"
-          echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
-          echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
+          {
+            echo "RAPIDS_REPOSITORY=${RAPIDS_REPOSITORY}"
+            echo "RAPIDS_SHA=$(cd ./src && git rev-parse HEAD)"
+            echo "RAPIDS_REF_NAME=${RAPIDS_REF_NAME}"
+            echo "RAPIDS_NIGHTLY_DATE=${RAPIDS_NIGHTLY_DATE}"
+          } >> "${GITHUB_ENV}"
       - name: Download conda C++ build artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -88,9 +94,9 @@ jobs:
           SYMBOL_EXCLUSIONS: ${{ inputs.symbol_exclusions }}
         run: |
           if [ -n "${SYMBOL_EXCLUSIONS}" ]; then
-            python ./tool/detect.py ${RAPIDS_EXTRACTED_DIR}/lib -e "${SYMBOL_EXCLUSIONS}"
+            python ./tool/detect.py "${RAPIDS_EXTRACTED_DIR}"/lib -e "${SYMBOL_EXCLUSIONS}"
           else
-            python ./tool/detect.py ${RAPIDS_EXTRACTED_DIR}/lib
+            python ./tool/detect.py "${RAPIDS_EXTRACTED_DIR}"/lib
           fi
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
