@@ -147,6 +147,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: ${{ inputs.upload-artifacts }}
         with:
+          if-no-files-found: 'error'
           name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
           path: ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
       - name: Upload additional artifacts

@@ -20,17 +20,13 @@ on:
         required: true
         type: string
       package-name:
-        required: false
+        required: true
         type: string
         description: "Distribution name, without any other qualifiers (e.g. 'pylibcudf', not 'pylibcudf-cu12-cp311-manylinux_2_24_aarch64')"
       package-type:
         description: "One of: [cpp, python]"
         required: true
         type: string
-      wheel-name:
-        required: false
-        type: string
-        description: "DEPRECATED: Use package-name instead"
       pure-wheel:
         required: false
         type: boolean
@@ -211,19 +207,19 @@ jobs:
       - name: Get package name
         if: ${{ inputs.upload-artifacts }}
         env:
-          PACKAGE_TYPE: ${{ inputs.package-type }}
-          WHEEL_NAME: ${{ inputs.package-name != '' && inputs.package-name || inputs.wheel-name }}
-          PURE_WHEEL: ${{ inputs.pure-wheel }}
           APPEND_CUDA_SUFFIX: ${{ inputs.append-cuda-suffix }}
+          PACKAGE_NAME: ${{ inputs.package-name }}
+          PACKAGE_TYPE: ${{ inputs.package-type }}
+          PURE_WHEEL: ${{ inputs.pure-wheel }}
         run: |
-          if [ -z "${WHEEL_NAME}" ]; then
-            WHEEL_NAME="${RAPIDS_REPOSITORY#*/}"
+          if [ -z "${PACKAGE_NAME}" ]; then
+            PACKAGE_NAME="${RAPIDS_REPOSITORY#*/}"
           fi
           export "RAPIDS_PY_CUDA_SUFFIX=$(rapids-wheel-ctk-name-gen ${RAPIDS_CUDA_VERSION})"
           if [ "${APPEND_CUDA_SUFFIX}" = "true" ]; then
-            export "RAPIDS_PY_WHEEL_NAME=${WHEEL_NAME}_${RAPIDS_PY_CUDA_SUFFIX}"
+            export "RAPIDS_PY_WHEEL_NAME=${PACKAGE_NAME}_${RAPIDS_PY_CUDA_SUFFIX}"
           else
-            export "RAPIDS_PY_WHEEL_NAME=${WHEEL_NAME}"
+            export "RAPIDS_PY_WHEEL_NAME=${PACKAGE_NAME}"
           fi
           if [ "${PURE_WHEEL}" = "true" ]; then
             export "RAPIDS_PY_WHEEL_PURE=1"
@@ -241,6 +237,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: ${{ inputs.upload-artifacts }}
         with:
+          if-no-files-found: 'error'
           name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
           path: ${{ steps.package-name.outputs.WHEEL_OUTPUT_DIR }}
       

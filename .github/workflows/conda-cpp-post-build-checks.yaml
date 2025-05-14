@@ -70,8 +70,10 @@ jobs:
           echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
           echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
       - name: Download conda C++ build artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          CPP_DIR=$(rapids-download-conda-from-s3 cpp)
+          CPP_DIR=$(rapids-download-conda-from-github cpp)
           EXTRACTED_DIR=$(rapids-extract-conda-files "${CPP_DIR}")
           echo "RAPIDS_EXTRACTED_DIR=${EXTRACTED_DIR}" >> "${GITHUB_ENV}"
       - name: Get weak detection tool
