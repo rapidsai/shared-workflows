@@ -65,6 +65,7 @@ jobs:
         run: |
             # Set the field based on the inputted desired value
             if [ "$ENV_FIELD_TYPE" == "date" ] || [ "$ENV_FIELD_TYPE" == "text" ]; then
+              # shellcheck disable=SC2016
               gh api graphql -f projectId="$ENV_PROJECT_ID" \
                            -f itemId="$ENV_ITEM_PROJECT_ID" \
                            -f fieldId="$ENV_FIELD_ID" \
@@ -87,6 +88,7 @@ jobs:
                 }'
 
             elif [ "$ENV_FIELD_TYPE" == "number" ]; then
+              # shellcheck disable=SC2016
               gh api graphql -f projectId="$ENV_PROJECT_ID" \
                            -f itemId="$ENV_ITEM_PROJECT_ID" \
                            -f fieldId="$ENV_FIELD_ID" \

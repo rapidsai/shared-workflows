@@ -69,6 +69,7 @@ jobs:
         run: |
             # Get current iteration iteration id
             # The current iteration is always the first element in the returned list
+            # shellcheck disable=SC2016
             gh api graphql -f projectId="$ENV_PROJECT_ID" -f fieldName="$ENV_ITERATION_FIELD_NAME" -f query='
             query($projectId: ID!, $fieldName: String!) {
                 node(id: $projectId) {
@@ -104,6 +105,7 @@ jobs:
           ENV_ITERATION_FIELD_ID: ${{ inputs.ITERATION_FIELD_ID }}
           ENV_ITERATION_OPTION_ID: ${{ steps.get_iteration_option_id.outputs.ITERATION_OPTION_ID }}
         run: |
+            # shellcheck disable=SC2016
             gh api graphql -f projectId="$ENV_PROJECT_ID" \
                           -f itemId="$ENV_ITEM_PROJECT_ID" \
                           -f fieldId="$ENV_ITERATION_FIELD_ID" \

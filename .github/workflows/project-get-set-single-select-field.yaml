@@ -77,6 +77,7 @@ jobs:
             # Get single_select option id
             if [ -z "$ENV_SINGLE_SELECT_OPTION_VALUE" ]; then
               # No option specified, get first option in list
+              # shellcheck disable=SC2016
               gh api graphql -f projectId="$ENV_PROJECT_ID" \
                            -f fieldName="$ENV_SINGLE_SELECT_FIELD_NAME" \
                            -f query='
@@ -93,6 +94,7 @@ jobs:
                       }' > single_select_option_data.json
             else
               # Get specific value
+              # shellcheck disable=SC2016
               gh api graphql -f projectId="$ENV_PROJECT_ID" \
                            -f fieldName="$ENV_SINGLE_SELECT_FIELD_NAME" \
                            -f optionName="$ENV_SINGLE_SELECT_OPTION_VALUE" \
@@ -125,6 +127,7 @@ jobs:
           ENV_SINGLE_SELECT_FIELD_ID: ${{ inputs.SINGLE_SELECT_FIELD_ID }}
           ENV_SINGLE_SELECT_OPTION_ID: ${{ steps.get_single_select_option_id.outputs.SINGLE_SELECT_OPTION_ID }}
         run: |
+            # shellcheck disable=SC2016
             gh api graphql -f projectId="$ENV_PROJECT_ID" \
                          -f itemId="$ENV_ITEM_PROJECT_ID" \
                          -f fieldId="$ENV_SINGLE_SELECT_FIELD_ID" \

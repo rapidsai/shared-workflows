@@ -101,6 +101,7 @@ jobs:
 
               case "$ENV_UPDATE_FIELD_TYPE" in
                 "iteration")
+                  # shellcheck disable=SC2016
                   gh api graphql -f projectId="$ENV_PROJECT_ID" \
                                -f itemId="$issue_id" \
                                -f fieldId="$ENV_UPDATE_FIELD_ID" \
@@ -121,6 +122,7 @@ jobs:
                   ;;
 
                 "single_select")
+                  # shellcheck disable=SC2016
                   gh api graphql -f projectId="$ENV_PROJECT_ID" \
                                -f itemId="$issue_id" \
                                -f fieldId="$ENV_UPDATE_FIELD_ID" \
@@ -141,6 +143,7 @@ jobs:
                   ;;
 
                 "date"|"text")
+                  # shellcheck disable=SC2016
                   gh api graphql -f projectId="$ENV_PROJECT_ID" \
                                -f itemId="$issue_id" \
                                -f fieldId="$ENV_UPDATE_FIELD_ID" \
@@ -162,6 +165,7 @@ jobs:
                   ;;
 
                 "number")
+                  # shellcheck disable=SC2016
                   gh api graphql -f projectId="$ENV_PROJECT_ID" \
                                -f itemId="$issue_id" \
                                -f fieldId="$ENV_UPDATE_FIELD_ID" \
