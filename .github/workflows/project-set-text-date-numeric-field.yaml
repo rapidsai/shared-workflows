@@ -65,12 +65,20 @@ jobs:
         run: |
             # Set the field based on the inputted desired value
             if [ "$ENV_FIELD_TYPE" == "date" ] || [ "$ENV_FIELD_TYPE" == "text" ]; then
+<<<<<<< HEAD
               # shellcheck disable=SC2016
               gh api graphql -F projectId="$ENV_PROJECT_ID" \
                            -F itemId="$ENV_ITEM_PROJECT_ID" \
                            -F fieldId="$ENV_FIELD_ID" \
                            -F value="$ENV_SET_VALUE" \
                            -F fieldType="$ENV_FIELD_TYPE" \
+=======
+              gh api graphql -f projectId="$ENV_PROJECT_ID" \
+                           -f itemId="$ENV_ITEM_PROJECT_ID" \
+                           -f fieldId="$ENV_FIELD_ID" \
+                           -f value="$ENV_SET_VALUE" \
+                           -f fieldType="$ENV_FIELD_TYPE" \
+>>>>>>> 861fe12 (Replace all `-F` usage with `-f`)
                            -f query='
                 mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: String!, $fieldType: String!) {
                   updateProjectV2ItemFieldValue(
@@ -88,11 +96,18 @@ jobs:
                 }'
 
             elif [ "$ENV_FIELD_TYPE" == "number" ]; then
+<<<<<<< HEAD
               # shellcheck disable=SC2016
               gh api graphql -F projectId="$ENV_PROJECT_ID" \
                            -F itemId="$ENV_ITEM_PROJECT_ID" \
                            -F fieldId="$ENV_FIELD_ID" \
                            -F value="$ENV_SET_VALUE" \
+=======
+              gh api graphql -f projectId="$ENV_PROJECT_ID" \
+                           -f itemId="$ENV_ITEM_PROJECT_ID" \
+                           -f fieldId="$ENV_FIELD_ID" \
+                           -f value="$ENV_SET_VALUE" \
+>>>>>>> 861fe12 (Replace all `-F` usage with `-f`)
                            -f query='
                 mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: Float!) {
                   updateProjectV2ItemFieldValue(

@@ -50,8 +50,12 @@ jobs:
             # Query up to 10 projects for the PR
             # There's no graphQL filter configured to query by a specific project
             # So we need to query all projects and filter the result ourselves
+<<<<<<< HEAD
             # shellcheck disable=SC2016
             gh api graphql -F nodeId="$ENV_ITEM_NODE_ID" -f query='
+=======
+            gh api graphql -f nodeId="$ENV_ITEM_NODE_ID" -f query='
+>>>>>>> 861fe12 (Replace all `-F` usage with `-f`)
               query($nodeId: ID!) {
                 node(id: $nodeId) {
                   ... on PullRequest {

@@ -77,9 +77,14 @@ jobs:
             # Get single_select option id
             if [ -z "$ENV_SINGLE_SELECT_OPTION_VALUE" ]; then
               # No option specified, get first option in list
+<<<<<<< HEAD
               # shellcheck disable=SC2016
               gh api graphql -F projectId="$ENV_PROJECT_ID" \
                            -F fieldName="$ENV_SINGLE_SELECT_FIELD_NAME" \
+=======
+              gh api graphql -f projectId="$ENV_PROJECT_ID" \
+                           -f fieldName="$ENV_SINGLE_SELECT_FIELD_NAME" \
+>>>>>>> 861fe12 (Replace all `-F` usage with `-f`)
                            -f query='
                 query($projectId: ID!, $fieldName: String!) {
                     node(id: $projectId) {
@@ -94,10 +99,16 @@ jobs:
                       }' > single_select_option_data.json
             else
               # Get specific value
+<<<<<<< HEAD
               # shellcheck disable=SC2016
               gh api graphql -F projectId="$ENV_PROJECT_ID" \
                            -F fieldName="$ENV_SINGLE_SELECT_FIELD_NAME" \
                            -F optionName="$ENV_SINGLE_SELECT_OPTION_VALUE" \
+=======
+              gh api graphql -f projectId="$ENV_PROJECT_ID" \
+                           -f fieldName="$ENV_SINGLE_SELECT_FIELD_NAME" \
+                           -f optionName="$ENV_SINGLE_SELECT_OPTION_VALUE" \
+>>>>>>> 861fe12 (Replace all `-F` usage with `-f`)
                            -f query='
                 query($projectId: ID!, $fieldName: String!, $optionName: String!) {
                     node(id: $projectId) {
@@ -127,11 +138,18 @@ jobs:
           ENV_SINGLE_SELECT_FIELD_ID: ${{ inputs.SINGLE_SELECT_FIELD_ID }}
           ENV_SINGLE_SELECT_OPTION_ID: ${{ steps.get_single_select_option_id.outputs.SINGLE_SELECT_OPTION_ID }}
         run: |
+<<<<<<< HEAD
             # shellcheck disable=SC2016
             gh api graphql -F projectId="$ENV_PROJECT_ID" \
                          -F itemId="$ENV_ITEM_PROJECT_ID" \
                          -F fieldId="$ENV_SINGLE_SELECT_FIELD_ID" \
                          -F optionId="$ENV_SINGLE_SELECT_OPTION_ID" \
+=======
+            gh api graphql -f projectId="$ENV_PROJECT_ID" \
+                         -f itemId="$ENV_ITEM_PROJECT_ID" \
+                         -f fieldId="$ENV_SINGLE_SELECT_FIELD_ID" \
+                         -f optionId="$ENV_SINGLE_SELECT_OPTION_ID" \
+>>>>>>> 861fe12 (Replace all `-F` usage with `-f`)
                          -f query='
               mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
                 updateProjectV2ItemFieldValue(
