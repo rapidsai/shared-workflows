@@ -59,12 +59,12 @@ jobs:
     runs-on: "linux-${{ inputs.arch }}-${{ inputs.node_type }}"
     continue-on-error: ${{ inputs.continue-on-error }}
     container:
-      image: ${{ inputs.container_image }}
+      image: ${{ inputs.container_image }} # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -74,6 +74,7 @@ jobs:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
           fetch-depth: 0
+          persist-credentials: true
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
@@ -84,8 +85,10 @@ jobs:
         uses: nv-gha-runners/get-pr-info@main
       - name: Add PR Info
         if: startsWith(github.ref_name, 'pull-request/')
+        env:
+          RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
         run: |
-          echo "RAPIDS_BASE_BRANCH=${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}" >> "${GITHUB_ENV}"
+          echo "${RAPIDS_BASE_BRANCH}" >> "${GITHUB_ENV}"
       - name: Standardize repository information
         env:
           RAPIDS_REPOSITORY: ${{ inputs.repo || github.repository }}
@@ -99,7 +102,7 @@ jobs:
             echo "RAPIDS_NIGHTLY_DATE=${RAPIDS_NIGHTLY_DATE}"
           } >> "${GITHUB_ENV}"
       - name: Run script
-        run: ${{ inputs.run_script }}
+        run: ${{ inputs.run_script }} # zizmor: ignore[template-injection]
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Upload file to GitHub Artifact

@@ -146,7 +146,7 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
 
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -171,8 +171,10 @@ jobs:
       - name: Preprocess extra repos
         id: preprocess-extras
         if: ${{ inputs.extra-repo != '' }}
+        env:
+          EXTRA_REPO: ${{ inputs.extra-repo }}
         run: |
-          EXTRA_REPO_PATH=$(echo ${{ inputs.extra-repo }} | cut -d "/"  -f 2)
+          EXTRA_REPO_PATH=$(echo "$EXTRA_REPO" | cut -d "/"  -f 2)
           echo "EXTRA_REPO_PATH=${EXTRA_REPO_PATH}" >> "${GITHUB_OUTPUT}"
 
       - name: checkout extra repos
@@ -182,7 +184,7 @@ jobs:
           repository: ${{ inputs.extra-repo }}
           ref: ${{ inputs.extra-repo-sha }}
           path: "./${{ steps.preprocess-extras.outputs.EXTRA_REPO_PATH }}"
-          ssh-key: ${{ secrets[inputs.extra-repo-deploy-key] }}
+          ssh-key: ${{ secrets[inputs.extra-repo-deploy-key] }} # zizmor: ignore[overprovisioned-secrets]
           persist-credentials: false
 
       - name: Setup proxy cache
@@ -197,8 +199,7 @@ jobs:
           extra_attributes: "rapids.PACKAGER=wheel,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
 
       - name: Build and repair the wheel
-        run: |
-          ${{ inputs.script }}
+        run: ${{ inputs.script }} # zizmor: ignore[template-injection]
         env:
           GH_TOKEN: ${{ github.token }}
         # Use a shell that loads the rc file so that we get the compiler settings
@@ -230,9 +231,11 @@ jobs:
 
       - name: Show files to be uploaded
         if: ${{ inputs.upload-artifacts }}
+        env:
+          WHEEL_OUTPUT_DIR: ${{ steps.package-name.outputs.WHEEL_OUTPUT_DIR }}
         run: |
           echo "Contents of directory to be uploaded:"
-          ls -R ${{ steps.package-name.outputs.WHEEL_OUTPUT_DIR }}
+          ls -R "$WHEEL_OUTPUT_DIR"
 
       - uses: actions/upload-artifact@v4
         if: ${{ inputs.upload-artifacts }}

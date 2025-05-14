@@ -44,11 +44,11 @@ jobs:
     if: ${{ inputs.enable_check_symbols }}
     runs-on: linux-amd64-cpu4
     container:
-      image: rapidsai/ci-wheel:latest
+      image: rapidsai/ci-wheel:latest # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -59,6 +59,7 @@ jobs:
           ref: ${{ inputs.sha }}
           path: "./src/"
           fetch-depth: 0
+          persist-credentials: true
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
@@ -89,6 +90,7 @@ jobs:
           ref: refs/heads/main
           path: "./tool/"
           fetch-depth: 0
+          persist-credentials: true
       - name: Verify CUDA libraries have no public kernel entry points
         env:
           SYMBOL_EXCLUSIONS: ${{ inputs.symbol_exclusions }}

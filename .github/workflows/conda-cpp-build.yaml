@@ -94,7 +94,7 @@ jobs:
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -104,6 +104,7 @@ jobs:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
           fetch-depth: 0
+          persist-credentials: true
       - name: Standardize repository information
         env:
           RAPIDS_REPOSITORY: ${{ inputs.repo || github.repository }}
@@ -131,7 +132,7 @@ jobs:
             extra_attributes: "rapids.PACKAGER=conda,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
 
       - name: C++ build
-        run: ${{ inputs.script }}
+        run: ${{ inputs.script }}  # zizmor: ignore[template-injection]
         env:
           STEP_NAME: "C++ build"
           GH_TOKEN: ${{ github.token }}
@@ -143,9 +144,11 @@ jobs:
         id: package-name
       - name: Show files to be uploaded
         if: ${{ inputs.upload-artifacts }}
+        env:
+          CONDA_OUTPUT_DIR: ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
         run: |
           echo "Contents of directory to be uploaded:"
-          ls -R ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
+          ls -R "${CONDA_OUTPUT_DIR}"
       - uses: actions/upload-artifact@v4
         if: ${{ inputs.upload-artifacts }}
         with:
