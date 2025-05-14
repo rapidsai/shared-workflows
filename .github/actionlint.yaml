@@ -7,6 +7,6 @@ self-hosted-runner:
 
 # Configuration variables in array of strings defined in your repository or organization.
 config-variables:
-  - AWS_ROLE_ARN
   - AWS_REGION
+  - AWS_ROLE_ARN
   - TELEMETRY_ENABLED
