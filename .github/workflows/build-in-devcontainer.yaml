@@ -85,11 +85,11 @@ jobs:
 
       - name: Check if repo has devcontainer
         run: |
-          echo "REPOSITORY=$(basename "$(pwd)")" | tee -a "${GITHUB_ENV}";
+          echo "REPOSITORY=$(basename "$(pwd)")" | tee -a "${GITHUB_ENV}"
           if test -f .devcontainer/cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}/devcontainer.json; then
-            echo "HAS_DEVCONTAINER=true" >> "${GITHUB_ENV}";
+            echo "HAS_DEVCONTAINER=true" >> "${GITHUB_ENV}"
           else
-            echo "HAS_DEVCONTAINER=false" >> "${GITHUB_ENV}";
+            echo "HAS_DEVCONTAINER=false" >> "${GITHUB_ENV}"
           fi
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
