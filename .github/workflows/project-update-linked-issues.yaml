@@ -61,6 +61,7 @@ jobs:
             ENV_UPDATE_FIELD_VALUE: ${{ inputs.UPDATE_FIELD_VALUE }}
           run: |
             # Find the linked issues to the PR
+            # shellcheck disable=SC2016
             gh api graphql -f prNodeId="$ENV_PR_NODE_ID" -f query='
               query($prNodeId: ID!) {
                 node(id: $prNodeId) {
