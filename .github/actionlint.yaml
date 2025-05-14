@@ -1,0 +1,12 @@
+# Configuration related to self-hosted runners.
+self-hosted-runner:
+  # Labels of self-hosted runner in array of strings.
+  labels:
+    - linux-amd64-*
+    - linux-arm64-*
+
+# Configuration variables in array of strings defined in your repository or organization.
+config-variables:
+  - AWS_ROLE_ARN
+  - AWS_REGION
+  - TELEMETRY_ENABLED

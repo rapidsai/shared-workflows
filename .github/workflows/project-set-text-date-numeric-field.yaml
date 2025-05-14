@@ -24,7 +24,7 @@ on:
         description: "The graphQL node ID of the field"
         type: string
         required: true
-        
+
       ITEM_PROJECT_ID:
         description: "The issue or PR's graphQL project-specific ID"
         type: string
@@ -32,7 +32,6 @@ on:
 
       ITEM_NODE_ID:
         description: "The issue or PR's graphQL node ID"
-        default: null
         type: string
         required: true
 
@@ -66,6 +65,7 @@ jobs:
         run: |
             # Set the field based on the inputted desired value
             if [ "$ENV_FIELD_TYPE" == "date" ] || [ "$ENV_FIELD_TYPE" == "text" ]; then
+              # shellcheck disable=SC2016
               gh api graphql -F projectId="$ENV_PROJECT_ID" \
                            -F itemId="$ENV_ITEM_PROJECT_ID" \
                            -F fieldId="$ENV_FIELD_ID" \
@@ -88,6 +88,7 @@ jobs:
                 }'
 
             elif [ "$ENV_FIELD_TYPE" == "number" ]; then
+              # shellcheck disable=SC2016
               gh api graphql -F projectId="$ENV_PROJECT_ID" \
                            -F itemId="$ENV_ITEM_PROJECT_ID" \
                            -F fieldId="$ENV_FIELD_ID" \
@@ -114,6 +115,7 @@ jobs:
             fi
 
             # Validate the response
+            # shellcheck disable=SC2181
             if [ $? -ne 0 ]; then
               echo "Error: Failed to update field value" >&2
               exit 1
