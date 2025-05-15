@@ -62,7 +62,7 @@ jobs:
           run: |
             # Find the linked issues to the PR
             # shellcheck disable=SC2016
-            gh api graphql -F prNodeId="$ENV_PR_NODE_ID" -f query='
+            gh api graphql -f prNodeId="$ENV_PR_NODE_ID" -f query='
               query($prNodeId: ID!) {
                 node(id: $prNodeId) {
                   ... on PullRequest {
@@ -103,10 +103,10 @@ jobs:
               case "$ENV_UPDATE_FIELD_TYPE" in
                 "iteration")
                   # shellcheck disable=SC2016
-                  gh api graphql -F projectId="$ENV_PROJECT_ID" \
-                               -F itemId="$issue_id" \
-                               -F fieldId="$ENV_UPDATE_FIELD_ID" \
-                               -F iterationId="$ENV_UPDATE_FIELD_VALUE" \
+                  gh api graphql -f projectId="$ENV_PROJECT_ID" \
+                               -f itemId="$issue_id" \
+                               -f fieldId="$ENV_UPDATE_FIELD_ID" \
+                               -f iterationId="$ENV_UPDATE_FIELD_VALUE" \
                                -f query='
                     mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $iterationId: String!) {
                       updateProjectV2ItemFieldValue(
@@ -124,10 +124,10 @@ jobs:
 
                 "single_select")
                   # shellcheck disable=SC2016
-                  gh api graphql -F projectId="$ENV_PROJECT_ID" \
-                               -F itemId="$issue_id" \
-                               -F fieldId="$ENV_UPDATE_FIELD_ID" \
-                               -F optionId="$ENV_UPDATE_FIELD_VALUE" \
+                  gh api graphql -f projectId="$ENV_PROJECT_ID" \
+                               -f itemId="$issue_id" \
+                               -f fieldId="$ENV_UPDATE_FIELD_ID" \
+                               -f optionId="$ENV_UPDATE_FIELD_VALUE" \
                                -f query='
                     mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
                       updateProjectV2ItemFieldValue(
@@ -145,11 +145,11 @@ jobs:
 
                 "date"|"text")
                   # shellcheck disable=SC2016
-                  gh api graphql -F projectId="$ENV_PROJECT_ID" \
-                               -F itemId="$issue_id" \
-                               -F fieldId="$ENV_UPDATE_FIELD_ID" \
-                               -F value="$ENV_UPDATE_FIELD_VALUE" \
-                               -F fieldType="$ENV_UPDATE_FIELD_TYPE" \
+                  gh api graphql -f projectId="$ENV_PROJECT_ID" \
+                               -f itemId="$issue_id" \
+                               -f fieldId="$ENV_UPDATE_FIELD_ID" \
+                               -f value="$ENV_UPDATE_FIELD_VALUE" \
+                               -f fieldType="$ENV_UPDATE_FIELD_TYPE" \
                                -f query='
                     mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: String!, $fieldType: String!) {
                       updateProjectV2ItemFieldValue(
@@ -167,10 +167,10 @@ jobs:
 
                 "number")
                   # shellcheck disable=SC2016
-                  gh api graphql -F projectId="$ENV_PROJECT_ID" \
-                               -F itemId="$issue_id" \
-                               -F fieldId="$ENV_UPDATE_FIELD_ID" \
-                               -F value="$ENV_UPDATE_FIELD_VALUE" \
+                  gh api graphql -f projectId="$ENV_PROJECT_ID" \
+                               -f itemId="$issue_id" \
+                               -f fieldId="$ENV_UPDATE_FIELD_ID" \
+                               -f value="$ENV_UPDATE_FIELD_VALUE" \
                                -f query='
                     mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: Float!) {
                       updateProjectV2ItemFieldValue(

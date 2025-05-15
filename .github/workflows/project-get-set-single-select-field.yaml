@@ -78,8 +78,8 @@ jobs:
             if [ -z "$ENV_SINGLE_SELECT_OPTION_VALUE" ]; then
               # No option specified, get first option in list
               # shellcheck disable=SC2016
-              gh api graphql -F projectId="$ENV_PROJECT_ID" \
-                           -F fieldName="$ENV_SINGLE_SELECT_FIELD_NAME" \
+              gh api graphql -f projectId="$ENV_PROJECT_ID" \
+                           -f fieldName="$ENV_SINGLE_SELECT_FIELD_NAME" \
                            -f query='
                 query($projectId: ID!, $fieldName: String!) {
                     node(id: $projectId) {
@@ -95,9 +95,9 @@ jobs:
             else
               # Get specific value
               # shellcheck disable=SC2016
-              gh api graphql -F projectId="$ENV_PROJECT_ID" \
-                           -F fieldName="$ENV_SINGLE_SELECT_FIELD_NAME" \
-                           -F optionName="$ENV_SINGLE_SELECT_OPTION_VALUE" \
+              gh api graphql -f projectId="$ENV_PROJECT_ID" \
+                           -f fieldName="$ENV_SINGLE_SELECT_FIELD_NAME" \
+                           -f optionName="$ENV_SINGLE_SELECT_OPTION_VALUE" \
                            -f query='
                 query($projectId: ID!, $fieldName: String!, $optionName: String!) {
                     node(id: $projectId) {
@@ -128,10 +128,10 @@ jobs:
           ENV_SINGLE_SELECT_OPTION_ID: ${{ steps.get_single_select_option_id.outputs.SINGLE_SELECT_OPTION_ID }}
         run: |
             # shellcheck disable=SC2016
-            gh api graphql -F projectId="$ENV_PROJECT_ID" \
-                         -F itemId="$ENV_ITEM_PROJECT_ID" \
-                         -F fieldId="$ENV_SINGLE_SELECT_FIELD_ID" \
-                         -F optionId="$ENV_SINGLE_SELECT_OPTION_ID" \
+            gh api graphql -f projectId="$ENV_PROJECT_ID" \
+                         -f itemId="$ENV_ITEM_PROJECT_ID" \
+                         -f fieldId="$ENV_SINGLE_SELECT_FIELD_ID" \
+                         -f optionId="$ENV_SINGLE_SELECT_OPTION_ID" \
                          -f query='
               mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
                 updateProjectV2ItemFieldValue(
