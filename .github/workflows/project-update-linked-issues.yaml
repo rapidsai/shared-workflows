@@ -61,7 +61,8 @@ jobs:
             ENV_UPDATE_FIELD_VALUE: ${{ inputs.UPDATE_FIELD_VALUE }}
           run: |
             # Find the linked issues to the PR
-            gh api graphql -F prNodeId="$ENV_PR_NODE_ID" -f query='
+            # shellcheck disable=SC2016
+            gh api graphql -f prNodeId="$ENV_PR_NODE_ID" -f query='
               query($prNodeId: ID!) {
                 node(id: $prNodeId) {
                   ... on PullRequest {
@@ -101,10 +102,11 @@ jobs:
 
               case "$ENV_UPDATE_FIELD_TYPE" in
                 "iteration")
-                  gh api graphql -F projectId="$ENV_PROJECT_ID" \
-                               -F itemId="$issue_id" \
-                               -F fieldId="$ENV_UPDATE_FIELD_ID" \
-                               -F iterationId="$ENV_UPDATE_FIELD_VALUE" \
+                  # shellcheck disable=SC2016
+                  gh api graphql -f projectId="$ENV_PROJECT_ID" \
+                               -f itemId="$issue_id" \
+                               -f fieldId="$ENV_UPDATE_FIELD_ID" \
+                               -f iterationId="$ENV_UPDATE_FIELD_VALUE" \
                                -f query='
                     mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $iterationId: String!) {
                       updateProjectV2ItemFieldValue(
@@ -121,10 +123,11 @@ jobs:
                   ;;
 
                 "single_select")
-                  gh api graphql -F projectId="$ENV_PROJECT_ID" \
-                               -F itemId="$issue_id" \
-                               -F fieldId="$ENV_UPDATE_FIELD_ID" \
-                               -F optionId="$ENV_UPDATE_FIELD_VALUE" \
+                  # shellcheck disable=SC2016
+                  gh api graphql -f projectId="$ENV_PROJECT_ID" \
+                               -f itemId="$issue_id" \
+                               -f fieldId="$ENV_UPDATE_FIELD_ID" \
+                               -f optionId="$ENV_UPDATE_FIELD_VALUE" \
                                -f query='
                     mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
                       updateProjectV2ItemFieldValue(
@@ -141,11 +144,12 @@ jobs:
                   ;;
 
                 "date"|"text")
-                  gh api graphql -F projectId="$ENV_PROJECT_ID" \
-                               -F itemId="$issue_id" \
-                               -F fieldId="$ENV_UPDATE_FIELD_ID" \
-                               -F value="$ENV_UPDATE_FIELD_VALUE" \
-                               -F fieldType="$ENV_UPDATE_FIELD_TYPE" \
+                  # shellcheck disable=SC2016
+                  gh api graphql -f projectId="$ENV_PROJECT_ID" \
+                               -f itemId="$issue_id" \
+                               -f fieldId="$ENV_UPDATE_FIELD_ID" \
+                               -f value="$ENV_UPDATE_FIELD_VALUE" \
+                               -f fieldType="$ENV_UPDATE_FIELD_TYPE" \
                                -f query='
                     mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: String!, $fieldType: String!) {
                       updateProjectV2ItemFieldValue(
@@ -162,10 +166,11 @@ jobs:
                   ;;
 
                 "number")
-                  gh api graphql -F projectId="$ENV_PROJECT_ID" \
-                               -F itemId="$issue_id" \
-                               -F fieldId="$ENV_UPDATE_FIELD_ID" \
-                               -F value="$ENV_UPDATE_FIELD_VALUE" \
+                  # shellcheck disable=SC2016
+                  gh api graphql -f projectId="$ENV_PROJECT_ID" \
+                               -f itemId="$issue_id" \
+                               -f fieldId="$ENV_UPDATE_FIELD_ID" \
+                               -f value="$ENV_UPDATE_FIELD_VALUE" \
                                -f query='
                     mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: Float!) {
                       updateProjectV2ItemFieldValue(
@@ -187,6 +192,7 @@ jobs:
                   ;;
               esac
 
+              # shellcheck disable=SC2181
               if [ $? -ne 0 ]; then
                 echo "Error: Failed to update field for issue $issue_id" >&2
                 exit 1

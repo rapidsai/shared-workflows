@@ -85,19 +85,19 @@ jobs:
             pull-request:
               # amd64
               - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.8.0', LINUX_VER: 'ubuntu24.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.9.0', LINUX_VER: 'ubuntu24.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               # arm64
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
             nightly:
               # amd64
               - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu20.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.0.1', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.8.0', LINUX_VER: 'ubuntu24.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu20.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.0.1', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.9.0', LINUX_VER: 'ubuntu24.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               # arm64
               - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '12.9.0', LINUX_VER: 'rockylinux8', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
           "
 
           # only overwrite MATRIX_TYPE if it was set to 'auto'
@@ -151,11 +151,17 @@ jobs:
           fetch-depth: 0
 
       - name: Standardize repository information
+        env:
+          RAPIDS_REPOSITORY: ${{ inputs.repo || github.repository }}
+          RAPIDS_REF_NAME: ${{ inputs.branch || github.ref_name }}
+          RAPIDS_NIGHTLY_DATE: ${{ inputs.date }}
         run: |
-          echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
-          echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
-          echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
-          echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
+          {
+            echo "RAPIDS_REPOSITORY=${RAPIDS_REPOSITORY}"
+            echo "RAPIDS_SHA=$(git rev-parse HEAD)"
+            echo "RAPIDS_REF_NAME=${RAPIDS_REF_NAME}"
+            echo "RAPIDS_NIGHTLY_DATE=${RAPIDS_NIGHTLY_DATE}"
+          } >> "${GITHUB_ENV}"
 
       # This has to be AFTER the checkout step. It creates a telemetry-artifacts directory,
       # and the checkout step would destroy it.
@@ -192,7 +198,7 @@ jobs:
             --handle-no-reports-found
       - name: Upload additional artifacts
         if: "!cancelled()"
-        run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}
+        run: rapids-upload-artifacts-dir "cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}"
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
