@@ -21,6 +21,7 @@ on:
       script:
         type: string
         default: "ci/test_python.sh"
+        description: "Shell code to be executed in a step. Ideally this should just invoke a script managed in the repo the workflow runs from, like 'ci/test_python.sh'."
       run_codecov:
         type: boolean
         default: true
