@@ -23,8 +23,13 @@ on:
         type: string
         default: "rapidsai/ci-conda:latest"
       run_script:
-        required: true
+        required: false
         type: string
+        description: "DEPRECATED - use 'script' instead"
+      script:
+        required: false
+        type: string
+        description: "Shell code to be executed in a step. Ideally this should just invoke a script managed in the repo the workflow runs from, like 'ci/test_java.sh'."
       file_to_upload:
         type: string
         default: "gh-status.json"
@@ -99,7 +104,7 @@ jobs:
             echo "RAPIDS_NIGHTLY_DATE=${RAPIDS_NIGHTLY_DATE}"
           } >> "${GITHUB_ENV}"
       - name: Run script
-        run: ${{ inputs.run_script }}
+        run: ${{ inputs.script || inputs.run_script }}
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Upload file to GitHub Artifact
