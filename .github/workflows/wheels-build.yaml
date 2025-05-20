@@ -19,6 +19,7 @@ on:
       script:
         required: true
         type: string
+        description: "Shell code to be executed in a step. Ideally this should just invoke a script managed in the repo the workflow runs from, like 'ci/build_wheel.sh'."
       package-name:
         required: true
         type: string

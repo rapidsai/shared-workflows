@@ -19,6 +19,7 @@ on:
       script:
         type: string
         default: "ci/build_python.sh"
+        description: "Shell code to be executed in a step. Ideally this should just invoke a script managed in the repo the workflow runs from, like 'ci/build_python.sh'."
       upload-artifacts:
         type: boolean
         default: true
