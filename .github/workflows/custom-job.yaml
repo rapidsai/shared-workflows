@@ -23,8 +23,9 @@ on:
         type: string
         default: "rapidsai/ci-conda:latest"
       run_script:
-        required: true
+        required: false
         type: string
+        description: "DEPRECATED - use 'script' instead"
       script:
         required: false
         type: string
