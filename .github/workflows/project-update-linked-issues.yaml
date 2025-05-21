@@ -83,7 +83,7 @@ jobs:
               }' > linked_issues.json
 
             # Use jq with proper variable handling to get issue IDs
-            issue_ids=$(jq --exit-status --arg project_id "$ENV_PROJECT_ID" -r '
+            issue_ids=$(jq --arg project_id "$ENV_PROJECT_ID" -r '
               .data.node.closingIssuesReferences.nodes[].projectItems.nodes[] |
               select(.project.id == $project_id) |
               .id' linked_issues.json)
