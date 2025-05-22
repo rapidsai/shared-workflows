@@ -87,8 +87,9 @@ jobs:
         sha: ${{ inputs.sha }}
 
     - name: Download wheels from artifact storage and publish to anaconda repository
-      run: rapids-wheels-anaconda "${{ inputs.package-name }}" "${{ inputs.package-type }}"
+      run: rapids-wheels-anaconda-github "${{ inputs.package-name }}" "${{ inputs.package-type }}"
       env:
+        GH_TOKEN: ${{ github.token }}
         RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
 
     - name: Check if build is release
