@@ -22,10 +22,6 @@ on:
       container_image:
         type: string
         default: "rapidsai/ci-conda:latest"
-      run_script:
-        required: false
-        type: string
-        description: "DEPRECATED - use 'script' instead"
       script:
         required: false
         type: string
@@ -104,7 +100,7 @@ jobs:
             echo "RAPIDS_NIGHTLY_DATE=${RAPIDS_NIGHTLY_DATE}"
           } >> "${GITHUB_ENV}"
       - name: Run script
-        run: ${{ inputs.script || inputs.run_script }}
+        run: ${{ inputs.script }}
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Upload file to GitHub Artifact
