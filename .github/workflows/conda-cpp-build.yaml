@@ -18,7 +18,7 @@ on:
         default: "cpu8"
       script:
         type: string
-        default: "ci/build_cpp.sh"
+        required: true
         description: "Shell code to be executed in a step. Ideally this should just invoke a script managed in the repo the workflow runs from, like 'ci/build_cpp.sh'."
       upload-artifacts:
         type: boolean
