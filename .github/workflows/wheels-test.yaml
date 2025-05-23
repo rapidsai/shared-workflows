@@ -181,6 +181,18 @@ jobs:
       uses: nv-gha-runners/setup-proxy-cache@main
       continue-on-error: true
 
+    # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
+    # checking '/rate_limit' should not itself count against any rate limits.
+    - name: Check GitHub API rate limits
+      run: |
+        if ! type gh >/dev/null; then
+            echo "'gh' CLI is not installed... skipping rate-limits check"
+        else
+            gh api /rate_limit
+        fi
+      env:
+        GH_TOKEN: ${{ github.token }}
+
     - name: Run tests
       run: ${{ inputs.script }}
       env:
