@@ -65,10 +65,10 @@ jobs:
           PR_SHA: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).head.sha }}
           BASE_SHA: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.sha }}
         run: |
-          (echo -n "merge-base="; git merge-base "$BASE_SHA" "$PR_SHA") | tee --append "$GITHUB_OUTPUT"
+          (echo -n "merge-base="; git merge-base "$BASE_SHA" "$PR_SHA") | tee --append "${GITHUB_OUTPUT}"
       - name: Get changed files
         id: changed-files
-        uses: step-security/changed-files@3dbe17c78367e7d60f00d78ae6781a35be47b4a1 # v45.0.1
+        uses: step-security/changed-files@95b56dadb92a30ca9036f16423fd3c088a71ee94 # v46.0.5
         with:
           base_sha: ${{ steps.calculate-merge-base.outputs.merge-base }}
           sha: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).head.sha }}
@@ -85,7 +85,7 @@ jobs:
             key="$(echo "$file" | sed -E 's/^\.github\/outputs\/(.*)\.json$/\1/g')"
             file_args=("${file_args[@]}" --slurpfile "$key" "$file")
           done
-          (echo -n "transformed-output="; jq -c -n "\$ARGS.named | to_entries | map({"key": .key, "value": .value[]}) | from_entries | $TRANSFORM_EXPR" "${file_args[@]}") | tee --append "$GITHUB_OUTPUT"
+          (echo -n "transformed-output="; jq -c -n "\$ARGS.named | to_entries | map({\"key\": .key, \"value\": .value[]}) | from_entries | $TRANSFORM_EXPR" "${file_args[@]}") | tee --append "${GITHUB_OUTPUT}"
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true

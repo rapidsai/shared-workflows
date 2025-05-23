@@ -19,18 +19,15 @@ on:
       script:
         required: true
         type: string
+        description: "Shell code to be executed in a step. Ideally this should just invoke a script managed in the repo the workflow runs from, like 'ci/build_wheel.sh'."
       package-name:
-        required: false
+        required: true
         type: string
         description: "Distribution name, without any other qualifiers (e.g. 'pylibcudf', not 'pylibcudf-cu12-cp311-manylinux_2_24_aarch64')"
       package-type:
         description: "One of: [cpp, python]"
-        required: false
+        required: true
         type: string
-      wheel-name:
-        required: false
-        type: string
-        description: "DEPRECATED: Use package-name instead"
       pure-wheel:
         required: false
         type: boolean
@@ -52,6 +49,11 @@ on:
       matrix_filter:
         type: string
         default: "."
+      upload-artifacts:
+        type: boolean
+        default: true
+        required: false
+        description: "One of [true, false], true if artifacts should be uploaded to GitHub's artifact store"
 
       # Extra repository that will be cloned into the project directory.
       extra-repo:
@@ -112,6 +114,8 @@ jobs:
           - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8' }
           - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
           - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8' }
           # arm64
           - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
           - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8' }
@@ -119,6 +123,8 @@ jobs:
           - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8' }
           - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
           - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8' }
           "
 
           MATRIX="$(
@@ -168,7 +174,7 @@ jobs:
         if: ${{ inputs.extra-repo != '' }}
         run: |
           EXTRA_REPO_PATH=$(echo ${{ inputs.extra-repo }} | cut -d "/"  -f 2)
-          echo "EXTRA_REPO_PATH=${EXTRA_REPO_PATH}" >> $GITHUB_OUTPUT
+          echo "EXTRA_REPO_PATH=${EXTRA_REPO_PATH}" >> "${GITHUB_OUTPUT}"
 
       - name: checkout extra repos
         uses: actions/checkout@v4
@@ -200,44 +206,45 @@ jobs:
         shell: bash -leo pipefail {0}
 
       - name: Get package name
-        if: inputs.package-type != ''
+        if: ${{ inputs.upload-artifacts }}
         env:
-          PACKAGE_TYPE: ${{ inputs.package-type }}
-          WHEEL_NAME: ${{ inputs.package-name != '' && inputs.package-name || inputs.wheel-name }}
-          PURE_WHEEL: ${{ inputs.pure-wheel }}
           APPEND_CUDA_SUFFIX: ${{ inputs.append-cuda-suffix }}
+          PACKAGE_NAME: ${{ inputs.package-name }}
+          PACKAGE_TYPE: ${{ inputs.package-type }}
+          PURE_WHEEL: ${{ inputs.pure-wheel }}
         run: |
-          if [ -z "${WHEEL_NAME}" ]; then
-            WHEEL_NAME="${RAPIDS_REPOSITORY#*/}"
+          if [ -z "${PACKAGE_NAME}" ]; then
+            PACKAGE_NAME="${RAPIDS_REPOSITORY#*/}"
           fi
-          export "RAPIDS_PY_CUDA_SUFFIX=$(rapids-wheel-ctk-name-gen ${RAPIDS_CUDA_VERSION})"
+          export "RAPIDS_PY_CUDA_SUFFIX=$(rapids-wheel-ctk-name-gen "${RAPIDS_CUDA_VERSION}")"
           if [ "${APPEND_CUDA_SUFFIX}" = "true" ]; then
-            export "RAPIDS_PY_WHEEL_NAME=${WHEEL_NAME}_${RAPIDS_PY_CUDA_SUFFIX}"
+            export "RAPIDS_PY_WHEEL_NAME=${PACKAGE_NAME}_${RAPIDS_PY_CUDA_SUFFIX}"
           else
-            export "RAPIDS_PY_WHEEL_NAME=${WHEEL_NAME}"
+            export "RAPIDS_PY_WHEEL_NAME=${PACKAGE_NAME}"
           fi
           if [ "${PURE_WHEEL}" = "true" ]; then
             export "RAPIDS_PY_WHEEL_PURE=1"
           fi
-          echo "RAPIDS_PACKAGE_NAME=$(RAPIDS_NO_PKG_EXTENSION=true rapids-package-name wheel_${PACKAGE_TYPE})" >> "${GITHUB_OUTPUT}"
+          echo "RAPIDS_PACKAGE_NAME=$(RAPIDS_NO_PKG_EXTENSION=true rapids-package-name "wheel_${PACKAGE_TYPE}")" >> "${GITHUB_OUTPUT}"
           echo "WHEEL_OUTPUT_DIR=${RAPIDS_WHEEL_BLD_OUTPUT_DIR}" >> "${GITHUB_OUTPUT}"
         id: package-name
 
       - name: Show files to be uploaded
-        if: inputs.package-type != ''
+        if: ${{ inputs.upload-artifacts }}
         run: |
           echo "Contents of directory to be uploaded:"
           ls -R ${{ steps.package-name.outputs.WHEEL_OUTPUT_DIR }}
-      
+
       - uses: actions/upload-artifact@v4
-        if: inputs.package-type != ''
+        if: ${{ inputs.upload-artifacts }}
         with:
+          if-no-files-found: 'error'
           name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
           path: ${{ steps.package-name.outputs.WHEEL_OUTPUT_DIR }}
-      
+
       - name: Upload additional artifacts
         if: "!cancelled()"
-        run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}
+        run: rapids-upload-artifacts-dir "cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}"
       - name: Telemetry upload attributes
         if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main

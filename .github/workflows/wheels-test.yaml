@@ -23,7 +23,8 @@ on:
         default: "auto"
       script:
         type: string
-        default: "ci/test_wheel.sh"
+        required: true
+        description: "Shell code to be executed in a step. Ideally this should just invoke a script managed in the repo the workflow runs from, like 'ci/test_wheel.sh'."
       matrix_filter:
         type: string
         default: "."
@@ -97,19 +98,19 @@ jobs:
           export MATRICES="
             pull-request:
               # amd64
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.8.0', LINUX_VER: 'ubuntu24.04', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
+              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.9.0', LINUX_VER: 'ubuntu24.04', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
               # arm64
-              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
             nightly:
               # amd64
               - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
               - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu20.04', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.8.0', LINUX_VER: 'ubuntu22.04', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.8.0', LINUX_VER: 'ubuntu24.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.9.0', LINUX_VER: 'ubuntu22.04', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.9.0', LINUX_VER: 'ubuntu24.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               # arm64
               - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.8.0', LINUX_VER: 'ubuntu24.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '12.9.0', LINUX_VER: 'ubuntu24.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
           "
 
           # only overwrite MATRIX_TYPE if it was set to 'auto'
@@ -200,7 +201,7 @@ jobs:
 
     - name: Upload additional artifacts
       if: "!cancelled()"
-      run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}
+      run: rapids-upload-artifacts-dir "cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}"
     - name: Telemetry upload attributes
       uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
       continue-on-error: true
