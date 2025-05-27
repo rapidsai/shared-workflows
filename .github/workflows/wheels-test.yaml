@@ -23,7 +23,7 @@ on:
         default: "auto"
       script:
         type: string
-        default: "ci/test_wheel.sh"
+        required: true
         description: "Shell code to be executed in a step. Ideally this should just invoke a script managed in the repo the workflow runs from, like 'ci/test_wheel.sh'."
       matrix_filter:
         type: string
@@ -180,6 +180,18 @@ jobs:
     - name: Setup proxy cache
       uses: nv-gha-runners/setup-proxy-cache@main
       continue-on-error: true
+
+    # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
+    # checking '/rate_limit | jq .' should not itself count against any rate limits.
+    - name: Check GitHub API rate limits
+      run: |
+        if ! type gh >/dev/null; then
+            echo "'gh' CLI is not installed... skipping rate-limits check"
+        else
+            gh api /rate_limit | jq .
+        fi
+      env:
+        GH_TOKEN: ${{ github.token }}
 
     - name: Run tests
       run: ${{ inputs.script }}
