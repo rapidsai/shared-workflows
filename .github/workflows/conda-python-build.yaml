@@ -18,7 +18,7 @@ on:
         default: "cpu8"
       script:
         type: string
-        default: "ci/build_python.sh"
+        required: true
         description: "Shell code to be executed in a step. Ideally this should just invoke a script managed in the repo the workflow runs from, like 'ci/build_python.sh'."
       upload-artifacts:
         type: boolean
@@ -136,6 +136,17 @@ jobs:
           extra_attributes: "rapids.PACKAGER=conda,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
       - name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
+      # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
+      # checking '/rate_limit | jq .' should not itself count against any rate limits.
+      - name: Check GitHub API rate limits
+        run: |
+          if ! type gh >/dev/null; then
+              echo "'gh' CLI is not installed... skipping rate-limits check"
+          else
+              gh api /rate_limit | jq .
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Python build
         run: ${{ inputs.script }}
         env:
