@@ -33,6 +33,12 @@ on:
         type: boolean
         required: false
         default: false
+      build_workflow_name:
+        description: |
+          Name of a workflow file that produced artifacts to be downloaded in this run.
+          If not set (the default), artifact-handling scripts use RAPIDS-conventional defaults (like "build.yaml" when "build_type == nightly").
+        required: false
+        type: string
 
 defaults:
   run:
@@ -88,17 +94,13 @@ jobs:
         run: |
           echo "RAPIDS_BASE_BRANCH=${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}" >> "${GITHUB_ENV}"
       - name: Standardize repository information
-        env:
-          RAPIDS_REPOSITORY: ${{ inputs.repo || github.repository }}
-          RAPIDS_REF_NAME: ${{ inputs.branch || github.ref_name }}
-          RAPIDS_NIGHTLY_DATE: ${{ inputs.date }}
-        run: |
-          {
-            echo "RAPIDS_REPOSITORY=${RAPIDS_REPOSITORY}"
-            echo "RAPIDS_SHA=$(git rev-parse HEAD)"
-            echo "RAPIDS_REF_NAME=${RAPIDS_REF_NAME}"
-            echo "RAPIDS_NIGHTLY_DATE=${RAPIDS_NIGHTLY_DATE}"
-          } >> "${GITHUB_ENV}"
+        uses: rapidsai/shared-actions/rapids-github-info@main
+        with:
+          repo: ${{ inputs.repo }}
+          branch: ${{ inputs.branch }}
+          date: ${{ inputs.date }}
+          sha: ${{ inputs.sha }}
+          build_workflow_name: ${{ inputs.build_workflow_name }}
       # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
       # checking '/rate_limit | jq .' should not itself count against any rate limits.
       - name: Check GitHub API rate limits

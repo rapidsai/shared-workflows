@@ -41,6 +41,12 @@ on:
         required: false
         type: string
         default: ''
+      build_workflow_name:
+        description: |
+          Name of a workflow file that produced artifacts to be downloaded in this run.
+          If not set (the default), artifact-handling scripts use RAPIDS-conventional defaults (like "build.yaml" when "build_type == nightly").
+        required: false
+        type: string
 
 defaults:
   run:
@@ -176,6 +182,7 @@ jobs:
         branch: ${{ inputs.branch }}
         date: ${{ inputs.date }}
         sha: ${{ inputs.sha }}
+        build_workflow_name: ${{ inputs.build_workflow_name }}
 
     - name: Setup proxy cache
       uses: nv-gha-runners/setup-proxy-cache@main

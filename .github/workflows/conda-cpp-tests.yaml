@@ -29,6 +29,12 @@ on:
         required: false
         type: string
         default: "-e _NOOP"
+      build_workflow_name:
+        description: |
+          Name of a workflow file that produced artifacts to be downloaded in this run.
+          If not set (the default), artifact-handling scripts use RAPIDS-conventional defaults (like "build.yaml" when "build_type == nightly").
+        required: false
+        type: string
 
 defaults:
   run:
@@ -157,17 +163,13 @@ jobs:
           extra_attributes: "rapids.PACKAGER=conda,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }},rapids.GPU=${{ matrix.GPU }},rapids.DRIVER=${{ matrix.DRIVER }},rapids.DEPENDENCIES=${{ matrix.DEPENDENCIES }}"
 
       - name: Standardize repository information
-        env:
-          RAPIDS_REPOSITORY: ${{ inputs.repo || github.repository }}
-          RAPIDS_REF_NAME: ${{ inputs.branch || github.ref_name }}
-          RAPIDS_NIGHTLY_DATE: ${{ inputs.date }}
-        run: |
-          {
-            echo "RAPIDS_REPOSITORY=${RAPIDS_REPOSITORY}"
-            echo "RAPIDS_SHA=$(git rev-parse HEAD)"
-            echo "RAPIDS_REF_NAME=${RAPIDS_REF_NAME}"
-            echo "RAPIDS_NIGHTLY_DATE=${RAPIDS_NIGHTLY_DATE}"
-          } >> "${GITHUB_ENV}"
+        uses: rapidsai/shared-actions/rapids-github-info@main
+        with:
+          repo: ${{ inputs.repo }}
+          branch: ${{ inputs.branch }}
+          date: ${{ inputs.date }}
+          sha: ${{ inputs.sha }}
+          build_workflow_name: ${{ inputs.build_workflow_name }}
 
       - name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
