@@ -59,12 +59,6 @@ jobs:
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
-    - uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-        aws-region: ${{ vars.AWS_REGION }}
-        role-duration-seconds: 43200 # 12h
-
     - name: checkout code repo
       uses: actions/checkout@v4
       with:
@@ -99,8 +93,9 @@ jobs:
         GH_TOKEN: ${{ github.token }}
 
     - name: Download wheels from artifact storage and publish to anaconda repository
-      run: rapids-wheels-anaconda "${{ inputs.package-name }}" "${{ inputs.package-type }}"
+      run: rapids-wheels-anaconda-github "${{ inputs.package-name }}" "${{ inputs.package-type }}"
       env:
+        GH_TOKEN: ${{ github.token }}
         RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
 
     - name: Check if build is release
