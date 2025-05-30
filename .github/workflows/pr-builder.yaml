@@ -17,7 +17,8 @@ jobs:
         run: jq -en 'env.NEEDS | fromjson | all(.result as $result | ["success", "skipped"] | any($result == .))'
       - name: Checkout code
         uses: actions/checkout@v4
-        fetch-depth: 1
+        with:
+          fetch-depth: 1
       - name: Check for private token usage
         env:
           ERROR_MSG: "PR validation failed: Private token access is not allowed to be merged onto the development branch. Remove any uses of input 'alternative-gh-token-secret-name'."
