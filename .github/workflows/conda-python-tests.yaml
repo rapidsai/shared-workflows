@@ -38,6 +38,13 @@ on:
           If not set (the default), artifact-handling scripts use RAPIDS-conventional defaults (like "build.yaml" when "build_type == nightly").
         required: false
         type: string
+      alternative-gh-token-secret-name:
+        type: string
+        required: false
+        description: |
+          If provided, should contain the name of a secret in the repo which holds a GitHub API token.
+          When this is non-empty, that secret's value is used in place of the default repo-level token
+          anywhere that environment variable GH_TOKEN is set.
 
 defaults:
   run:
@@ -189,11 +196,11 @@ jobs:
               gh api /rate_limit | jq .
           fi
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
       - name: Python tests
         run: ${{ inputs.script }}
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
       - name: Generate test report
         uses: test-summary/action@v2.4
         with:
