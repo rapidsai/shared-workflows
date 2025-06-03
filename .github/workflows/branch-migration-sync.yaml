@@ -1,0 +1,22 @@
+name: Sync main to branch-25.08 (migration)
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync-branches:
+    runs-on: ubuntu-latest
+    name: Syncing branches
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: "branch-25.08"
+      - shell: bash
+        run: |
+          git config --global user.email "noreply@nvidia.com"
+          git config --global user.name "NVIDIA RAPIDS Bot"
+          git config --global push.default current
+          git pull --ff-only origin main
+          git push origin branch-25.08
