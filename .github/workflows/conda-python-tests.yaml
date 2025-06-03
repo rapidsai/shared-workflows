@@ -32,6 +32,19 @@ on:
         required: false
         type: string
         default: "-e _NOOP"
+      build_workflow_name:
+        description: |
+          Name of a workflow file that produced artifacts to be downloaded in this run.
+          If not set (the default), artifact-handling scripts use RAPIDS-conventional defaults (like "build.yaml" when "build_type == nightly").
+        required: false
+        type: string
+      alternative-gh-token-secret-name:
+        type: string
+        required: false
+        description: |
+          If provided, should contain the name of a secret in the repo which holds a GitHub API token.
+          When this is non-empty, that secret's value is used in place of the default repo-level token
+          anywhere that environment variable GH_TOKEN is set.
 
 defaults:
   run:
@@ -85,20 +98,19 @@ jobs:
           export MATRICES="
             pull-request:
               # amd64
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.4.3', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
+              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
               - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.9.0', LINUX_VER: 'ubuntu24.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               # arm64
               - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
             nightly:
               # amd64
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.4.3', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu20.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.0.1', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
+              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu20.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.0.1', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.9.0', LINUX_VER: 'ubuntu24.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               # arm64
               - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
-              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '12.9.0', LINUX_VER: 'rockylinux8', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
           "
 
@@ -153,17 +165,13 @@ jobs:
           fetch-depth: 0
 
       - name: Standardize repository information
-        env:
-          RAPIDS_REPOSITORY: ${{ inputs.repo || github.repository }}
-          RAPIDS_REF_NAME: ${{ inputs.branch || github.ref_name }}
-          RAPIDS_NIGHTLY_DATE: ${{ inputs.date }}
-        run: |
-          {
-            echo "RAPIDS_REPOSITORY=${RAPIDS_REPOSITORY}"
-            echo "RAPIDS_SHA=$(git rev-parse HEAD)"
-            echo "RAPIDS_REF_NAME=${RAPIDS_REF_NAME}"
-            echo "RAPIDS_NIGHTLY_DATE=${RAPIDS_NIGHTLY_DATE}"
-          } >> "${GITHUB_ENV}"
+        uses: rapidsai/shared-actions/rapids-github-info@main
+        with:
+          repo: ${{ inputs.repo }}
+          branch: ${{ inputs.branch }}
+          date: ${{ inputs.date }}
+          sha: ${{ inputs.sha }}
+          build_workflow_name: ${{ inputs.build_workflow_name }}
 
       # This has to be AFTER the checkout step. It creates a telemetry-artifacts directory,
       # and the checkout step would destroy it.
@@ -188,11 +196,11 @@ jobs:
               gh api /rate_limit | jq .
           fi
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
       - name: Python tests
         run: ${{ inputs.script }}
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
       - name: Generate test report
         uses: test-summary/action@v2.4
         with:
