@@ -137,6 +137,8 @@ jobs:
         if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
         with:
             extra_attributes: "rapids.PACKAGER=conda,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
+            GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
+
 
       # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
       # checking '/rate_limit | jq .' should not itself count against any rate limits.
@@ -178,3 +180,5 @@ jobs:
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@check-base-env-var-artifact
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        with:
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
