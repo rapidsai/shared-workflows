@@ -95,8 +95,6 @@ jobs:
     runs-on: "linux-${{ matrix.ARCH }}-${{ inputs.node_type }}"
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
-      SHARED_ACTIONS_REPO: rapidsai/shared-actions
-      SHARED_ACTIONS_REF: check-base-env-var-artifact
     container:
       image: rapidsai/ci-conda:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
       env:
@@ -132,12 +130,13 @@ jobs:
       # This has to be AFTER the checkout step. It creates a telemetry-artifacts directory,
       # and the checkout step would destroy it.
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@check-base-env-var-artifact
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        env:
+            GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
         with:
             extra_attributes: "rapids.PACKAGER=conda,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
-            GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
 
 
       # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
@@ -177,8 +176,8 @@ jobs:
         if: "!cancelled()"
         run: rapids-upload-artifacts-dir "cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)"
       - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@check-base-env-var-artifact
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
-        with:
-          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
+        env:
+            GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
