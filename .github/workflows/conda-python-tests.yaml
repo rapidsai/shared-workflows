@@ -44,7 +44,8 @@ on:
         description: |
           If provided, should contain the name of a secret in the repo which holds a GitHub API token.
           When this is non-empty, that secret's value is used in place of the default repo-level token
-          anywhere that environment variable GH_TOKEN is set.
+          anywhere that environment variable GH_TOKEN is set. This is especially useful for downloading
+          artifacts from other private repos, which repo tokens do not have access to.
 
 defaults:
   run:
@@ -178,7 +179,10 @@ jobs:
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
+          GH_TOKEN: ${{ github.token }}
         with:
           extra_attributes:  "rapids.PACKAGER=conda,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }},rapids.GPU=${{ matrix.GPU }},rapids.DRIVER=${{ matrix.DRIVER }},rapids.DEPENDENCIES=${{ matrix.DEPENDENCIES }}"
 
@@ -188,6 +192,8 @@ jobs:
 
       # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
       # checking '/rate_limit | jq .' should not itself count against any rate limits.
+      #
+      # gh CLI is pre-installed on Github-hosted runners, but may not be on self-hosted runners.
       - name: Check GitHub API rate limits
         run: |
           if ! type gh >/dev/null; then
@@ -196,10 +202,12 @@ jobs:
               gh api /rate_limit | jq .
           fi
         env:
+          # NEEDS alternative-gh-token-secret_name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
       - name: Python tests
         run: ${{ inputs.script }}
         env:
+          # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
       - name: Generate test report
         uses: test-summary/action@v2.4
@@ -223,4 +231,7 @@ jobs:
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
+          GH_TOKEN: ${{ github.token }}
