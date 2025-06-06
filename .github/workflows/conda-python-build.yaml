@@ -34,7 +34,8 @@ on:
         description: |
           If provided, should contain the name of a secret in the repo which holds a GitHub API token.
           When this is non-empty, that secret's value is used in place of the default repo-level token
-          anywhere that environment variable GH_TOKEN is set.
+          anywhere that environment variable GH_TOKEN is set. This is especially useful for downloading
+          artifacts from other private repos, which repo tokens do not have access to.
 
 defaults:
   run:
