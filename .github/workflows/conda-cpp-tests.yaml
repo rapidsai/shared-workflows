@@ -202,7 +202,7 @@ jobs:
       - name: C++ tests
         run: ${{ inputs.script }}
         env:
-          # NEEDS alternative-gh-token-secret_name - testing may require use of a token with more permissions to download artifacts from other private repos
+          # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
       - name: Generate test report
         uses: test-summary/action@v2.4
