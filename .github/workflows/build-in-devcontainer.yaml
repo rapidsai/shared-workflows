@@ -4,6 +4,7 @@ on:
       env:
         type: string
       sha:
+        description: "Full git commit SHA to check out"
         type: string
       arch:
         type: string
