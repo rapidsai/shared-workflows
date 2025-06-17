@@ -24,4 +24,7 @@ function sed_runner() {
 
 for FILE in .github/workflows/*.yaml; do
   sed_runner "/rapidsai\/shared-workflows/ s/@.*/@branch-${NEXT_SHORT_TAG}/g" "${FILE}"
+
+  # Update CI image tags
+  sed_runner "/rapidsai\/ci-/ s/:[0-9\.]*-/:${NEXT_SHORT_TAG}-/g" "${FILE}"
 done
