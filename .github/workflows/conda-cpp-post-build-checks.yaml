@@ -50,7 +50,7 @@ jobs:
     if: ${{ inputs.enable_check_symbols }}
     runs-on: linux-amd64-cpu4
     container:
-      image: rapidsai/ci-wheel:latest
+      image: rapidsai/ci-wheel:25.08-latest
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
