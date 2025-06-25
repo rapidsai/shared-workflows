@@ -20,10 +20,15 @@ on:
         description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
         type: string
       enable_check_symbols:
-        default: false
+        default: true
         type: boolean
         required: false
       symbol_exclusions:
+        description: |
+          Regular expression matching unmangled symbol names to be ignored by this check.
+          Should be wrapped in '()' to form a capture group.
+          For example, to ignore any function symbols coming from the 'thrust' or 'cub' namespaces,
+          you might provide '(void (thrust::|cub::))'.
         type: string
 
 defaults:
