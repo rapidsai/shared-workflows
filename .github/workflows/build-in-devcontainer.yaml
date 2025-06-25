@@ -2,11 +2,15 @@ on:
   workflow_call:
     inputs:
       env:
+        description: |
+          Additional environment variables to be set inside the devcontainer.
+          Should be a space-delimited string in the form "KEY=value".
         type: string
       sha:
         description: "Full git commit SHA to check out"
         type: string
       arch:
+        description: "One of [amd64, arm64]. CPU architecture to run on."
         type: string
         default: '["amd64"]'
       cuda:
@@ -48,14 +52,14 @@ on:
       extra-repo-deploy-key:
         description: |
           The NAME (not value) of a GitHub secret in the calling repo, containing a repo deploy key.
-          This is here to allow the use of private repos in runs of this workflow.
+          This is here to allow the use of additional private repos in runs of this workflow.
         required: false
         type: string
         default: ''
       extra-repo-deploy-key-2:
         description: |
           The NAME (not value) of a GitHub secret in the calling repo, containing a repo deploy key.
-          This is here to allow the use of private repos in runs of this workflow.
+          This is here to allow the use of additional private repos in runs of this workflow.
         required: false
         type: string
         default: ''

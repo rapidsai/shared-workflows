@@ -2,9 +2,19 @@ on:
   workflow_call:
     inputs:
       files_yaml:
+        description: |
+          YAML string containing mappings of the form `{key}: [{glob1}, {glob2}, etc.]`.
+          Where `{key}` is an arbitrary identifier for grouping a set of changed files
+          (e.g. "test_cpp" for "if these files change, C++ tests should be re-run") and
+          each `{glob}` is a glob expression matching file paths in the calling repo.
+          For example, "re-run all C++ tests on any changes EXCEPT docs" might look like this:
+          'test_cpp: ["**", "!docs/**"]'.
         type: string
         required: true
       transform_expr:
+        description: |
+          jq expression for post-processing results to create this workflow's outputs.
+          Provided for backwards compatibility, should not need to be updated with normal use.
         type: string
         required: false
         default: |

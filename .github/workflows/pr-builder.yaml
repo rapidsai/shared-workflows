@@ -2,6 +2,9 @@ on:
   workflow_call:
     inputs:
       needs:
+        description: |
+          JSON string with the content of the 'needs' context for a GitHub Actions workflow.
+          For details, see https://docs.github.com/en/actions/reference/accessing-contextual-information-about-workflow-runs#example-contents-of-the-needs-context
         required: false
         type: string
         default: '{}'

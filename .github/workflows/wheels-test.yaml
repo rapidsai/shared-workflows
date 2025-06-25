@@ -57,7 +57,10 @@ on:
         required: false
         type: string
         default: ''
-        description: "The name of an extra secret in the repo (not the content of the secret itself)."
+        description: |
+          The NAME (not value) of a GitHub secret in the calling repo.
+          This allows callers of the workflow to make a single secret available in the job's
+          environment, via environment variable `RAPIDS_AUX_SECRET_1`.
       build_workflow_name:
         description: |
           Name of a workflow file that produced artifacts to be downloaded in this run.
