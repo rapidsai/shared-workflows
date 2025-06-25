@@ -29,6 +29,9 @@ on:
         required: true
         description: "Shell code to be executed in a step. Ideally this should just invoke a script managed in the repo the workflow runs from, like 'ci/test_cpp.sh'."
       matrix_filter:
+        description: |
+          jq expression which modifies the matrix.
+          For example, 'map(select(.ARCH == "amd64"))' to achieve "only run amd64 jobs".
         type: string
         default: "."
       container-options:

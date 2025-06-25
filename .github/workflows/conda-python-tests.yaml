@@ -32,6 +32,9 @@ on:
         type: boolean
         default: true
       matrix_filter:
+        description: |
+          jq expression which modifies the matrix.
+          For example, 'map(select(.ARCH == "amd64"))' to achieve "only run amd64 jobs".
         type: string
         default: "."
       container-options:

@@ -24,6 +24,8 @@ on:
 
       # general settings
       package-name:
+        description: |
+          Distribution name, without any other qualifiers (e.g. 'pylibcudf', not 'pylibcudf-cu12-cp311-manylinux_2_24_aarch64')
         required: true
         type: string
       package-type:
@@ -32,6 +34,7 @@ on:
         default: python
         type: string
       publish_to_pypi:
+        description: "One of [true, false], true if the wheel should be published to pypi.org"
         required: false
         type: boolean
         default: false

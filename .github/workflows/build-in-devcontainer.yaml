@@ -10,34 +10,60 @@ on:
         type: string
         default: '["amd64"]'
       cuda:
+        description: |
+          Stringified JSON array of CUDA versions to run this workflow for.
+          This is used to select .devcontainer/ directories local to wherever this workflow is invoked from.
+          For example, if a repository has directories '.devcontainer/cuda12.0-pip/' and '.devcontainer/cuda12.8-pip/',
+          '["12.0", "12.8"]' could be passed here to build both of those devcontainers in CI.
         type: string
         default: '["12.0"]'
       python_package_manager:
+        description: |
+          Stringified JSON array of Python package managers to run devcontainer builds for.
+          One of: '["conda"]', '["pip"]', '["conda", "pip"]'.
         type: string
         default: '["conda", "pip"]'
       repo:
+        description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
         type: string
       timeout-minutes:
+        description: "Maximum time (in minutes) allowed for a run of this workflow."
         type: number
         default: 360
       node_type:
+        description: |
+          Suffix, without leading '-', indicating the type of machine to run jobs on (e.g., 'cpu4' or 'gpu-l4-latest-1').
+          Runner labels are of the form '{operating_system}-{arch}-{node_type}'.
+          See https://github.com/nv-gha-runners/enterprise-runner-configuration/blob/main/docs/runner-groups.md for a list
+          of valid values.
         type: string
         default: "cpu8"
       build_command:
+        description: |
+          Shell commands to run inside the devcontainer after it's built and started.
+          This is almost always some form of 'build-all --verbose;'.
+          See https://github.com/rapidsai/devcontainers for details.
         type: string
         required: true
-      # Note that this is the _name_ of a secret containing the key, not the key itself.
       extra-repo-deploy-key:
+        description: |
+          The NAME (not value) of a GitHub secret in the calling repo, containing a repo deploy key.
+          This is here to allow the use of private repos in runs of this workflow.
         required: false
         type: string
         default: ''
-      # Note that this is the _name_ of a secret containing the key, not the key itself.
       extra-repo-deploy-key-2:
+        description: |
+          The NAME (not value) of a GitHub secret in the calling repo, containing a repo deploy key.
+          This is here to allow the use of private repos in runs of this workflow.
         required: false
         type: string
         default: ''
-      # Note that this is the _name_ of a secret containing the key, not the key itself.
       rapids-aux-secret-1:
+        description: |
+          The NAME (not value) of a GitHub secret in the calling repo.
+          This allows callers of the workflow to make a single secret available in the devcontainer's
+          environment, via environment variable `RAPIDS_AUX_SECRET_1`.
         required: false
         type: string
         default: ''

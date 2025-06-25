@@ -20,6 +20,11 @@ on:
         description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
         type: string
       node_type:
+        description: |
+          Suffix, without leading '-', indicating the type of machine to run jobs on (e.g., 'cpu4' or 'gpu-l4-latest-1').
+          Runner labels are of the form '{operating_system}-{arch}-{node_type}'.
+          See https://github.com/nv-gha-runners/enterprise-runner-configuration/blob/main/docs/runner-groups.md for a list
+          of valid values.
         type: string
         default: "cpu8"
       script:
@@ -32,6 +37,9 @@ on:
         required: false
         description: "One of [true, false], true if artifacts should be uploaded to GitHub's artifact store"
       matrix_filter:
+        description: |
+          jq expression which modifies the matrix.
+          For example, 'map(select(.ARCH == "amd64"))' to achieve "only run amd64 jobs".
         type: string
         default: "."
       alternative-gh-token-secret-name:
