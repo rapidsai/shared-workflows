@@ -27,7 +27,7 @@ on:
         default: "cpu8"
       container_image:
         type: string
-        default: "rapidsai/ci-conda:latest"
+        default: "rapidsai/ci-conda:25.08-latest"
       script:
         required: false
         type: string

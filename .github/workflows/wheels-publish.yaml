@@ -60,7 +60,7 @@ jobs:
     container:
       # CUDA toolkit version of the container is irrelevant in the publish step.
       # This just uploads already-built wheels to remote storage.
-      image: "rapidsai/ci-wheel:latest"
+      image: "rapidsai/ci-wheel:25.08-latest"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:

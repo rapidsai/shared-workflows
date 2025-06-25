@@ -113,19 +113,19 @@ jobs:
           export MATRICES="
             pull-request:
               # amd64
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.9.0', LINUX_VER: 'ubuntu24.04', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
+              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.9.1', LINUX_VER: 'ubuntu24.04', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
               # arm64
-              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '12.9.0', LINUX_VER: 'ubuntu22.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '12.9.1', LINUX_VER: 'ubuntu22.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
             nightly:
               # amd64
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
+              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
               - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu22.04', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.9.0', LINUX_VER: 'ubuntu22.04', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.9.0', LINUX_VER: 'ubuntu24.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.9.1', LINUX_VER: 'ubuntu22.04', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.9.1', LINUX_VER: 'ubuntu24.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               # arm64
-              - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.9.0', LINUX_VER: 'rockylinux8', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
+              - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
               - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '12.9.0', LINUX_VER: 'ubuntu24.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '12.9.1', LINUX_VER: 'ubuntu24.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
           "
 
           # only overwrite MATRIX_TYPE if it was set to 'auto'
@@ -159,7 +159,7 @@ jobs:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.ARCH }}-gpu-${{ matrix.GPU }}-${{ matrix.DRIVER }}-1"
     container:
-      image: "rapidsai/citestwheel:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}"
+      image: "rapidsai/citestwheel:25.08-cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}"
       options: ${{ inputs.container-options }}
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
