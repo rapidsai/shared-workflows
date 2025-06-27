@@ -99,6 +99,16 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
 
+    - name: use gha-tools from a PR branch
+      run: |
+        if [[ ! -d "/tmp/gha-tools" ]]; then
+            git clone \
+              --branch "gha-artifacts/make-lookup-more-flexible" \
+              https://github.com/rapidsai/gha-tools.git \
+              /tmp/gha-tools
+            export PATH="/tmp/gha-tools/tools":$PATH
+        fi
+
     - name: Download wheels from artifact storage and publish to anaconda repository
       run: rapids-wheels-anaconda-github "${{ inputs.package-name }}" "${{ inputs.package-type }}"
       env:
