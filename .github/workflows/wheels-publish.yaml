@@ -106,7 +106,7 @@ jobs:
               --branch "gha-artifacts/make-lookup-more-flexible" \
               https://github.com/rapidsai/gha-tools.git \
               /tmp/gha-tools
-            export PATH="/tmp/gha-tools/tools":$PATH
+            echo "/tmp/gha-tools/tools" >> "${GITHUB_PATH}"
         fi
 
     - name: Download wheels from artifact storage and publish to anaconda repository
