@@ -205,6 +205,14 @@ jobs:
         env:
           # NEEDS alternative-gh-token-secret_name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
+
+      - name: Prepare conda environment
+        uses: rapidsai/shared-actions/prepare-conda-env@msarahan/add-prepare-conda-env
+        with:
+          dependency-key: cpp
+          cuda-version: ${{ matrix.CUDA_VER }}
+          arch: ${{ matrix.ARCH }}
+
       - name: C++ tests
         run: ${{ inputs.script }}
         env:
