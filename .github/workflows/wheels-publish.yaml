@@ -100,12 +100,14 @@ jobs:
         GH_TOKEN: ${{ github.token }}
 
     - name: Download wheels from artifact storage and publish to anaconda repository
-      run: rapids-wheels-anaconda-github "${{ inputs.package-name }}" "${{ inputs.package-type }}"
+      run: rapids-wheels-anaconda-github "${INPUTS_PACKAGE_NAME}" "${INPUTS_PACKAGE_TYPE}"
       env:
         GH_TOKEN: ${{ github.token }}
         RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
         PACKAGENAME: ${{ inputs.package-name }}
         PACKAGETYPE: ${{ inputs.package-type }}
+        INPUTS_PACKAGE_NAME: ${{ inputs.package-name }}
+        INPUTS_PACKAGE_TYPE: ${{ inputs.package-type }}
 
     - name: Check if build is release
       id: check_if_release
