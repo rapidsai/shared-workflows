@@ -121,6 +121,7 @@ jobs:
           env: |
             REPOSITORY=${{ env.REPOSITORY }}
             SCCACHE_REGION=${{ vars.AWS_REGION }}
+            SCCACHE_ERROR_LOG=/home/coder/${{ env.REPOSITORY }}/sccache.log
             AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
@@ -133,13 +134,6 @@ jobs:
             ${{ inputs.env }}
           runCmd: |
             set -euo pipefail;
-            mkdir -p ~/.config/pip/;
-            cat <<EOF >> ~/.config/pip/pip.conf
-            [global]
-            extra-index-url = https://pypi.anaconda.org/rapidsai-wheels-nightly/simple
-            EOF
-
-            rapids-make-${PYTHON_PACKAGE_MANAGER}-env;
 
             if test -n '${{ inputs.extra-repo-deploy-key }}' \
             || test -n '${{ inputs.extra-repo-deploy-key-2 }}'; then
@@ -153,9 +147,24 @@ jobs:
               devcontainer-utils-init-ssh-deploy-keys || true;
             fi
 
+            mkdir -p ~/.config/pip/;
+            cat <<EOF >> ~/.config/pip/pip.conf
+            [global]
+            extra-index-url = https://pypi.anaconda.org/rapidsai-wheels-nightly/simple
+            EOF
+
+            rapids-make-${PYTHON_PACKAGE_MANAGER}-env;
+
             cd ~/"${REPOSITORY}";
             mkdir -p telemetry-artifacts;
             ${{ inputs.build_command }}
+      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        name: Upload sccache logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: sccache-client-logs
+          path: sccache*.log
+          compression-level: 9
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
