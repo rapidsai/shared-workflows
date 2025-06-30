@@ -109,10 +109,8 @@ jobs:
         uses: nv-gha-runners/get-pr-info@main
       - name: Add PR Info
         if: startsWith(github.ref_name, 'pull-request/')
-        env:
-          RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
-        run: |
-          echo "${RAPIDS_BASE_BRANCH}" >> "${GITHUB_ENV}"
+        run: | # zizmor: ignore[template-injection]
+          echo "RAPIDS_BASE_BRANCH=${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}" >> "${GITHUB_ENV}"
       - name: Standardize repository information
         uses: rapidsai/shared-actions/rapids-github-info@main
         with:
