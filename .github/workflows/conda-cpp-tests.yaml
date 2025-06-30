@@ -215,7 +215,7 @@ jobs:
           dependency-key: cpp
           cuda-version: ${{ matrix.CUDA_VER }}
           arch: ${{ matrix.ARCH }}
-          pr-number: ${{ github.event.pull_request.number }}
+          pr-number: "${{ github.event.pull_request.number }}"
 
       - name: C++ tests
         run: ${{ inputs.script }}
