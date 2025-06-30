@@ -165,7 +165,7 @@ jobs:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
-    - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+    - uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
       with:
         role-to-assume: ${{ vars.AWS_ROLE_ARN }}
         aws-region: ${{ vars.AWS_REGION }}
@@ -228,7 +228,7 @@ jobs:
         INPUTS_SCRIPT: ${{ inputs.script }}
 
     - name: Generate test report
-      uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86
+      uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4
       with:
         paths: "${{ env.RAPIDS_TESTS_DIR }}/*.xml"
         show: ${{ inputs.test_summary_show }}

@@ -99,7 +99,7 @@ jobs:
             echo "HAS_DEVCONTAINER=false" >> "${GITHUB_ENV}"
           fi
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -116,7 +116,7 @@ jobs:
 
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
-        uses: devcontainers/ci@8bf61b26e9c3a98f69cb6ce2f88d24ff59b785c6
+        uses: devcontainers/ci@8bf61b26e9c3a98f69cb6ce2f88d24ff59b785c6 # v0.3.1900000417
         with:
           push: never
           configFile: .devcontainer/cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}/devcontainer.json
