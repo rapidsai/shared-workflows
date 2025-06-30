@@ -208,6 +208,9 @@ jobs:
 
       - name: Prepare conda environment
         uses: rapidsai/shared-actions/prepare-conda-env@msarahan-add-prepare-conda-action
+        env:
+          # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
         with:
           dependency-key: cpp
           cuda-version: ${{ matrix.CUDA_VER }}
