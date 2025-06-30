@@ -40,7 +40,7 @@ jobs:
   other-checks:
     runs-on: ubuntu-latest
     container:
-      image: rapidsai/ci-conda:latest # zizmor: ignore[unpinned-images]
+      image: rapidsai/ci-conda:25.08-latest # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -51,7 +51,9 @@ jobs:
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Get PR Info
         id: get-pr-info
         uses: nv-gha-runners/get-pr-info@main
@@ -68,13 +70,15 @@ jobs:
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   check-style:
     if: ${{ inputs.enable_check_style }}
     runs-on: ubuntu-latest
     container:
-      image: rapidsai/ci-conda:latest # zizmor: ignore[unpinned-images]
+      image: rapidsai/ci-conda:25.08-latest # zizmor: ignore[unpinned-images]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -84,7 +88,9 @@ jobs:
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Get PR Info
         id: get-pr-info
         uses: nv-gha-runners/get-pr-info@main
@@ -99,4 +105,6 @@ jobs:
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}

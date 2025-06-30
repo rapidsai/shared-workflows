@@ -6,19 +6,26 @@ on:
         required: true
         type: string
       branch:
+        description: |
+          Git branch the workflow run targets.
+          This is required even when 'sha' is provided because it is also used for organizing artifacts.
         type: string
       date:
+        description: "Date (YYYY-MM-DD) this run is for. Used to organize artifacts produced by nightly builds"
         type: string
       sha:
+        description: "Full git commit SHA to check out"
         type: string
       repo:
+        description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
         type: string
       node_type:
         type: string
         default: "cpu8"
       script:
         type: string
-        default: "ci/build_cpp.sh"
+        required: true
+        description: "Shell code to be executed in a step. Ideally this should just invoke a script managed in the repo the workflow runs from, like 'ci/build_cpp.sh'."
       upload-artifacts:
         type: boolean
         default: true
@@ -27,6 +34,14 @@ on:
       matrix_filter:
         type: string
         default: "."
+      alternative-gh-token-secret-name:
+        type: string
+        required: false
+        description: |
+          If provided, should contain the name of a secret in the repo which holds a GitHub API token.
+          When this is non-empty, that secret's value is used in place of the default repo-level token
+          anywhere that environment variable GH_TOKEN is set. This is especially useful for downloading
+          artifacts from other private repos, which repo tokens do not have access to.
 
 defaults:
   run:
@@ -66,11 +81,9 @@ jobs:
           #
           export MATRIX="
           # amd64
-          - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
-          - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8' }
           # arm64
-          - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
-          - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8' }
           "
 
           MATRIX="$(
@@ -90,7 +103,7 @@ jobs:
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     container:
-      image: rapidsai/ci-conda:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
+      image: rapidsai/ci-conda:25.08-cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
@@ -127,15 +140,34 @@ jobs:
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
+          GH_TOKEN: ${{ github.token }}
         with:
-            extra_attributes: "rapids.PACKAGER=conda,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
+          extra_attributes: "rapids.PACKAGER=conda,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
 
+
+      # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
+      # checking '/rate_limit | jq .' should not itself count against any rate limits.
+      #
+      # gh CLI is pre-installed on Github-hosted runners, but may not be on self-hosted runners.
+      - name: Check GitHub API rate limits
+        run: |
+          if ! type gh >/dev/null; then
+              echo "'gh' CLI is not installed... skipping rate-limits check"
+          else
+              gh api /rate_limit | jq .
+          fi
+        env:
+          # NEEDS alternative-gh-token-secret-name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
       - name: C++ build
         run: ${{ inputs.script }}  # zizmor: ignore[template-injection]
         env:
           STEP_NAME: "C++ build"
-          GH_TOKEN: ${{ github.token }}
+          # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
       - name: Get Package Name and Location
         if: ${{ inputs.upload-artifacts }}
         run: |
@@ -161,4 +193,7 @@ jobs:
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
+          GH_TOKEN: ${{ github.token }}

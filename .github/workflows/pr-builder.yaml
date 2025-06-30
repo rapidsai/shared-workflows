@@ -15,3 +15,19 @@ jobs:
         env:
           NEEDS: ${{ inputs.needs }}
         run: jq -en 'env.NEEDS | fromjson | all(.result as $result | ["success", "skipped"] | any($result == .))'
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Check for private token usage
+        env:
+          ERROR_MSG: "PR validation failed: Private token access is not allowed to be merged onto the development branch. Remove any uses of input 'alternative-gh-token-secret-name'."
+        # The 'grep' call below is intentionally not using '-q' or redirecting to /dev/null.
+        #
+        # Those choices + the use of '-n' mean that the exact file path and line numbers of the offending uses
+        # will show up in logs.
+        run: |
+          if grep -n -R -E 'alternative\-gh\-token\-secret\-name\:' ./.github; then
+            echo "::error::$ERROR_MSG"
+            exit 1
+          fi

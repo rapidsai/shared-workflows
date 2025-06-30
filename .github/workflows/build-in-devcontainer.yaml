@@ -4,6 +4,7 @@ on:
       env:
         type: string
       sha:
+        description: "Full git commit SHA to check out"
         type: string
       arch:
         type: string
@@ -80,9 +81,11 @@ jobs:
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
         with:
-            extra_attributes: "rapids.PACKAGER=${{ matrix.PACKAGER }},rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.ARCH=${{ matrix.ARCH }}"
+          extra_attributes: "rapids.PACKAGER=${{ matrix.PACKAGER }},rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.ARCH=${{ matrix.ARCH }}"
 
       - name: Check if repo has devcontainer
         env:
@@ -160,4 +163,6 @@ jobs:
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}

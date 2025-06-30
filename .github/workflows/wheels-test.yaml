@@ -3,14 +3,19 @@ name: Test RAPIDS wheels
 on:
   workflow_call:
     inputs:
-      # repo and branch
-      repo:
-        type: string
       branch:
+        description: |
+          Git branch the workflow run targets.
+          This is required even when 'sha' is provided because it is also used for organizing artifacts.
         type: string
       date:
+        description: "Date (YYYY-MM-DD) this run is for. Used to organize artifacts produced by nightly builds"
         type: string
       sha:
+        description: "Full git commit SHA to check out"
+        type: string
+      repo:
+        description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
         type: string
       build_type:
         description: "One of: [branch, nightly, pull-request]"
@@ -23,7 +28,8 @@ on:
         default: "auto"
       script:
         type: string
-        default: "ci/test_wheel.sh"
+        required: true
+        description: "Shell code to be executed in a step. Ideally this should just invoke a script managed in the repo the workflow runs from, like 'ci/test_wheel.sh'."
       matrix_filter:
         type: string
         default: "."
@@ -35,11 +41,25 @@ on:
         required: false
         type: string
         default: "fail"
-      # Note that this is the _name_ of a secret containing the key, not the key itself.
       rapids-aux-secret-1:
         required: false
         type: string
         default: ''
+        description: "The name of an extra secret in the repo (not the content of the secret itself)."
+      build_workflow_name:
+        description: |
+          Name of a workflow file that produced artifacts to be downloaded in this run.
+          If not set (the default), artifact-handling scripts use RAPIDS-conventional defaults (like "build.yaml" when "build_type == nightly").
+        required: false
+        type: string
+      alternative-gh-token-secret-name:
+        type: string
+        required: false
+        description: |
+          If provided, should contain the name of a secret in the repo which holds a GitHub API token.
+          When this is non-empty, that secret's value is used in place of the default repo-level token
+          anywhere that environment variable GH_TOKEN is set. This is especially useful for downloading
+          artifacts from other private repos, which repo tokens do not have access to.
 
 defaults:
   run:
@@ -93,19 +113,19 @@ jobs:
           export MATRICES="
             pull-request:
               # amd64
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.9.0', LINUX_VER: 'ubuntu24.04', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
+              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.9.1', LINUX_VER: 'ubuntu24.04', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
               # arm64
-              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '11.8.0', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '12.9.1', LINUX_VER: 'ubuntu22.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
             nightly:
               # amd64
-              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu20.04', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.9.0', LINUX_VER: 'ubuntu22.04', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.9.0', LINUX_VER: 'ubuntu24.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
+              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.0.1', LINUX_VER: 'ubuntu22.04', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.9.1', LINUX_VER: 'ubuntu22.04', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'latest' }
+              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.9.1', LINUX_VER: 'ubuntu24.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               # arm64
-              - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
-              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu20.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '12.9.0', LINUX_VER: 'ubuntu24.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
+              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '12.9.1', LINUX_VER: 'ubuntu24.04', GPU: 'a100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
           "
 
           # only overwrite MATRIX_TYPE if it was set to 'auto'
@@ -139,7 +159,7 @@ jobs:
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.ARCH }}-gpu-${{ matrix.GPU }}-${{ matrix.DRIVER }}-1"
     container:
-      image: "rapidsai/citestwheel:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}"
+      image: "rapidsai/citestwheel:25.08-cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}"
       options: ${{ inputs.container-options }}
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
@@ -164,7 +184,10 @@ jobs:
     - name: Telemetry setup
       uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
       continue-on-error: true
-      if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+      if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+      env:
+        # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
+        GH_TOKEN: ${{ github.token }}
       with:
         extra_attributes: "rapids.PACKAGER=wheel,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }},rapids.GPU=${{ matrix.GPU }},rapids.DRIVER=${{ matrix.DRIVER }},rapids.DEPENDENCIES=${{ matrix.DEPENDENCIES }}"
 
@@ -175,16 +198,33 @@ jobs:
         branch: ${{ inputs.branch }}
         date: ${{ inputs.date }}
         sha: ${{ inputs.sha }}
+        build_workflow_name: ${{ inputs.build_workflow_name }}
 
     - name: Setup proxy cache
       uses: nv-gha-runners/setup-proxy-cache@main
       continue-on-error: true
 
+    # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
+    # checking '/rate_limit | jq .' should not itself count against any rate limits.
+    #
+    # gh CLI is pre-installed on Github-hosted runners, but may not be on self-hosted runners.
+    - name: Check GitHub API rate limits
+      run: |
+        if ! type gh >/dev/null; then
+            echo "'gh' CLI is not installed... skipping rate-limits check"
+        else
+            gh api /rate_limit | jq .
+        fi
+      env:
+        # NEEDS alternative-gh-token-secret_name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
+        GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
+
     - name: Run tests
       run: ${{ inputs.script }} # zizmor: ignore[template-injection]
       env:
-        GH_TOKEN: ${{ github.token }}
-        RAPIDS_AUX_SECRET_1: ${{ inputs.rapids-aux-secret-1 != '' && secrets[inputs.rapids-aux-secret-1] || '' }} # zizmor: ignore[overprovisioned-secrets]
+        # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
+        GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
+        RAPIDS_AUX_SECRET_1: ${{ inputs.rapids-aux-secret-1 != '' && secrets[inputs.rapids-aux-secret-1] || '' }}
 
     - name: Generate test report
       uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86
@@ -199,4 +239,7 @@ jobs:
     - name: Telemetry upload attributes
       uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
       continue-on-error: true
-      if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+      if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+      env:
+        # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
+        GH_TOKEN: ${{ github.token }}

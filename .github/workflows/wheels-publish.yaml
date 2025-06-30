@@ -3,14 +3,19 @@ name: Publish RAPIDS wheels
 on:
   workflow_call:
     inputs:
-      # repo and branch
-      repo:
-        type: string
       branch:
+        description: |
+          Git branch the workflow run targets.
+          This is required even when 'sha' is provided because it is also used for organizing artifacts.
         type: string
       date:
+        description: "Date (YYYY-MM-DD) this run is for. Used to organize artifacts produced by nightly builds"
         type: string
       sha:
+        description: "Full git commit SHA to check out"
+        type: string
+      repo:
+        description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
         type: string
       build_type:
         description: "One of: [branch, nightly, pull-request]"
@@ -55,16 +60,10 @@ jobs:
     container:
       # CUDA toolkit version of the container is irrelevant in the publish step.
       # This just uploads already-built wheels to remote storage.
-      image: "rapidsai/ci-wheel:latest" # zizmor: ignore[unpinned-images]
+      image: "rapidsai/ci-wheel:25.08-latest" # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
-    - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
-      with:
-        role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-        aws-region: ${{ vars.AWS_REGION }}
-        role-duration-seconds: 43200 # 12h
-
     - name: checkout code repo
       uses: actions/checkout@v4
       with:
@@ -76,7 +75,9 @@ jobs:
     - name: Telemetry setup
       uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
       continue-on-error: true
-      if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+      if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+      env:
+        GH_TOKEN: ${{ github.token }}
 
     - name: Standardize repository information
       uses: rapidsai/shared-actions/rapids-github-info@main
@@ -86,9 +87,22 @@ jobs:
         date: ${{ inputs.date }}
         sha: ${{ inputs.sha }}
 
-    - name: Download wheels from artifact storage and publish to anaconda repository
-      run: rapids-wheels-anaconda "$PACKAGENAME" "$PACKAGETYPE"
+    # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
+    # checking '/rate_limit | jq .' should not itself count against any rate limits.
+    - name: Check GitHub API rate limits
+      run: |
+        if ! type gh >/dev/null; then
+            echo "'gh' CLI is not installed... skipping rate-limits check"
+        else
+            gh api /rate_limit | jq .
+        fi
       env:
+        GH_TOKEN: ${{ github.token }}
+
+    - name: Download wheels from artifact storage and publish to anaconda repository
+      run: rapids-wheels-anaconda-github "${{ inputs.package-name }}" "${{ inputs.package-type }}"
+      env:
+        GH_TOKEN: ${{ github.token }}
         RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
         PACKAGENAME: ${{ inputs.package-name }}
         PACKAGETYPE: ${{ inputs.package-type }}
@@ -114,4 +128,6 @@ jobs:
     - name: Telemetry upload attributes
       uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
       continue-on-error: true
-      if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+      if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+      env:
+        GH_TOKEN: ${{ github.token }}

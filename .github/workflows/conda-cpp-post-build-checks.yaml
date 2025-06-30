@@ -6,18 +6,29 @@ on:
         required: true
         type: string
       branch:
+        description: |
+          Git branch the workflow run targets.
+          This is required even when 'sha' is provided because it is also used for organizing artifacts.
         type: string
       date:
+        description: "Date (YYYY-MM-DD) this run is for. Used to organize artifacts produced by nightly builds"
         type: string
       sha:
+        description: "Full git commit SHA to check out"
         type: string
       repo:
+        description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
         type: string
       enable_check_symbols:
-        default: false
+        default: true
         type: boolean
         required: false
       symbol_exclusions:
+        description: |
+          Regular expression matching unmangled symbol names to be ignored by this check.
+          Should be wrapped in '()' to form a capture group.
+          For example, to ignore any function symbols coming from the 'thrust' or 'cub' namespaces,
+          you might provide '(void (thrust::|cub::))'.
         type: string
 
 defaults:
@@ -44,7 +55,7 @@ jobs:
     if: ${{ inputs.enable_check_symbols }}
     runs-on: linux-amd64-cpu4
     container:
-      image: rapidsai/ci-wheel:latest # zizmor: ignore[unpinned-images]
+      image: rapidsai/ci-wheel:25.08-latest # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
@@ -63,7 +74,9 @@ jobs:
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Standardize repository information
         env:
           RAPIDS_REPOSITORY: ${{ inputs.repo || github.repository }}
@@ -76,6 +89,17 @@ jobs:
             echo "RAPIDS_REF_NAME=${RAPIDS_REF_NAME}"
             echo "RAPIDS_NIGHTLY_DATE=${RAPIDS_NIGHTLY_DATE}"
           } >> "${GITHUB_ENV}"
+      # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
+      # checking '/rate_limit | jq .' should not itself count against any rate limits.
+      - name: Check GitHub API rate limits
+        run: |
+          if ! type gh >/dev/null; then
+              echo "'gh' CLI is not installed... skipping rate-limits check"
+          else
+              gh api /rate_limit | jq .
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Download conda C++ build artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -103,4 +127,6 @@ jobs:
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
