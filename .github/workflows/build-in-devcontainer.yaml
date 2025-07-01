@@ -162,7 +162,7 @@ jobs:
         name: Upload sccache logs
         uses: actions/upload-artifact@v4
         with:
-          name: sccache-client-logs
+          name: sccache-client-logs-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_attempt }}
           path: sccache*.log
           compression-level: 9
       - name: Telemetry upload attributes
