@@ -19,10 +19,6 @@ on:
       repo:
         description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
         type: string
-      enable_check_symbols:
-        default: true
-        type: boolean
-        required: false
       symbol_exclusions:
         description: |
           Regular expression matching unmangled symbol names to be ignored by this check.
@@ -52,7 +48,6 @@ permissions:
 
 jobs:
   check-symbols:
-    if: ${{ inputs.enable_check_symbols }}
     runs-on: linux-amd64-cpu4
     container:
       image: rapidsai/ci-wheel:25.08-latest
