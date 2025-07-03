@@ -20,6 +20,10 @@ on:
         description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
         type: string
       skip_upload_pkgs:
+        description: |
+          Space-delimited string of package names to skip uploading to anaconda.org.
+          When this is empty (the default), all conda packages found in CI artifacts for a given
+          run will be uploaded to anaconda.org
         type: string
       upload_to_label:
         description: The label that should be applied to packages uploaded to Anaconda.org

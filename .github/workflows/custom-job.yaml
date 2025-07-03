@@ -20,12 +20,19 @@ on:
         description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
         type: string
       arch:
+        description: "One of [amd64, arm64]. CPU architecture to run on."
         type: string
         default: "amd64"
       node_type:
+        description: |
+          Suffix, without leading '-', indicating the type of machine to run jobs on (e.g., 'cpu4' or 'gpu-l4-latest-1').
+          Runner labels are of the form '{operating_system}-{arch}-{node_type}'.
+          See https://github.com/nv-gha-runners/enterprise-runner-configuration/blob/main/docs/runner-groups.md for a list
+          of valid values.
         type: string
         default: "cpu8"
       container_image:
+        description: "Container image URI"
         type: string
         default: "rapidsai/ci-conda:25.08-latest"
       script:
@@ -33,9 +40,14 @@ on:
         type: string
         description: "Shell code to be executed in a step. Ideally this should just invoke a script managed in the repo the workflow runs from, like 'ci/test_java.sh'."
       file_to_upload:
+        description: "Path to a file to be uploaded as a CI artifact."
         type: string
         default: "gh-status.json"
       continue-on-error:
+        description: |
+          If false (the default), treat job failures as workflow failures.
+          If true, job failures do not result in workflow failures (useful for implementing optional CI workflows).
+          See https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idcontinue-on-error
         type: boolean
         required: false
         default: false
