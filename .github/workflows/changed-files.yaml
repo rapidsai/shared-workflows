@@ -14,7 +14,7 @@ on:
       transform_expr:
         description: |
           jq expression for post-processing results to create this workflow's outputs.
-          Provided for backwards compatibility, should not need to be updated with normal use.
+          Provided for backwards compatibility; should not need to be updated with normal use.
         type: string
         required: false
         default: |

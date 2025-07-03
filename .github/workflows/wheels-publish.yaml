@@ -34,8 +34,7 @@ on:
         default: python
         type: string
       publish_to_pypi:
-        description: "One of [true, false], true if the wheel should be published to pypi.org"
-        required: false
+        description: "If true, the wheel will be published to pypi.org"
         type: boolean
         default: false
 
