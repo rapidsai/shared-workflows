@@ -160,7 +160,7 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
 
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -185,8 +185,10 @@ jobs:
       - name: Preprocess extra repos
         id: preprocess-extras
         if: ${{ inputs.extra-repo != '' }}
+        env:
+          EXTRA_REPO: ${{ inputs.extra-repo }}
         run: |
-          EXTRA_REPO_PATH=$(echo ${{ inputs.extra-repo }} | cut -d "/"  -f 2)
+          EXTRA_REPO_PATH=$(echo "$EXTRA_REPO" | cut -d "/"  -f 2)
           echo "EXTRA_REPO_PATH=${EXTRA_REPO_PATH}" >> "${GITHUB_OUTPUT}"
 
       - name: checkout extra repos
@@ -196,7 +198,7 @@ jobs:
           repository: ${{ inputs.extra-repo }}
           ref: ${{ inputs.extra-repo-sha }}
           path: "./${{ steps.preprocess-extras.outputs.EXTRA_REPO_PATH }}"
-          ssh-key: ${{ secrets[inputs.extra-repo-deploy-key] }}
+          ssh-key: ${{ secrets[inputs.extra-repo-deploy-key] }} # zizmor: ignore[overprovisioned-secrets]
           persist-credentials: false
 
       - name: Setup proxy cache
@@ -226,13 +228,12 @@ jobs:
           fi
         env:
           # NEEDS alternative-gh-token-secret_name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
-          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
       - name: Build and repair the wheel
-        run: |
-          ${{ inputs.script }}
+        run: ${{ inputs.script }} # zizmor: ignore[template-injection]
         env:
           # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
-          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
         # Use a shell that loads the rc file so that we get the compiler settings
         shell: bash -leo pipefail {0}
 
@@ -262,9 +263,11 @@ jobs:
 
       - name: Show files to be uploaded
         if: ${{ inputs.upload-artifacts }}
+        env:
+          WHEEL_OUTPUT_DIR: ${{ steps.package-name.outputs.WHEEL_OUTPUT_DIR }}
         run: |
           echo "Contents of directory to be uploaded:"
-          ls -R ${{ steps.package-name.outputs.WHEEL_OUTPUT_DIR }}
+          ls -R "$WHEEL_OUTPUT_DIR"
 
       - uses: actions/upload-artifact@v4
         if: ${{ inputs.upload-artifacts }}

@@ -134,4 +134,5 @@ jobs:
       UPDATE_FIELD_TYPE: ${{inputs.FIELD_TYPE}}
       UPDATE_FIELD_ID: ${{ inputs.FIELD_ID }}
       UPDATE_FIELD_VALUE: ${{ inputs.SET_VALUE }}
-    secrets: inherit
+    secrets:
+      ADD_TO_PROJECT_GITHUB_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}

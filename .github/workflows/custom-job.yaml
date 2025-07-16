@@ -92,12 +92,12 @@ jobs:
     runs-on: "linux-${{ inputs.arch }}-${{ inputs.node_type }}"
     continue-on-error: ${{ inputs.continue-on-error }}
     container:
-      image: ${{ inputs.container_image }}
+      image: ${{ inputs.container_image }} # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -107,6 +107,7 @@ jobs:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
           fetch-depth: 0
+          persist-credentials: true
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
@@ -120,7 +121,7 @@ jobs:
         uses: nv-gha-runners/get-pr-info@main
       - name: Add PR Info
         if: startsWith(github.ref_name, 'pull-request/')
-        run: |
+        run: | # zizmor: ignore[template-injection]
           echo "RAPIDS_BASE_BRANCH=${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}" >> "${GITHUB_ENV}"
       - name: Standardize repository information
         uses: rapidsai/shared-actions/rapids-github-info@main
@@ -143,12 +144,13 @@ jobs:
           fi
         env:
           # NEEDS alternative-gh-token-secret_name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
-          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
       - name: Run script
-        run: ${{ inputs.script }}
+        run: ${INPUTS_SCRIPT}
         env:
           # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
-          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
+          INPUTS_SCRIPT: ${{ inputs.script }}
       - name: Upload file to GitHub Artifact
         uses: actions/upload-artifact@v4
         with:
