@@ -142,4 +142,5 @@ jobs:
       UPDATE_FIELD_TYPE: "iteration"
       UPDATE_FIELD_ID: ${{ inputs.ITERATION_FIELD_ID }}
       UPDATE_FIELD_VALUE: ${{ needs.get_set_iteration_option_id.outputs.ITERATION_OPTION_ID }}
-    secrets: inherit
+    secrets:
+      ADD_TO_PROJECT_GITHUB_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}

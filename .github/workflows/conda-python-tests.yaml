@@ -166,7 +166,7 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -177,6 +177,7 @@ jobs:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
           fetch-depth: 0
+          persist-credentials: true
 
       - name: Standardize repository information
         uses: rapidsai/shared-actions/rapids-github-info@main
@@ -216,14 +217,14 @@ jobs:
           fi
         env:
           # NEEDS alternative-gh-token-secret_name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
-          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
       - name: Python tests
-        run: ${{ inputs.script }}
+        run: ${{ inputs.script }} # zizmor: ignore[template-injection]
         env:
           # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
-          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
       - name: Generate test report
-        uses: test-summary/action@v2.4
+        uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4
         with:
           paths: "${{ env.RAPIDS_TESTS_DIR }}/*.xml"
         if: always()

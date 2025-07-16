@@ -115,7 +115,7 @@ jobs:
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -125,6 +125,7 @@ jobs:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
           fetch-depth: 0
+          persist-credentials: true
       - name: Standardize repository information
         env:
           RAPIDS_REPOSITORY: ${{ inputs.repo || github.repository }}
@@ -168,13 +169,13 @@ jobs:
           fi
         env:
           # NEEDS alternative-gh-token-secret-name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
-          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
       - name: C++ build
-        run: ${{ inputs.script }}
+        run: ${{ inputs.script }}  # zizmor: ignore[template-injection]
         env:
           STEP_NAME: "C++ build"
           # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
-          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }}
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
       - name: Get Package Name and Location
         if: ${{ inputs.upload-artifacts }}
         run: |
@@ -183,9 +184,11 @@ jobs:
         id: package-name
       - name: Show files to be uploaded
         if: ${{ inputs.upload-artifacts }}
+        env:
+          CONDA_OUTPUT_DIR: ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
         run: |
           echo "Contents of directory to be uploaded:"
-          ls -R ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
+          ls -R "${CONDA_OUTPUT_DIR}"
       - uses: actions/upload-artifact@v4
         if: ${{ inputs.upload-artifacts }}
         with:

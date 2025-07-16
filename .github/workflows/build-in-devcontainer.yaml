@@ -104,6 +104,7 @@ jobs:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
           fetch-depth: 0
+          persist-credentials: true
 
       # This provides an initial set of metadata tags. Jobs are free to add to the RAPIDS_JOB_ATTRIBUTES
       # environment variable as they see fit - but remember to export the variable to ${GITHUB_ENV}
@@ -117,15 +118,18 @@ jobs:
           extra_attributes: "rapids.PACKAGER=${{ matrix.PACKAGER }},rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.ARCH=${{ matrix.ARCH }}"
 
       - name: Check if repo has devcontainer
+        env:
+          CUDA_VER: ${{ matrix.CUDA_VER }}
+          PACKAGER: ${{ matrix.PACKAGER }}
         run: |
           echo "REPOSITORY=$(basename "$(pwd)")" | tee -a "${GITHUB_ENV}"
-          if test -f .devcontainer/cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}/devcontainer.json; then
+          if test -f ".devcontainer/cuda${CUDA_VER}-${PACKAGER}/devcontainer.json"; then
             echo "HAS_DEVCONTAINER=true" >> "${GITHUB_ENV}"
           else
             echo "HAS_DEVCONTAINER=false" >> "${GITHUB_ENV}"
           fi
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -142,7 +146,7 @@ jobs:
 
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
-        uses: devcontainers/ci@v0.3
+        uses: devcontainers/ci@8bf61b26e9c3a98f69cb6ce2f88d24ff59b785c6 # v0.3.1900000417
         with:
           push: never
           configFile: .devcontainer/cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}/devcontainer.json
@@ -155,7 +159,7 @@ jobs:
             AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
-            RAPIDS_AUX_SECRET_1=${{ inputs.rapids-aux-secret-1 != '' && secrets[inputs.rapids-aux-secret-1] || '' }}
+            RAPIDS_AUX_SECRET_1=${{ inputs.rapids-aux-secret-1 != '' && secrets[inputs.rapids-aux-secret-1] || '' }} # zizmor: ignore[overprovisioned-secrets]
             TRACEPARENT=${{ env.TRACEPARENT }}
             OTEL_SERVICE_NAME=${{ env.OTEL_SERVICE_NAME }}
             OTEL_EXPORTER_OTLP_ENDPOINT=${{ env.OTEL_EXPORTER_OTLP_ENDPOINT }}
@@ -169,10 +173,10 @@ jobs:
             || test -n '${{ inputs.extra-repo-deploy-key-2 }}'; then
               if ! pgrep ssh-agent >/dev/null 2>&1; then eval "$(ssh-agent -s)"; fi;
               if test -n '${{ inputs.extra-repo-deploy-key }}'; then
-                ssh-add - <<< '${{ secrets[inputs.extra-repo-deploy-key] }}';
+                ssh-add - <<< '${{ secrets[inputs.extra-repo-deploy-key] }}'; # zizmor: ignore[overprovisioned-secrets]
               fi
               if test -n '${{ inputs.extra-repo-deploy-key-2 }}'; then
-                ssh-add - <<< '${{ secrets[inputs.extra-repo-deploy-key-2] }}';
+                ssh-add - <<< '${{ secrets[inputs.extra-repo-deploy-key-2] }}'; # zizmor: ignore[overprovisioned-secrets]
               fi
               devcontainer-utils-init-ssh-deploy-keys || true;
             fi

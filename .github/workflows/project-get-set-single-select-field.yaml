@@ -164,4 +164,5 @@ jobs:
       UPDATE_FIELD_TYPE: "single_select"
       UPDATE_FIELD_ID: ${{ inputs.SINGLE_SELECT_FIELD_ID }}
       UPDATE_FIELD_VALUE: ${{ needs.get_set_single_select_option_id.outputs.SINGLE_SELECT_OPTION_ID }}
-    secrets: inherit
+    secrets:
+      ADD_TO_PROJECT_GITHUB_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
