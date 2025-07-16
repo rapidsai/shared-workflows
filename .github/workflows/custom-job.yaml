@@ -40,9 +40,18 @@ on:
         type: string
         description: "Shell code to be executed in a step. Ideally this should just invoke a script managed in the repo the workflow runs from, like 'ci/test_java.sh'."
       file_to_upload:
-        description: "Path to a file to be uploaded as a CI artifact."
+        description: |
+          Path to file(s) to be uploaded as a CI artifact.
+          If a directory is provided, all files in it will be bundled into a zip archive.
+          See 'path' input at https://github.com/actions/upload-artifact?tab=readme-ov-file#inputs
         type: string
         default: "gh-status.json"
+      artifact-name:
+        description: |
+          Identifier for the GitHub Actions artifact created by uploading ``file_to_upload``.
+          See 'name' input at https://github.com/actions/upload-artifact?tab=readme-ov-file#inputs
+        type: string
+        default: "result"
       continue-on-error:
         description: |
           If false (the default), treat job failures as workflow failures.
@@ -154,7 +163,7 @@ jobs:
       - name: Upload file to GitHub Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: result
+          name: ${{ inputs.artifact-name }}
           path: ${{ inputs.file_to_upload }}
           if-no-files-found: ignore
       - name: Telemetry upload attributes
