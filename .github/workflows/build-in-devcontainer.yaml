@@ -187,7 +187,7 @@ jobs:
             extra-index-url = https://pypi.anaconda.org/rapidsai-wheels-nightly/simple
             EOF
 
-            rapids-make-${PYTHON_PACKAGE_MANAGER}-env;
+            rapids-make-${PYTHON_PACKAGE_MANAGER}-env --quiet;
 
             cd ~/"${REPOSITORY}";
             mkdir -p telemetry-artifacts;
