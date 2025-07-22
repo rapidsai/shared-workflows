@@ -31,3 +31,7 @@ repos:
     hooks:
       # Run the linter.
       - id: zizmor
+        exclude: |
+          (?x)^(
+            .github/workflows/build-in-devcontainer.yaml
+          )$
