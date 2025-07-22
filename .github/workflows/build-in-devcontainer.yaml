@@ -159,7 +159,11 @@ jobs:
             AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
-            RAPIDS_AUX_SECRET_1=${{ inputs.rapids-aux-secret-1 != '' && secrets[inputs.rapids-aux-secret-1] || '' }} # zizmor: ignore[overprovisioned-secrets]
+            RAPIDS_AUX_SECRET_1=${{
+              inputs.rapids-aux-secret-1 != ''
+              && secrets[inputs.rapids-aux-secret-1] # zizmor: ignore[overprovisioned-secrets]
+              || ''
+            }}
             TRACEPARENT=${{ env.TRACEPARENT }}
             OTEL_SERVICE_NAME=${{ env.OTEL_SERVICE_NAME }}
             OTEL_EXPORTER_OTLP_ENDPOINT=${{ env.OTEL_EXPORTER_OTLP_ENDPOINT }}
@@ -192,7 +196,7 @@ jobs:
             cd ~/"${REPOSITORY}";
             mkdir -p telemetry-artifacts;
             ${{ inputs.build_command }}
-      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+      - if: ${{ !cancelled() && env.HAS_DEVCONTAINER == 'true' }}
         name: Upload sccache logs
         uses: actions/upload-artifact@v4
         with:
