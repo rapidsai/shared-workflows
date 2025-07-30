@@ -151,22 +151,28 @@ jobs:
         name: Set up Python packages cache
         uses: actions/cache@v4
         with:
-          key: ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
           path: ${{ matrix.PACKAGER == 'pip' && '.cache/pip' || '.conda/pkgs' }}
+          key: ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
 
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Set up sccache preprocessor cache
         uses: actions/cache@v4
         with:
-          key: ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
           path: .config/sccache
+          key: ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
 
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Set up sccache-dist client toolchains
         uses: actions/cache@v4
         with:
-          key: ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
           path: .config/sccache-dist-client
+          key: ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
 
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
