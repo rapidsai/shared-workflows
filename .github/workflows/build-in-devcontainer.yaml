@@ -147,32 +147,32 @@ jobs:
         uses: nv-gha-runners/setup-proxy-cache@main
         continue-on-error: true
 
-      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Set up Python packages cache
-        uses: actions/cache@v4
+      - id: python-packages-cache
+        if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        name: Load Python packages cache
+        uses: actions/cache/restore@v4
         with:
           path: ${{ matrix.PACKAGER == 'pip' && '.cache/pip' || '.conda/pkgs' }}
+          restore-keys: python-packages-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
           key: python-packages-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}
-          restore-keys: |
-            python-packages-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
 
-      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Set up sccache preprocessor cache
-        uses: actions/cache@v4
+      - id: sccache-preprocessor-cache
+        if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        name: Load sccache preprocessor cache
+        uses: actions/cache/restore@v4
         with:
           path: .config/sccache
+          restore-keys: sccache-preprocessor-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
           key: sccache-preprocessor-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}
-          restore-keys: |
-            sccache-preprocessor-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
 
-      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Set up sccache-dist client toolchains cache
-        uses: actions/cache@v4
+      - id: sccache-dist-toolchains-cache
+        if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        name: Load sccache-dist client toolchains cache
+        uses: actions/cache/restore@v4
         with:
           path: .config/sccache-dist-client
+          restore-keys: sccache-toolchains-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
           key: sccache-toolchains-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}
-          restore-keys: |
-            sccache-toolchains-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
 
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
@@ -225,6 +225,27 @@ jobs:
             ${{ inputs.build_command }}
 
       - if: ${{ !cancelled() && env.HAS_DEVCONTAINER == 'true' }}
+        name: Save Python packages cache
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ matrix.PACKAGER == 'pip' && '.cache/pip' || '.conda/pkgs' }}
+          key: ${{ steps.python-packages-cache.outputs.cache-primary-key }}
+
+      - if: ${{ !cancelled() && env.HAS_DEVCONTAINER == 'true' }}
+        name: Save sccache preprocessor cache
+        uses: actions/cache/save@v4
+        with:
+          path: .config/sccache
+          key: ${{ steps.sccache-preprocessor-cache.outputs.cache-primary-key }}
+
+      - if: ${{ !cancelled() && env.HAS_DEVCONTAINER == 'true' }}
+        name: Save sccache-dist client toolchains cache
+        uses: actions/cache/save@v4
+        with:
+          path: .config/sccache-dist-client
+          key: ${{ steps.sccache-dist-toolchains-cache.outputs.cache-primary-key }}
+
+      - if: ${{ !cancelled() && env.HAS_DEVCONTAINER == 'true' }}
         name: Upload sccache logs
         uses: actions/upload-artifact@v4
         with:
@@ -232,7 +253,8 @@ jobs:
           path: .cache/sccache*.log
           compression-level: 9
 
-      - name: Telemetry upload attributes
+      - if: ${{ always() }}
+        name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
