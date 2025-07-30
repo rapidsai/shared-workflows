@@ -152,27 +152,27 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ matrix.PACKAGER == 'pip' && '.cache/pip' || '.conda/pkgs' }}
-          key: ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}
+          key: python-packages-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}
           restore-keys: |
-            ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
+            python-packages-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
 
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Set up sccache preprocessor cache
         uses: actions/cache@v4
         with:
           path: .config/sccache
-          key: ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}
+          key: sccache-preprocessor-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}
           restore-keys: |
-            ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
+            sccache-preprocessor-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
 
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Set up sccache-dist client toolchains
+        name: Set up sccache-dist client toolchains cache
         uses: actions/cache@v4
         with:
           path: .config/sccache-dist-client
-          key: ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}
+          key: sccache-toolchains-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}
           restore-keys: |
-            ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
+            sccache-toolchains-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
 
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
