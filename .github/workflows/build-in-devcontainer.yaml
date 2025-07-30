@@ -104,6 +104,7 @@ jobs:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
           fetch-depth: 0
+          path: repo
           persist-credentials: true
 
       # This provides an initial set of metadata tags. Jobs are free to add to the RAPIDS_JOB_ATTRIBUTES
@@ -123,11 +124,12 @@ jobs:
           PACKAGER: ${{ matrix.PACKAGER }}
         run: |
           echo "REPOSITORY=$(basename "$(pwd)")" | tee -a "${GITHUB_ENV}"
-          if test -f ".devcontainer/cuda${CUDA_VER}-${PACKAGER}/devcontainer.json"; then
+          if test -f "repo/.devcontainer/cuda${CUDA_VER}-${PACKAGER}/devcontainer.json"; then
             echo "HAS_DEVCONTAINER=true" >> "${GITHUB_ENV}"
           else
             echo "HAS_DEVCONTAINER=false" >> "${GITHUB_ENV}"
           fi
+
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
@@ -140,22 +142,38 @@ jobs:
         with:
           node-version: '16'
 
-      - name: Setup proxy cache
+      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
         continue-on-error: true
+
+      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        name: Init sccache preprocessor cache
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
+          path: .config/sccache
+
+      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        name: Init sccache-dist client toolchains
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
+          path: .config/sccache-dist-client
 
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
         uses: devcontainers/ci@8bf61b26e9c3a98f69cb6ce2f88d24ff59b785c6 # v0.3.1900000417
         with:
           push: never
+          checkoutPath: repo
           configFile: .devcontainer/cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}/devcontainer.json
           # Env vars are NOT automatically passed from our current env into the devcontainer.
           # We have to pass them in explicitly.
           env: |
             REPOSITORY=${{ env.REPOSITORY }}
             SCCACHE_REGION=${{ vars.AWS_REGION }}
-            SCCACHE_ERROR_LOG=/home/coder/${{ env.REPOSITORY }}/sccache.log
+            SCCACHE_ERROR_LOG=/home/coder/.cache/sccache.log
             AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
@@ -192,13 +210,15 @@ jobs:
             cd ~/"${REPOSITORY}";
             mkdir -p telemetry-artifacts;
             ${{ inputs.build_command }}
+
       - if: ${{ !cancelled() && env.HAS_DEVCONTAINER == 'true' }}
         name: Upload sccache logs
         uses: actions/upload-artifact@v4
         with:
           name: sccache-client-logs-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_attempt }}
-          path: sccache*.log
+          path: .cache/sccache*.log
           compression-level: 9
+
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
