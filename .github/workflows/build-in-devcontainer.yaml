@@ -137,25 +137,32 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-duration-seconds: 43200 # 12h
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Setup Node.js
+        name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '16'
+          node-version: '22'
 
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Setup proxy cache
+        name: Set up proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
         continue-on-error: true
 
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Init sccache preprocessor cache
+        name: Set up Python packages cache
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
+          path: ${{ matrix.PACKAGER == 'pip' && '.cache/pip' || '.conda/pkgs' }}
+
+      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        name: Set up sccache preprocessor cache
         uses: actions/cache@v4
         with:
           key: ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
           path: .config/sccache
 
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Init sccache-dist client toolchains
+        name: Set up sccache-dist client toolchains
         uses: actions/cache@v4
         with:
           key: ${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
