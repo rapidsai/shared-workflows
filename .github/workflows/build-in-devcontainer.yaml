@@ -186,7 +186,7 @@ jobs:
           env: |
             REPOSITORY=${{ env.REPOSITORY }}
             SCCACHE_REGION=${{ vars.AWS_REGION }}
-            SCCACHE_ERROR_LOG=/home/coder/.cache/sccache.log
+            SCCACHE_ERROR_LOG=/home/coder/${{ env.REPOSITORY }}/sccache.log
             AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
@@ -250,7 +250,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sccache-client-logs-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_attempt }}
-          path: .cache/sccache*.log
+          path: repo/sccache*.log
           compression-level: 9
 
       - if: ${{ always() }}
