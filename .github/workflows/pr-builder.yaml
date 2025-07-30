@@ -9,11 +9,19 @@ on:
         type: string
         default: '{}'
 
+permissions:
+  contents: read
+
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
       # This reusable workflow should depend on all other jobs in the calling workflow.
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        with:
+          egress-policy: audit
+
       - name: "Check all dependent jobs"
         env:
           NEEDS: ${{ inputs.needs }}

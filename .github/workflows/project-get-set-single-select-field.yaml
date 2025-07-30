@@ -57,6 +57,9 @@ on:
         value: ${{ jobs.get_set_single_select_option_id.outputs.SINGLE_SELECT_OPTION_ID }}
         description: "The single_select option ID"
 
+permissions:
+  contents: read
+
 jobs:
   get_set_single_select_option_id:
     runs-on: ubuntu-latest
@@ -66,6 +69,11 @@ jobs:
       SINGLE_SELECT_OPTION_ID: ${{ steps.get_single_select_option_id.outputs.SINGLE_SELECT_OPTION_ID }}
 
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        with:
+          egress-policy: audit
+
       - name: Get single_select Option ID
         id: get_single_select_option_id
         env:

@@ -25,6 +25,9 @@ on:
         description: "The item's project-specific ID"
         value: ${{ jobs.get_items_project_id.outputs.ITEM_PROJECT_ID }}
 
+permissions:
+  contents: read
+
 jobs:
   get_items_project_id:
     runs-on: ubuntu-latest
@@ -32,6 +35,11 @@ jobs:
       ITEM_PROJECT_ID: ${{ steps.get_item_id.outputs.ITEM_PROJECT_ID }}
 
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        with:
+          egress-policy: audit
+
       - name: Sleep 10s
         id: sleep
         run: |
