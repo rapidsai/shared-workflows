@@ -165,15 +165,6 @@ jobs:
           restore-keys: sccache-toolchains-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
           key: sccache-toolchains-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}-${{ github.run_attempt }}
 
-      - id: python-packages-cache
-        if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Set up Python packages cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ matrix.PACKAGER == 'pip' && '.cache/pip' || '.conda/pkgs' }}
-          restore-keys: python-packages-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
-          key: python-packages-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}-${{ github.run_attempt }}
-
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
         uses: devcontainers/ci@8bf61b26e9c3a98f69cb6ce2f88d24ff59b785c6 # v0.3.1900000417
