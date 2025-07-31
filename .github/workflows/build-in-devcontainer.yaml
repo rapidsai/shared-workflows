@@ -147,32 +147,32 @@ jobs:
         uses: nv-gha-runners/setup-proxy-cache@main
         continue-on-error: true
 
-      - id: python-packages-cache
-        if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Load Python packages cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ matrix.PACKAGER == 'pip' && '.cache/pip' || '.conda/pkgs' }}
-          restore-keys: python-packages-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
-          key: python-packages-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}
-
       - id: sccache-preprocessor-cache
         if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Load sccache preprocessor cache
-        uses: actions/cache/restore@v4
+        name: Set up sccache preprocessor cache
+        uses: actions/cache@v4
         with:
           path: .config/sccache
           restore-keys: sccache-preprocessor-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
-          key: sccache-preprocessor-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}
+          key: sccache-preprocessor-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - id: sccache-dist-toolchains-cache
         if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Load sccache-dist client toolchains cache
-        uses: actions/cache/restore@v4
+        name: Set up sccache-dist client toolchains cache
+        uses: actions/cache@v4
         with:
           path: .config/sccache-dist-client
           restore-keys: sccache-toolchains-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
-          key: sccache-toolchains-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}
+          key: sccache-toolchains-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - id: python-packages-cache
+        if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        name: Set up Python packages cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ matrix.PACKAGER == 'pip' && '.cache/pip' || '.conda/pkgs' }}
+          restore-keys: python-packages-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}
+          key: python-packages-cache-${{ runner.os }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
@@ -223,27 +223,6 @@ jobs:
             cd ~/"${REPOSITORY}";
             mkdir -p telemetry-artifacts;
             ${{ inputs.build_command }}
-
-      - if: ${{ !cancelled() && env.HAS_DEVCONTAINER == 'true' }}
-        name: Save Python packages cache
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ matrix.PACKAGER == 'pip' && '.cache/pip' || '.conda/pkgs' }}
-          key: ${{ steps.python-packages-cache.outputs.cache-primary-key }}
-
-      - if: ${{ !cancelled() && env.HAS_DEVCONTAINER == 'true' }}
-        name: Save sccache preprocessor cache
-        uses: actions/cache/save@v4
-        with:
-          path: .config/sccache
-          key: ${{ steps.sccache-preprocessor-cache.outputs.cache-primary-key }}
-
-      - if: ${{ !cancelled() && env.HAS_DEVCONTAINER == 'true' }}
-        name: Save sccache-dist client toolchains cache
-        uses: actions/cache/save@v4
-        with:
-          path: .config/sccache-dist-client
-          key: ${{ steps.sccache-dist-toolchains-cache.outputs.cache-primary-key }}
 
       - if: ${{ !cancelled() && env.HAS_DEVCONTAINER == 'true' }}
         name: Upload sccache logs
