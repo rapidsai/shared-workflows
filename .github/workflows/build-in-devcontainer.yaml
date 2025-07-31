@@ -253,10 +253,9 @@ jobs:
           path: repo/sccache*.log
           compression-level: 9
 
-      - if: ${{ always() }}
+      - if: ${{ always() && vars.TELEMETRY_ENABLED == 'true' }}
         name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
