@@ -37,6 +37,12 @@ on:
         description: "If true, the wheel will be published to pypi.org"
         type: boolean
         default: false
+      build_workflow_name:
+        description: |
+          Name of a workflow file that produced artifacts to be downloaded in this run.
+          If not set (the default), artifact-handling scripts use RAPIDS-conventional defaults (like "build.yaml" when "build_type == nightly").
+        required: false
+        type: string
 
 permissions:
   actions: read
@@ -86,6 +92,7 @@ jobs:
       with:
         repo: ${{ inputs.repo }}
         branch: ${{ inputs.branch }}
+        build_workflow_name: ${{ inputs.build_workflow_name }}
         date: ${{ inputs.date }}
         sha: ${{ inputs.sha }}
 
