@@ -29,6 +29,12 @@ on:
         description: The label that should be applied to packages uploaded to Anaconda.org
         type: string
         default: main
+      build_workflow_name:
+        description: |
+          Name of a workflow file that produced artifacts to be downloaded in this run.
+          If not set (the default), artifact-handling scripts use RAPIDS-conventional defaults (like "build.yaml" when "build_type == nightly").
+        required: false
+        type: string
 
 defaults:
   run:
@@ -71,17 +77,13 @@ jobs:
           persist-credentials: true
 
       - name: Standardize repository information
-        env:
-          RAPIDS_REPOSITORY: ${{ inputs.repo || github.repository }}
-          RAPIDS_REF_NAME: ${{ inputs.branch || github.ref_name }}
-          RAPIDS_NIGHTLY_DATE: ${{ inputs.date }}
-        run: |
-          {
-            echo "RAPIDS_REPOSITORY=${RAPIDS_REPOSITORY}"
-            echo "RAPIDS_SHA=$(git rev-parse HEAD)"
-            echo "RAPIDS_REF_NAME=${RAPIDS_REF_NAME}"
-            echo "RAPIDS_NIGHTLY_DATE=${RAPIDS_NIGHTLY_DATE}"
-          } >> "${GITHUB_ENV}"
+        uses: rapidsai/shared-actions/rapids-github-info@main
+        with:
+          repo: ${{ inputs.repo }}
+          branch: ${{ inputs.branch }}
+          build_workflow_name: ${{ inputs.build_workflow_name }}
+          date: ${{ inputs.date }}
+          sha: ${{ inputs.sha }}
 
       # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
       # checking '/rate_limit | jq .' should not itself count against any rate limits.
