@@ -219,7 +219,7 @@ jobs:
         name: Upload sccache logs
         uses: actions/upload-artifact@v4
         with:
-          name: sccache-client-logs-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_attempt }}
+          name: sccache-client-logs-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}
           path: repo/sccache*.log
           compression-level: 9
 
