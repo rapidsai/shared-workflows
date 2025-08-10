@@ -138,7 +138,7 @@ jobs:
         name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '16'
+          node-version: '22'
 
       - name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
