@@ -104,6 +104,7 @@ jobs:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
           fetch-depth: 0
+          path: repo
           persist-credentials: true
 
       # This provides an initial set of metadata tags. Jobs are free to add to the RAPIDS_JOB_ATTRIBUTES
@@ -119,36 +120,67 @@ jobs:
 
       - name: Check if repo has devcontainer
         env:
+          ARCH: ${{ matrix.ARCH }}
           CUDA_VER: ${{ matrix.CUDA_VER }}
           PACKAGER: ${{ matrix.PACKAGER }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
         run: |
-          echo "REPOSITORY=$(basename "$(pwd)")" | tee -a "${GITHUB_ENV}"
-          if test -f ".devcontainer/cuda${CUDA_VER}-${PACKAGER}/devcontainer.json"; then
-            echo "HAS_DEVCONTAINER=true" >> "${GITHUB_ENV}"
-          else
-            echo "HAS_DEVCONTAINER=false" >> "${GITHUB_ENV}"
+          HAS_DEVCONTAINER=false
+          if test -f "repo/.devcontainer/cuda${CUDA_VER}-${PACKAGER}/devcontainer.json"; then
+            HAS_DEVCONTAINER=true
           fi
+          cat <<EOF | tee -a "${GITHUB_ENV}"
+          ARTIFACT_SLUG=${RUN_ID}-${RUN_ATTEMPT}-$RANDOM
+          BUILD_SLUG=cuda${CUDA_VER}-${PACKAGER}-${ARCH}
+          HAS_DEVCONTAINER=$HAS_DEVCONTAINER
+          REPOSITORY=$(basename "$(pwd)")
+          EOF
+
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           role-duration-seconds: 43200 # 12h
+
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '16'
+          node-version: '22'
 
-      - name: Setup proxy cache
+      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
         continue-on-error: true
+
+      - id: sccache-preprocessor-cache
+        if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        name: Setup sccache preprocessor cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/sccache
+          restore-keys: sccache-preprocessor-cache-${{ runner.os }}-${{ env.BUILD_SLUG }}
+          key: sccache-preprocessor-cache-${{ runner.os }}-${{ env.BUILD_SLUG }}-${{ env.ARTIFACT_SLUG }}
+
+      - id: sccache-dist-toolchains-cache
+        if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        name: Setup sccache-dist client toolchains cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/sccache-dist-client
+          restore-keys: sccache-toolchains-cache-${{ runner.os }}-${{ env.BUILD_SLUG }}
+          key: sccache-toolchains-cache-${{ runner.os }}-${{ env.BUILD_SLUG }}-${{ env.ARTIFACT_SLUG }}
 
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
         uses: devcontainers/ci@8bf61b26e9c3a98f69cb6ce2f88d24ff59b785c6 # v0.3.1900000417
         with:
           push: never
+          checkoutPath: repo
+          imageTag: "cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}"
+          imageName: "docker.io/rapidsai/${{ env.REPOSITORY }}-devcontainer"
           configFile: .devcontainer/cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}/devcontainer.json
           # Env vars are NOT automatically passed from our current env into the devcontainer.
           # We have to pass them in explicitly.
@@ -192,16 +224,18 @@ jobs:
             cd ~/"${REPOSITORY}";
             mkdir -p telemetry-artifacts;
             ${{ inputs.build_command }}
+
       - if: ${{ !cancelled() && env.HAS_DEVCONTAINER == 'true' }}
         name: Upload sccache logs
         uses: actions/upload-artifact@v4
         with:
-          name: sccache-client-logs-cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}-${{ matrix.ARCH }}-${{ github.run_attempt }}
-          path: sccache*.log
+          name: sccache-client-logs-${{ env.BUILD_SLUG }}-${{ env.ARTIFACT_SLUG }}
+          path: repo/sccache*.log
           compression-level: 9
-      - name: Telemetry upload attributes
+
+      - if: ${{ always() && vars.TELEMETRY_ENABLED == 'true' }}
+        name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
