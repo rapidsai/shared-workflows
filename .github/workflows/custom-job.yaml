@@ -2,35 +2,78 @@ on:
   workflow_call:
     inputs:
       build_type:
+        description: "One of: [branch, nightly, pull-request]"
         required: true
         type: string
       branch:
+        description: |
+          Git branch the workflow run targets.
+          This is required even when 'sha' is provided because it is also used for organizing artifacts.
         type: string
       date:
+        description: "Date (YYYY-MM-DD) this run is for. Used to organize artifacts produced by nightly builds"
         type: string
       sha:
+        description: "Full git commit SHA to check out"
         type: string
       repo:
+        description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
         type: string
       arch:
+        description: "One of [amd64, arm64]. CPU architecture to run on."
         type: string
         default: "amd64"
       node_type:
+        description: |
+          Suffix, without leading '-', indicating the type of machine to run jobs on (e.g., 'cpu4' or 'gpu-l4-latest-1').
+          Runner labels are of the form '{operating_system}-{arch}-{node_type}'.
+          See https://github.com/nv-gha-runners/enterprise-runner-configuration/blob/main/docs/runner-groups.md for a list
+          of valid values.
         type: string
         default: "cpu8"
       container_image:
+        description: "Container image URI"
         type: string
-        default: "rapidsai/ci-conda:latest"
-      run_script:
-        required: true
+        default: "rapidsai/ci-conda:25.10-latest"
+      script:
+        required: false
         type: string
+        description: "Shell code to be executed in a step. Ideally this should just invoke a script managed in the repo the workflow runs from, like 'ci/test_java.sh'."
       file_to_upload:
+        description: |
+          Path to file(s) to be uploaded as a CI artifact.
+          If a directory is provided, all files in it will be bundled into a zip archive.
+          See 'path' input at https://github.com/actions/upload-artifact?tab=readme-ov-file#inputs
         type: string
         default: "gh-status.json"
+      artifact-name:
+        description: |
+          Identifier for the GitHub Actions artifact created by uploading ``file_to_upload``.
+          See 'name' input at https://github.com/actions/upload-artifact?tab=readme-ov-file#inputs
+        type: string
+        default: "result"
       continue-on-error:
+        description: |
+          If false (the default), treat job failures as workflow failures.
+          If true, job failures do not result in workflow failures (useful for implementing optional CI workflows).
+          See https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idcontinue-on-error
         type: boolean
         required: false
         default: false
+      build_workflow_name:
+        description: |
+          Name of a workflow file that produced artifacts to be downloaded in this run.
+          If not set (the default), artifact-handling scripts use RAPIDS-conventional defaults (like "build.yaml" when "build_type == nightly").
+        required: false
+        type: string
+      alternative-gh-token-secret-name:
+        type: string
+        required: false
+        description: |
+          If provided, should contain the name of a secret in the repo which holds a GitHub API token.
+          When this is non-empty, that secret's value is used in place of the default repo-level token
+          anywhere that environment variable GH_TOKEN is set. This is especially useful for downloading
+          artifacts from other private repos, which repo tokens do not have access to.
 
 defaults:
   run:
@@ -58,12 +101,12 @@ jobs:
     runs-on: "linux-${{ inputs.arch }}-${{ inputs.node_type }}"
     continue-on-error: ${{ inputs.continue-on-error }}
     container:
-      image: ${{ inputs.container_image }}
+      image: ${{ inputs.container_image }} # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -73,36 +116,60 @@ jobs:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
           fetch-depth: 0
+          persist-credentials: true
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
+          GH_TOKEN: ${{ github.token }}
       - name: Get PR Info
         if: startsWith(github.ref_name, 'pull-request/')
         id: get-pr-info
         uses: nv-gha-runners/get-pr-info@main
       - name: Add PR Info
         if: startsWith(github.ref_name, 'pull-request/')
-        run: |
+        run: | # zizmor: ignore[template-injection]
           echo "RAPIDS_BASE_BRANCH=${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}" >> "${GITHUB_ENV}"
       - name: Standardize repository information
+        uses: rapidsai/shared-actions/rapids-github-info@main
+        with:
+          repo: ${{ inputs.repo }}
+          branch: ${{ inputs.branch }}
+          date: ${{ inputs.date }}
+          sha: ${{ inputs.sha }}
+          build_workflow_name: ${{ inputs.build_workflow_name }}
+      # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
+      # checking '/rate_limit | jq .' should not itself count against any rate limits.
+      #
+      # gh CLI is pre-installed on Github-hosted runners, but may not be on self-hosted runners.
+      - name: Check GitHub API rate limits
         run: |
-          echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
-          echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
-          echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
-          echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
-
-      - name: Run script
-        run: ${{ inputs.run_script }}
+          if ! type gh >/dev/null; then
+              echo "'gh' CLI is not installed... skipping rate-limits check"
+          else
+              gh api /rate_limit | jq .
+          fi
         env:
-          GH_TOKEN: ${{ github.token }}
+          # NEEDS alternative-gh-token-secret_name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
+      - name: Run script
+        run: ${INPUTS_SCRIPT}
+        env:
+          # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
+          INPUTS_SCRIPT: ${{ inputs.script }}
       - name: Upload file to GitHub Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: result
+          name: ${{ inputs.artifact-name }}
           path: ${{ inputs.file_to_upload }}
           if-no-files-found: ignore
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
+          GH_TOKEN: ${{ github.token }}

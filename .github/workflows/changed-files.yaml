@@ -2,9 +2,19 @@ on:
   workflow_call:
     inputs:
       files_yaml:
+        description: |
+          YAML string containing mappings of the form `{key}: [{glob1}, {glob2}, etc.]`.
+          Where `{key}` is an arbitrary identifier for grouping a set of changed files
+          (e.g. "test_cpp" for "if these files change, C++ tests should be re-run") and
+          each `{glob}` is a glob expression matching file paths in the calling repo.
+          For example, "re-run all C++ tests on any changes EXCEPT docs" might look like this:
+          'test_cpp: ["**", "!docs/**"]'.
         type: string
         required: true
       transform_expr:
+        description: |
+          jq expression for post-processing results to create this workflow's outputs.
+          Provided for backwards compatibility; should not need to be updated with normal use.
         type: string
         required: false
         default: |
@@ -31,7 +41,7 @@ permissions:
   contents: read
   deployments: none
   discussions: none
-  id-token: write
+  id-token: none
   issues: none
   packages: read
   pages: none
@@ -50,7 +60,9 @@ jobs:
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Get PR info
         id: get-pr-info
         uses: nv-gha-runners/get-pr-info@main
@@ -65,10 +77,10 @@ jobs:
           PR_SHA: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).head.sha }}
           BASE_SHA: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.sha }}
         run: |
-          (echo -n "merge-base="; git merge-base "$BASE_SHA" "$PR_SHA") | tee --append "$GITHUB_OUTPUT"
+          (echo -n "merge-base="; git merge-base "$BASE_SHA" "$PR_SHA") | tee --append "${GITHUB_OUTPUT}"
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v45
+        uses: step-security/changed-files@95b56dadb92a30ca9036f16423fd3c088a71ee94 # v46.0.5
         with:
           base_sha: ${{ steps.calculate-merge-base.outputs.merge-base }}
           sha: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).head.sha }}
@@ -85,8 +97,10 @@ jobs:
             key="$(echo "$file" | sed -E 's/^\.github\/outputs\/(.*)\.json$/\1/g')"
             file_args=("${file_args[@]}" --slurpfile "$key" "$file")
           done
-          (echo -n "transformed-output="; jq -c -n "\$ARGS.named | to_entries | map({"key": .key, "value": .value[]}) | from_entries | $TRANSFORM_EXPR" "${file_args[@]}") | tee --append "$GITHUB_OUTPUT"
+          (echo -n "transformed-output="; jq -c -n "\$ARGS.named | to_entries | map({\"key\": .key, \"value\": .value[]}) | from_entries | $TRANSFORM_EXPR" "${file_args[@]}") | tee --append "${GITHUB_OUTPUT}"
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}

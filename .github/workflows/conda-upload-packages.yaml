@@ -2,22 +2,39 @@ on:
   workflow_call:
     inputs:
       build_type:
+        description: "One of: [branch, nightly, pull-request]"
         required: true
         type: string
       branch:
+        description: |
+          Git branch the workflow run targets.
+          This is required even when 'sha' is provided because it is also used for organizing artifacts.
         type: string
       date:
+        description: "Date (YYYY-MM-DD) this run is for. Used to organize artifacts produced by nightly builds"
         type: string
       sha:
+        description: "Full git commit SHA to check out"
         type: string
       repo:
+        description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
         type: string
       skip_upload_pkgs:
+        description: |
+          Space-delimited string of package names to skip uploading to anaconda.org.
+          When this is empty (the default), all conda packages found in CI artifacts for a given
+          run will be uploaded to anaconda.org
         type: string
       upload_to_label:
         description: The label that should be applied to packages uploaded to Anaconda.org
         type: string
         default: main
+      build_workflow_name:
+        description: |
+          Name of a workflow file that produced artifacts to be downloaded in this run.
+          If not set (the default), artifact-handling scripts use RAPIDS-conventional defaults (like "build.yaml" when "build_type == nightly").
+        required: false
+        type: string
 
 defaults:
   run:
@@ -42,32 +59,43 @@ jobs:
   upload:
     runs-on: linux-amd64-cpu4
     container:
-      image: rapidsai/ci-conda:latest
+      image: rapidsai/ci-conda:25.10-latest # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-          role-duration-seconds: 43200 # 12h
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
       - uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
           fetch-depth: 0
+          persist-credentials: true
 
       - name: Standardize repository information
-        run: |
-          echo "RAPIDS_REPOSITORY=${{ inputs.repo || github.repository }}" >> "${GITHUB_ENV}"
-          echo "RAPIDS_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
-          echo "RAPIDS_REF_NAME=${{ inputs.branch || github.ref_name }}" >> "${GITHUB_ENV}"
-          echo "RAPIDS_NIGHTLY_DATE=${{ inputs.date }}" >> "${GITHUB_ENV}"
+        uses: rapidsai/shared-actions/rapids-github-info@main
+        with:
+          repo: ${{ inputs.repo }}
+          branch: ${{ inputs.branch }}
+          build_workflow_name: ${{ inputs.build_workflow_name }}
+          date: ${{ inputs.date }}
+          sha: ${{ inputs.sha }}
 
+      # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
+      # checking '/rate_limit | jq .' should not itself count against any rate limits.
+      - name: Check GitHub API rate limits
+        run: |
+          if ! type gh >/dev/null; then
+              echo "'gh' CLI is not installed... skipping rate-limits check"
+          else
+              gh api /rate_limit | jq .
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Set Proper Conda Upload Token
         run: |
           RAPIDS_CONDA_TOKEN=${{ secrets.CONDA_RAPIDSAI_NIGHTLY_TOKEN }}
@@ -76,11 +104,14 @@ jobs:
           fi
           echo "RAPIDS_CONDA_TOKEN=${RAPIDS_CONDA_TOKEN}" >> "${GITHUB_ENV}"
       - name: Upload packages
-        run: rapids-upload-to-anaconda
+        run: rapids-upload-to-anaconda-github
         env:
           SKIP_UPLOAD_PKGS: ${{ inputs.skip_upload_pkgs }}
           RAPIDS_CONDA_UPLOAD_LABEL: ${{ inputs.upload_to_label }}
+          GH_TOKEN: ${{ github.token }}
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}

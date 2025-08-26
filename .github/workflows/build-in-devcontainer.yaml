@@ -1,40 +1,76 @@
 on:
   workflow_call:
     inputs:
+      env:
+        description: |
+          Additional environment variables to be set inside the devcontainer.
+          Should be a space-delimited string in the form "KEY=value".
+        type: string
       sha:
+        description: "Full git commit SHA to check out"
         type: string
       arch:
+        description: "One of [amd64, arm64]. CPU architecture to run on."
         type: string
         default: '["amd64"]'
       cuda:
+        description: |
+          Stringified JSON array of CUDA versions to run this workflow for.
+          This is used to select .devcontainer/ directories local to wherever this workflow is invoked from.
+          For example, if a repository has directories '.devcontainer/cuda12.0-pip/' and '.devcontainer/cuda12.8-pip/',
+          '["12.0", "12.8"]' could be passed here to build both of those devcontainers in CI.
         type: string
         default: '["12.0"]'
       python_package_manager:
+        description: |
+          Stringified JSON array of Python package managers to run devcontainer builds for.
+          One of: '["conda"]', '["pip"]', '["conda", "pip"]'.
         type: string
         default: '["conda", "pip"]'
       repo:
+        description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
         type: string
+      timeout-minutes:
+        description: "Maximum time (in minutes) allowed for a run of this workflow."
+        type: number
+        default: 360
       node_type:
+        description: |
+          Suffix, without leading '-', indicating the type of machine to run jobs on (e.g., 'cpu4' or 'gpu-l4-latest-1').
+          Runner labels are of the form '{operating_system}-{arch}-{node_type}'.
+          See https://github.com/nv-gha-runners/enterprise-runner-configuration/blob/main/docs/runner-groups.md for a list
+          of valid values.
         type: string
         default: "cpu8"
       build_command:
+        description: |
+          Shell commands to run inside the devcontainer after it's built and started.
+          This is almost always some form of 'build-all --verbose;'.
+          See https://github.com/rapidsai/devcontainers for details.
         type: string
         required: true
-      # Note that this is the _name_ of a secret containing the key, not the key itself.
       extra-repo-deploy-key:
+        description: |
+          The NAME (not value) of a GitHub secret in the calling repo, containing a repo deploy key.
+          This is here to allow the use of additional private repos in runs of this workflow.
         required: false
         type: string
         default: ''
-      # Note that this is the _name_ of a secret containing the key, not the key itself.
       extra-repo-deploy-key-2:
+        description: |
+          The NAME (not value) of a GitHub secret in the calling repo, containing a repo deploy key.
+          This is here to allow the use of additional private repos in runs of this workflow.
         required: false
         type: string
         default: ''
-    # the use of secrets in shared-workflows is discouraged, especially for public repositories.
-    # these values were added for situations where the use of secrets is unavoidable.
-    secrets:
-      RAPIDS_AUX_SECRET_1:
+      rapids-aux-secret-1:
+        description: |
+          The NAME (not value) of a GitHub secret in the calling repo.
+          This allows callers of the workflow to make a single secret available in the devcontainer's
+          environment, via environment variable `RAPIDS_AUX_SECRET_1`.
         required: false
+        type: string
+        default: ''
 
 permissions:
   actions: read
@@ -53,6 +89,7 @@ permissions:
 
 jobs:
   build:
+    timeout-minutes: ${{ inputs.timeout-minutes }}
     strategy:
       fail-fast: false
       matrix:
@@ -67,69 +104,102 @@ jobs:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
           fetch-depth: 0
+          path: repo
+          persist-credentials: true
 
       # This provides an initial set of metadata tags. Jobs are free to add to the RAPIDS_JOB_ATTRIBUTES
       # environment variable as they see fit - but remember to export the variable to ${GITHUB_ENV}
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
         with:
-            extra_attributes: "rapids.PACKAGER=${{ matrix.PACKAGER }},rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.ARCH=${{ matrix.ARCH }}"
+          extra_attributes: "rapids.PACKAGER=${{ matrix.PACKAGER }},rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.ARCH=${{ matrix.ARCH }}"
 
       - name: Check if repo has devcontainer
+        env:
+          ARCH: ${{ matrix.ARCH }}
+          CUDA_VER: ${{ matrix.CUDA_VER }}
+          PACKAGER: ${{ matrix.PACKAGER }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
         run: |
-          echo "REPOSITORY=$(basename $(pwd))" | tee -a "${GITHUB_ENV}";
-          if test -f .devcontainer/cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}/devcontainer.json; then
-            echo "HAS_DEVCONTAINER=true" >> "${GITHUB_ENV}";
-          else
-            echo "HAS_DEVCONTAINER=false" >> "${GITHUB_ENV}";
+          HAS_DEVCONTAINER=false
+          if test -f "repo/.devcontainer/cuda${CUDA_VER}-${PACKAGER}/devcontainer.json"; then
+            HAS_DEVCONTAINER=true
           fi
+          cat <<EOF | tee -a "${GITHUB_ENV}"
+          ARTIFACT_SLUG=${RUN_ID}-${RUN_ATTEMPT}-$RANDOM
+          BUILD_SLUG=cuda${CUDA_VER}-${PACKAGER}-${ARCH}
+          HAS_DEVCONTAINER=$HAS_DEVCONTAINER
+          REPOSITORY=$(basename "$(pwd)")
+          EOF
+
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           role-duration-seconds: 43200 # 12h
+
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '16'
+          node-version: '22'
 
-      - name: Setup proxy cache
+      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
         continue-on-error: true
 
+      - id: sccache-preprocessor-cache
+        if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        name: Setup sccache preprocessor cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/sccache/preprocessor
+          restore-keys: sccache-preprocessor-cache-${{ runner.os }}-${{ env.BUILD_SLUG }}
+          key: sccache-preprocessor-cache-${{ runner.os }}-${{ env.BUILD_SLUG }}-${{ env.ARTIFACT_SLUG }}
+
+      - id: sccache-dist-toolchains-cache
+        if: ${{ env.HAS_DEVCONTAINER == 'true' }}
+        name: Setup sccache-dist client toolchains cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/sccache-dist-client
+          restore-keys: sccache-toolchains-cache-${{ runner.os }}-${{ env.BUILD_SLUG }}
+          key: sccache-toolchains-cache-${{ runner.os }}-${{ env.BUILD_SLUG }}-${{ env.ARTIFACT_SLUG }}
+
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
-        uses: devcontainers/ci@v0.3
+        uses: devcontainers/ci@8bf61b26e9c3a98f69cb6ce2f88d24ff59b785c6 # v0.3.1900000417
         with:
           push: never
+          checkoutPath: repo
+          imageTag: "cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}"
+          imageName: "docker.io/rapidsai/${{ env.REPOSITORY }}-devcontainer"
           configFile: .devcontainer/cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}/devcontainer.json
           # Env vars are NOT automatically passed from our current env into the devcontainer.
           # We have to pass them in explicitly.
           env: |
             REPOSITORY=${{ env.REPOSITORY }}
             SCCACHE_REGION=${{ vars.AWS_REGION }}
+            SCCACHE_ERROR_LOG=/home/coder/${{ env.REPOSITORY }}/sccache.log
             AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
-            RAPIDS_AUX_SECRET_1=${{ secrets.RAPIDS_AUX_SECRET_1 }}
+            RAPIDS_AUX_SECRET_1=${{ inputs.rapids-aux-secret-1 != '' && secrets[inputs.rapids-aux-secret-1] || '' }}
             TRACEPARENT=${{ env.TRACEPARENT }}
             OTEL_SERVICE_NAME=${{ env.OTEL_SERVICE_NAME }}
             OTEL_EXPORTER_OTLP_ENDPOINT=${{ env.OTEL_EXPORTER_OTLP_ENDPOINT }}
             OTEL_EXPORTER_OTLP_PROTOCOL=${{ env.OTEL_EXPORTER_OTLP_PROTOCOL }}
             OTEL_RESOURCE_ATTRIBUTES=${{ env.OTEL_RESOURCE_ATTRIBUTES }}
+            ${{ inputs.env }}
           runCmd: |
-            set -e;
-            mkdir -p ~/.config/pip/;
-            cat <<EOF >> ~/.config/pip/pip.conf
-            [global]
-            extra-index-url = https://pypi.anaconda.org/rapidsai-wheels-nightly/simple
-            EOF
-
-            rapids-make-${PYTHON_PACKAGE_MANAGER}-env;
+            set -euo pipefail;
 
             if test -n '${{ inputs.extra-repo-deploy-key }}' \
             || test -n '${{ inputs.extra-repo-deploy-key-2 }}'; then
@@ -143,9 +213,29 @@ jobs:
               devcontainer-utils-init-ssh-deploy-keys || true;
             fi
 
+            mkdir -p ~/.config/pip/;
+            cat <<EOF >> ~/.config/pip/pip.conf
+            [global]
+            extra-index-url = https://pypi.anaconda.org/rapidsai-wheels-nightly/simple
+            EOF
+
+            rapids-make-${PYTHON_PACKAGE_MANAGER}-env;
+
             cd ~/"${REPOSITORY}";
+            mkdir -p telemetry-artifacts;
             ${{ inputs.build_command }}
-      - name: Telemetry upload attributes
+
+      - if: ${{ !cancelled() && env.HAS_DEVCONTAINER == 'true' }}
+        name: Upload sccache logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: sccache-client-logs-${{ env.BUILD_SLUG }}-${{ env.ARTIFACT_SLUG }}
+          path: repo/sccache*.log
+          compression-level: 9
+
+      - if: ${{ always() && vars.TELEMETRY_ENABLED == 'true' }}
+        name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -1,0 +1,7 @@
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        rapidsai/shared-actions/*: ref-pin
+        nv-gha-runners/*: ref-pin
+        actions/*: ref-pin

@@ -73,21 +73,23 @@ jobs:
             echo "$1" | jq ${flag} -c . | grep -E '^".*"$' | awk '{print substr($0, 2, length($0) - 2)}' && [ "${PIPESTATUS[2]}" -eq 0 ]
           }
 
-          # Escape all input variables
-          echo "sender_login=$(escape_json "${SENDER_LOGIN}")" >> $GITHUB_OUTPUT
-          echo "sender_avatar=$(escape_json "${SENDER_AVATAR}")" >> $GITHUB_OUTPUT
-          echo "repo=$(escape_json "${REPO}")" >> $GITHUB_OUTPUT
-          echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
-          echo "pr_title=$(escape_json "${PR_TITLE}")" >> $GITHUB_OUTPUT
-          echo "pr_body=$(escape_json "${PR_BODY}" slurp)" >> $GITHUB_OUTPUT
-          echo "pr_base_ref=$(escape_json "${PR_BASE_REF}")" >> $GITHUB_OUTPUT
-          echo "pr_author=$(escape_json "${PR_AUTHOR}")" >> $GITHUB_OUTPUT
+          {
+            # Escape all input variables
+            echo "sender_login=$(escape_json "${SENDER_LOGIN}")"
+            echo "sender_avatar=$(escape_json "${SENDER_AVATAR}")"
+            echo "repo=$(escape_json "${REPO}")"
+            echo "pr_number=${PR_NUMBER}"
+            echo "pr_title=$(escape_json "${PR_TITLE}")"
+            echo "pr_body=$(escape_json "${PR_BODY}" slurp)"
+            echo "pr_base_ref=$(escape_json "${PR_BASE_REF}")"
+            echo "pr_author=$(escape_json "${PR_AUTHOR}")"
 
-          # Create escaped URLs
-          echo "repo_url=$(escape_json "https://github.com/${REPO}")" >> $GITHUB_OUTPUT
-          echo "pr_url=$(escape_json "https://github.com/${REPO}/pull/${PR_NUMBER}")" >> $GITHUB_OUTPUT
-          echo "branch_url=$(escape_json "https://github.com/${REPO}/tree/${PR_BASE_REF}")" >> $GITHUB_OUTPUT
-          echo "author_url=$(escape_json "https://github.com/${PR_AUTHOR}")" >> $GITHUB_OUTPUT
+            # Create escaped URLs
+            echo "repo_url=$(escape_json "https://github.com/${REPO}")"
+            echo "pr_url=$(escape_json "https://github.com/${REPO}/pull/${PR_NUMBER}")"
+            echo "branch_url=$(escape_json "https://github.com/${REPO}/tree/${PR_BASE_REF}")"
+            echo "author_url=$(escape_json "https://github.com/${PR_AUTHOR}")"
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Determine notification parameters
         id: notification
@@ -96,25 +98,33 @@ jobs:
           PR_MERGED: ${{ inputs.pr_merged }}
         run: |
           if [[ "$EVENT_ACTION" == "closed" && "$PR_MERGED" == "true" ]]; then
-            echo "action=Merged" >> $GITHUB_OUTPUT
-            echo "color=#D00000" >> $GITHUB_OUTPUT
-            echo "icon=:rocket:" >> $GITHUB_OUTPUT
+            {
+              echo "action=Merged"
+              echo "color=#D00000"
+              echo "icon=:rocket:"
+            } >> "${GITHUB_OUTPUT}"
           elif [[ "$EVENT_ACTION" == "closed" ]]; then
-            echo "action=Closed" >> $GITHUB_OUTPUT
-            echo "color=#1d9bd1" >> $GITHUB_OUTPUT
-            echo "icon=:information_source:" >> $GITHUB_OUTPUT
+            {
+              echo "action=Closed"
+              echo "color=#1d9bd1"
+              echo "icon=:information_source:"
+            } >> "${GITHUB_OUTPUT}"
           elif [[ "$EVENT_ACTION" == "reopened" ]]; then
-            echo "action=Reopened" >> $GITHUB_OUTPUT
-            echo "color=warning" >> $GITHUB_OUTPUT
-            echo "icon=:warning:" >> $GITHUB_OUTPUT
+            {
+              echo "action=Reopened"
+              echo "color=warning"
+              echo "icon=:warning:"
+            } >> "${GITHUB_OUTPUT}"
           else
-            echo "action=Modified" >> $GITHUB_OUTPUT
-            echo "color=good" >> $GITHUB_OUTPUT
-            echo "icon=:information_source:" >> $GITHUB_OUTPUT
+            {
+              echo "action=Modified"
+              echo "color=good"
+              echo "icon=:information_source:"
+            } >> "${GITHUB_OUTPUT}"
           fi
 
       - name: Send Slack notification
-        uses: slackapi/slack-github-action@v2.0.0
+        uses: slackapi/slack-github-action@485a9d42d3a73031f12ec201c457e2162c45d02d # v2.0.0
         with:
           payload: |
             {

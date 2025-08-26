@@ -3,47 +3,93 @@ name: Build RAPIDS wheels
 on:
   workflow_call:
     inputs:
-      # repo and branch
-      repo:
-        type: string
       branch:
+        description: |
+          Git branch the workflow run targets.
+          This is required even when 'sha' is provided because it is also used for organizing artifacts.
         type: string
       date:
+        description: "Date (YYYY-MM-DD) this run is for. Used to organize artifacts produced by nightly builds"
         type: string
       sha:
+        description: "Full git commit SHA to check out"
+        type: string
+      repo:
+        description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
         type: string
       build_type:
+        description: "One of: [branch, nightly, pull-request]"
         required: true
         type: string
       script:
         required: true
         type: string
+        description: "Shell code to be executed in a step. Ideally this should just invoke a script managed in the repo the workflow runs from, like 'ci/build_wheel.sh'."
+      package-name:
+        required: true
+        type: string
+        description: "Distribution name, without any other qualifiers (e.g. 'pylibcudf', not 'pylibcudf-cu12-cp311-manylinux_2_24_aarch64')"
+      package-type:
+        description: "One of: [cpp, python]"
+        required: true
+        type: string
+      pure-wheel:
+        required: false
+        type: boolean
+        default: false
+        description: "One of [true, false], true if the wheel is not dependent on operating system, Python minor version, or CPU architecture"
+      append-cuda-suffix:
+        required: false
+        type: boolean
+        default: true
+        description: "One of [true, false] to indicate if CUDA version should be appended to the wheel name"
 
       # allow a bigger runner instance
       node_type:
+        description: |
+          Suffix, without leading '-', indicating the type of machine to run jobs on (e.g., 'cpu4' or 'gpu-l4-latest-1').
+          Runner labels are of the form '{operating_system}-{arch}-{node_type}'.
+          See https://github.com/nv-gha-runners/enterprise-runner-configuration/blob/main/docs/runner-groups.md for a list
+          of valid values.
         required: false
         type: string
         default: "cpu16"
 
       # general settings
       matrix_filter:
+        description: |
+          jq expression which modifies the matrix.
+          For example, 'map(select(.ARCH == "amd64"))' to achieve "only run amd64 jobs".
         type: string
         default: "."
-
-      # Extra repository that will be cloned into the project directory.
+      upload-artifacts:
+        type: boolean
+        default: true
+        required: false
+        description: "One of [true, false], true if artifacts should be uploaded to GitHub's artifact store"
       extra-repo:
         required: false
         type: string
         default: ''
+        description: "Extra repository that will be cloned into the project directory."
       extra-repo-sha:
         required: false
         type: string
         default: ''
-      # Note that this is the _name_ of a secret containing the key, not the key itself.
+        description: "Commit SHA in 'extra-repo' to clone."
       extra-repo-deploy-key:
         required: false
         type: string
         default: ''
+        description: "The _name_ of a secret containing a deploy key for 'extra-repo' (not the key itself)."
+      alternative-gh-token-secret-name:
+        type: string
+        required: false
+        description: |
+          If provided, should contain the name of a secret in the repo which holds a GitHub API token.
+          When this is non-empty, that secret's value is used in place of the default repo-level token
+          anywhere that environment variable GH_TOKEN is set. This is especially useful for downloading
+          artifacts from other private repos, which repo tokens do not have access to.
 
 defaults:
   run:
@@ -72,6 +118,8 @@ jobs:
     steps:
       - name: Compute Build Matrix
         id: compute-matrix
+        env:
+          MATRIX_FILTER: ${{ inputs.matrix_filter }}
         run: |
           set -eo pipefail
 
@@ -81,24 +129,20 @@ jobs:
           #
           export MATRIX="
           # amd64
-          - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
-          - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8' }
-          - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
-          - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8' }
-          - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
-          - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8' }
           # arm64
-          - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
-          - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8' }
-          - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
-          - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8' }
-          - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '11.8.0', LINUX_VER: 'rockylinux8' }
-          - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.8.0', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'arm64', PY_VER: '3.10', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8' }
+          - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8' }
           "
 
           MATRIX="$(
             yq -n -o json 'env(MATRIX)' | \
-            jq -c '${{ inputs.matrix_filter }} | if (. | length) > 0 then {include: .} else "Error: Empty matrix\n" | halt_error(1) end'
+            jq -c "${MATRIX_FILTER} | if (. | length) > 0 then {include: .} else \"Error: Empty matrix\n\" | halt_error(1) end"
           )"
 
           echo "MATRIX=${MATRIX}" | tee --append "${GITHUB_OUTPUT}"
@@ -111,12 +155,12 @@ jobs:
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     container:
-      image: "rapidsai/ci-wheel:cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}"
+      image: "rapidsai/ci-wheel:25.10-cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
 
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -141,9 +185,11 @@ jobs:
       - name: Preprocess extra repos
         id: preprocess-extras
         if: ${{ inputs.extra-repo != '' }}
+        env:
+          EXTRA_REPO: ${{ inputs.extra-repo }}
         run: |
-          EXTRA_REPO_PATH=$(echo ${{ inputs.extra-repo }} | cut -d "/"  -f 2)
-          echo "EXTRA_REPO_PATH=${EXTRA_REPO_PATH}" >> $GITHUB_OUTPUT
+          EXTRA_REPO_PATH=$(echo "$EXTRA_REPO" | cut -d "/"  -f 2)
+          echo "EXTRA_REPO_PATH=${EXTRA_REPO_PATH}" >> "${GITHUB_OUTPUT}"
 
       - name: checkout extra repos
         uses: actions/checkout@v4
@@ -152,7 +198,7 @@ jobs:
           repository: ${{ inputs.extra-repo }}
           ref: ${{ inputs.extra-repo-sha }}
           path: "./${{ steps.preprocess-extras.outputs.EXTRA_REPO_PATH }}"
-          ssh-key: ${{ secrets[inputs.extra-repo-deploy-key] }}
+          ssh-key: ${{ secrets[inputs.extra-repo-deploy-key] }} # zizmor: ignore[overprovisioned-secrets]
           persist-credentials: false
 
       - name: Setup proxy cache
@@ -162,21 +208,81 @@ jobs:
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
+          GH_TOKEN: ${{ github.token }}
         with:
           extra_attributes: "rapids.PACKAGER=wheel,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
 
-      - name: Build and repair the wheel
+      # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
+      # checking '/rate_limit | jq .' should not itself count against any rate limits.
+      #
+      # gh CLI is pre-installed on Github-hosted runners, but may not be on self-hosted runners.
+      - name: Check GitHub API rate limits
         run: |
-          ${{ inputs.script }}
+          if ! type gh >/dev/null; then
+              echo "'gh' CLI is not installed... skipping rate-limits check"
+          else
+              gh api /rate_limit | jq .
+          fi
         env:
-          GH_TOKEN: ${{ github.token }}
+          # NEEDS alternative-gh-token-secret_name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
+      - name: Build and repair the wheel
+        run: ${{ inputs.script }} # zizmor: ignore[template-injection]
+        env:
+          # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
         # Use a shell that loads the rc file so that we get the compiler settings
         shell: bash -leo pipefail {0}
+
+      - name: Get package name
+        if: ${{ inputs.upload-artifacts }}
+        env:
+          APPEND_CUDA_SUFFIX: ${{ inputs.append-cuda-suffix }}
+          PACKAGE_NAME: ${{ inputs.package-name }}
+          PACKAGE_TYPE: ${{ inputs.package-type }}
+          PURE_WHEEL: ${{ inputs.pure-wheel }}
+        run: |
+          if [ -z "${PACKAGE_NAME}" ]; then
+            PACKAGE_NAME="${RAPIDS_REPOSITORY#*/}"
+          fi
+          export "RAPIDS_PY_CUDA_SUFFIX=$(rapids-wheel-ctk-name-gen "${RAPIDS_CUDA_VERSION}")"
+          if [ "${APPEND_CUDA_SUFFIX}" = "true" ]; then
+            export "RAPIDS_PY_WHEEL_NAME=${PACKAGE_NAME}_${RAPIDS_PY_CUDA_SUFFIX}"
+          else
+            export "RAPIDS_PY_WHEEL_NAME=${PACKAGE_NAME}"
+          fi
+          if [ "${PURE_WHEEL}" = "true" ]; then
+            export "RAPIDS_PY_WHEEL_PURE=1"
+          fi
+          echo "RAPIDS_PACKAGE_NAME=$(RAPIDS_NO_PKG_EXTENSION=true rapids-package-name "wheel_${PACKAGE_TYPE}")" >> "${GITHUB_OUTPUT}"
+          echo "WHEEL_OUTPUT_DIR=${RAPIDS_WHEEL_BLD_OUTPUT_DIR}" >> "${GITHUB_OUTPUT}"
+        id: package-name
+
+      - name: Show files to be uploaded
+        if: ${{ inputs.upload-artifacts }}
+        env:
+          WHEEL_OUTPUT_DIR: ${{ steps.package-name.outputs.WHEEL_OUTPUT_DIR }}
+        run: |
+          echo "Contents of directory to be uploaded:"
+          ls -R "$WHEEL_OUTPUT_DIR"
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ inputs.upload-artifacts }}
+        with:
+          if-no-files-found: 'error'
+          name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
+          path: ${{ steps.package-name.outputs.WHEEL_OUTPUT_DIR }}
+
       - name: Upload additional artifacts
         if: "!cancelled()"
-        run: rapids-upload-artifacts-dir cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}
+        run: rapids-upload-artifacts-dir "cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}"
       - name: Telemetry upload attributes
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' && github.run_attempt == '1' }}
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
+          GH_TOKEN: ${{ github.token }}
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
