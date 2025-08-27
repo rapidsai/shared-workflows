@@ -29,7 +29,7 @@ Using a high-level tracker as an example, the automation is built as a set of re
 
 ```mermaid
 flowchart LR
-    A[PR Event] --> B[project-high-level-tracker ♻️]
+    A[PR Event] --> B[project-high-level-tracker]
     B --> E[get-project-id ♻️]
     E --> H[update-week-field ♻️]
     E --> I[set-opened-date-field ♻️]
