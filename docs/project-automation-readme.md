@@ -34,8 +34,7 @@ flowchart LR
     E --> H[update-week-field ♻️]
     E --> I[set-opened-date-field ♻️]
     E --> J[set-closed-date-field ♻️]
-    G --> K[update-linked-issues ♻️]
-    H --> K
+    H --> K[update-linked-issues ♻️]
     I --> K
     J --> K
 ```
