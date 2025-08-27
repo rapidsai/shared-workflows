@@ -2,7 +2,7 @@
 
 ## Overview
 
-This collection of GitHub Actions workflows supports automation of the management of GitHub Projects, helping track development progress across RAPIDS repositories. 
+This collection of GitHub Actions workflows supports automation of the management of GitHub Projects, helping track development progress across RAPIDS repositories.
 
 The automations can also synchronize fields from PR to Issue such as the statuses, release information, and development stages into project fields, making project management effortless and consistent.
 
@@ -43,21 +43,21 @@ flowchart LR
 
 ### Core Workflows
 
-1. **project-get-item-id.yaml**  
+1. **project-get-item-id.yaml**
    Gets the project-specific ID for an item (PR or issue) within a project - a critical first step for all operations.
 
-2. **project-set-text-date-numeric-field.yaml**  
+2. **project-set-text-date-numeric-field.yaml**
    Updates text, date, or numeric fields in the project.
 
-3. **project-get-set-single-select-field.yaml**  
+3. **project-get-set-single-select-field.yaml**
    Handles single-select (dropdown) fields like Status, Stage, etc.
 
-4. **project-get-set-iteration-field.yaml**  
+4. **project-get-set-iteration-field.yaml**
    Manages iteration fields for sprint/week tracking.
 
 ### Support Workflow
 
-5. **project-update-linked-issues.yaml**  
+5. **project-update-linked-issues.yaml**
    Synchronizes linked issues with the PR's field values.<br>
    Unfortunately, we cannot go from Issue -> PR; the linkage exists only within the PR's API.
 
