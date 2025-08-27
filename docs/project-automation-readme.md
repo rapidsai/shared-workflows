@@ -31,12 +31,10 @@ Using a high-level tracker as an example, the automation is built as a set of re
 flowchart LR
     A[PR Event] --> B[project-high-level-tracker ♻️]
     B --> E[get-project-id ♻️]
-    E --> G
     E --> H[update-week-field ♻️]
     E --> I[set-opened-date-field ♻️]
     E --> J[set-closed-date-field ♻️]
-    F --> K[update-linked-issues ♻️]
-    G --> K
+    G --> K[update-linked-issues ♻️]
     H --> K
     I --> K
     J --> K
