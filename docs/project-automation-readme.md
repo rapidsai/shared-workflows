@@ -30,11 +30,11 @@ Using a high-level tracker as an example, the automation is built as a set of re
 ```mermaid
 flowchart LR
     A[PR Event] --> B[project-high-level-tracker]
-    B --> E[get-project-id ♻️ (project-get-item-id.yaml)]
-    E --> H[update-week-field ♻️ (project-get-set-iteration-field.yaml)]
-    E --> I[set-opened-date-field ♻️ (project-set-text-date-numeric-field.yaml)]
-    E --> J[set-closed-date-field ♻️ (project-set-text-date-numeric-field.yaml)]
-    H --> K[update-linked-issues ♻️ (project-update-linked-issues.yaml)]
+    B --> E["get-project-id ♻️<br/>project-get-item-id.yaml"]
+    E --> H["update-week-field ♻️<br/>project-get-set-iteration-field.yaml"]
+    E --> I["set-opened-date-field ♻️<br/>project-set-text-date-numeric-field.yaml"]
+    E --> J["set-closed-date-field ♻️<br/>project-set-text-date-numeric-field.yaml"]
+    H --> K["update-linked-issues ♻️<br/>project-update-linked-issues.yaml"]
     I --> K
     J --> K
 ```
