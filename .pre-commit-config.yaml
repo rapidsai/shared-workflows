@@ -27,7 +27,7 @@ repos:
       - id: verify-copyright
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
     # Zizmor version.
-    rev: v1.11.0
+    rev: v1.12.1
     hooks:
       # Run the linter.
       - id: zizmor
