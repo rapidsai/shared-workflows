@@ -159,7 +159,7 @@ jobs:
       RAPIDS_DEPENDENCIES: ${{ matrix.DEPENDENCIES }}
       RAPIDS_TESTS_DIR: ${{ github.workspace }}/test-results
     container:
-      image: rapidsai/ci-conda:25.10-cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
+      image: rapidsai/ci-conda:25.12-cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
       options: ${{ inputs.container-options }}
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}

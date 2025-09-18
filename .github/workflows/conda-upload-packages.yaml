@@ -59,7 +59,7 @@ jobs:
   upload:
     runs-on: linux-amd64-cpu4
     container:
-      image: rapidsai/ci-conda:25.10-latest # zizmor: ignore[unpinned-images]
+      image: rapidsai/ci-conda:25.12-latest # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
