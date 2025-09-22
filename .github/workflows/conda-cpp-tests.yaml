@@ -78,6 +78,7 @@ permissions:
 
 jobs:
   compute-matrix:
+    name: conda-cpp-tests (compute-matrix)
     runs-on: ubuntu-latest
     env:
       BUILD_TYPE: ${{ inputs.build_type }}

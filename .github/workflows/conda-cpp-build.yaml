@@ -72,7 +72,7 @@ permissions:
 
 jobs:
   compute-matrix:
-    name: compute-matrix (conda-cpp-build)
+    name: conda-cpp-build (compute-matrix)
     runs-on: ubuntu-latest
     outputs:
       MATRIX: ${{ steps.compute-matrix.outputs.MATRIX }}

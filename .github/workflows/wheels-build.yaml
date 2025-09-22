@@ -112,6 +112,9 @@ permissions:
 
 jobs:
   compute-matrix:
+    # Setting 'name' here helps differentiate jobs in the GitHub UI,
+    # especially when this workflow is >=2 levels deep (e.g. called by a workflow called by another workflow).
+    name: wheels-build (compute-matrix)
     runs-on: ubuntu-latest
     outputs:
       MATRIX: ${{ steps.compute-matrix.outputs.MATRIX }}
