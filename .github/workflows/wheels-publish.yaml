@@ -61,7 +61,9 @@ permissions:
 
 jobs:
   wheel-publish:
-    name: wheels publish
+    # Setting 'name' here helps differentiate jobs in the GitHub UI,
+    # especially when this workflow is >=2 levels deep (e.g. called by a workflow called by another workflow).
+    name: wheels-publish (${{ inputs.package-name }})
     # Use a self-hosted runner to ensure we have sufficient disk space. Using
     # cpu8 since we shouldn't need much CPU horsepower.
     runs-on: "linux-amd64-cpu8"
