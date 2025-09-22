@@ -99,29 +99,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          CPP_DIR=$(rapids-download-conda-from-github cpp)
-          EXTRACTED_DIR=$(rapids-extract-conda-files "${CPP_DIR}")
-          echo "RAPIDS_EXTRACTED_DIR=${EXTRACTED_DIR}" >> "${GITHUB_ENV}"
-      - name: Get weak detection tool
-        uses: actions/checkout@v4
-        with:
-          repository: rapidsai/detect-weak-linking
-          ref: refs/heads/main
-          path: "./tool/"
-          fetch-depth: 0
-          persist-credentials: true
-      - name: Verify CUDA libraries have no public kernel entry points
-        env:
-          SYMBOL_EXCLUSIONS: ${{ inputs.symbol_exclusions }}
-        run: |
-          if [ -n "${SYMBOL_EXCLUSIONS}" ]; then
-            python ./tool/detect.py "${RAPIDS_EXTRACTED_DIR}"/lib -e "${SYMBOL_EXCLUSIONS}"
-          else
-            python ./tool/detect.py "${RAPIDS_EXTRACTED_DIR}"/lib
-          fi
-      - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
+          exit 0

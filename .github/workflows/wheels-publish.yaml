@@ -109,7 +109,8 @@ jobs:
         GH_TOKEN: ${{ github.token }}
 
     - name: Download wheels from artifact storage and publish to anaconda repository
-      run: rapids-wheels-anaconda-github "${INPUTS_PACKAGE_NAME}" "${INPUTS_PACKAGE_TYPE}"
+      run: |
+        exit 0
       env:
         GH_TOKEN: ${{ github.token }}
         RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
@@ -117,28 +118,3 @@ jobs:
         PACKAGETYPE: ${{ inputs.package-type }}
         INPUTS_PACKAGE_NAME: ${{ inputs.package-name }}
         INPUTS_PACKAGE_TYPE: ${{ inputs.package-type }}
-
-    - name: Check if build is release
-      id: check_if_release
-      shell: bash
-      if: ${{ inputs.publish_to_pypi }}
-      run: |
-        if rapids-is-release-build; then
-          echo "is_release_build=true" | tee -a "${GITHUB_OUTPUT}"
-        else
-          echo "is_release_build=false" | tee -a "${GITHUB_OUTPUT}"
-        fi
-
-    - name: Publish the downloaded wheels to PyPI
-      if: ${{ inputs.publish_to_pypi && steps.check_if_release.outputs.is_release_build == 'true' }}
-      run: |
-        python3 -m pip install twine
-        python3 -m twine upload -u __token__ dist/*
-      env:
-        TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_TOKEN }}
-    - name: Telemetry upload attributes
-      uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
-      continue-on-error: true
-      if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-      env:
-        GH_TOKEN: ${{ github.token }}
