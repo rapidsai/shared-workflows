@@ -186,6 +186,7 @@ jobs:
           # We have to pass them in explicitly.
           env: |
             REPOSITORY=${{ env.REPOSITORY }}
+            SCCACHE_IDLE_TIMEOUT=0
             SCCACHE_REGION=${{ vars.AWS_REGION }}
             SCCACHE_ERROR_LOG=/home/coder/${{ env.REPOSITORY }}/sccache.log
             AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
