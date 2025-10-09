@@ -99,7 +99,7 @@ jobs:
     runs-on: "linux-${{ matrix.ARCH }}-${{ inputs.node_type }}"
     name: "${{ matrix.ARCH }}, ${{ matrix.CUDA_VER }}, ${{ matrix.PACKAGER }}"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
