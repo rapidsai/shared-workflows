@@ -120,6 +120,7 @@ jobs:
         id: compute-matrix
         env:
           MATRIX_FILTER: ${{ inputs.matrix_filter }}
+          PURE_WHEEL: ${{ inputs.pure-wheel }}
         run: |
           set -eo pipefail
 
@@ -147,6 +148,13 @@ jobs:
           - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '13.0.1', LINUX_VER: 'rockylinux8' }
           - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '13.0.1', LINUX_VER: 'rockylinux8' }
           "
+
+          # When pure-wheel is true, ignore matrix_filter and build one wheel per CUDA version with amd64 and the latest PY_VER
+          if [ "${PURE_WHEEL}" = "true" ]; then
+            MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | group_by(.CUDA_VER) | map(max_by(.PY_VER | split(\".\") | map(tonumber)))"
+          else
+            MATRIX_FILTER="${MATRIX_FILTER}"
+          fi
 
           MATRIX="$(
             yq -n -o json 'env(MATRIX)' | \
@@ -242,6 +250,10 @@ jobs:
         env:
           # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
+          # If this is a pure wheel, we need to set this variable for some of
+          # the `gha-tools` to name things correctly.
+          # `gha-tools` expects this env-var to be set to "1" if the wheel is pure
+          RAPIDS_PY_WHEEL_PURE: ${{ inputs.pure-wheel && '1' || '0' }}
         # Use a shell that loads the rc file so that we get the compiler settings
         shell: bash -leo pipefail {0}
 
