@@ -204,6 +204,8 @@ jobs:
           echo "RAPIDS_PACKAGE_NAME=$(RAPIDS_NO_PKG_EXTENSION=true rapids-package-name conda_python)" >> "${GITHUB_OUTPUT}"
           echo "CONDA_OUTPUT_DIR=${RAPIDS_CONDA_BLD_OUTPUT_DIR}" >> "${GITHUB_OUTPUT}"
         id: package-name
+        env:
+          RAPIDS_PY_CONDA_NOARCH: ${{ inputs.noarch && '1' || '0' }}
       - name: Show files to be uploaded
         if: ${{ inputs.upload-artifacts }}
         env:
