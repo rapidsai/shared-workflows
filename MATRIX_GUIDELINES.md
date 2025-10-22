@@ -104,7 +104,7 @@ Make sure to test on CUDA versions new enough to support that hardware.
 ### Adding new versions to the matrix
 
 When making matrix changes (new CUDA/Python/OS versions, runner type changes):
-1. **Create a long-lived branch**: Create a feature branch in `shared-workflows`. 1. **Create a long-lived branch**: Create a feature branch in `shared-workflows`. 
+1. **Create a long-lived branch**: Create a feature branch in `shared-workflows`. 1. **Create a long-lived branch**: Create a feature branch in `shared-workflows`.
 > [!IMPORTANT]
 > You must use the `rapidsai/shared-workflows` repo and not a fork.
 > Using a fork in downstream repositories will not allow actions to run, for security reasons.
@@ -125,7 +125,7 @@ That process is really only needed for adding new builds that don't yet exist, a
 
 1. **Announce deprecation**: Publish a RAPIDS Support Notice if needed (e.g., [RSN 54](https://docs.rapids.ai/notices/rsn0054/))
 2. **Update the matrix**: Modify/remove build and test matrices
-3. **Validate one repo**: Open a test PR downstream in representative project like rmm or cudf. 
+3. **Validate one repo**: Open a test PR downstream in representative project like rmm or cudf.
 > [!NOTE]
 > This ensures the workflow syntax is valid, the requested CI runners are operational, and the requested CI images exist
 4. **Merge matrix changes**: Merge the workflow changes and close the test PR
