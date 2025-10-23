@@ -250,9 +250,8 @@ jobs:
         GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
         RAPIDS_AUX_SECRET_1: ${{ inputs.rapids-aux-secret-1 != '' && secrets[inputs.rapids-aux-secret-1] || '' }} # zizmor: ignore[overprovisioned-secrets]
         INPUTS_SCRIPT: ${{ inputs.script }}
-        # If this is a pure wheel, we need to set this variable for some of
-        # the `gha-tools` to name things correctly.
-        # `gha-tools` expects this env-var to be set to "1" if the wheel is pure
+        # For pure wheels we pass through `pure-wheel` so `rapids-package-name` names the artifact correctly
+        # `rapids-package-name` expects this `$RAPIDS_PY_WHEEL_PURE` to be set to "1" if the wheel is pure
         RAPIDS_PY_WHEEL_PURE: ${{ inputs.pure-wheel && '1' || '0' }}
 
     - name: Generate test report
