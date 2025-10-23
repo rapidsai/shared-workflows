@@ -50,7 +50,7 @@ on:
           When this is non-empty, that secret's value is used in place of the default repo-level token
           anywhere that environment variable GH_TOKEN is set. This is especially useful for downloading
           artifacts from other private repos, which repo tokens do not have access to.
-      noarch:
+      conda-noarch:
         required: false
         type: boolean
         default: false
@@ -88,7 +88,7 @@ jobs:
         id: compute-matrix
         env:
           MATRIX_FILTER: ${{ inputs.matrix_filter }}
-          NO_ARCH: ${{ inputs.noarch }}
+          NO_ARCH: ${{ inputs.conda-noarch }}
         run: |
           set -eo pipefail
 
@@ -118,9 +118,9 @@ jobs:
           "
 
 
-          # When noarch is true, ignore matrix_filter and build one conda package with amd64 and the latest PY_VER
+          # When conda-noarch is true, ignore matrix_filter and build one conda package with amd64, latest CUDA_VER, and the latest PY_VER
           if [ "${NO_ARCH}" = "true" ]; then
-            MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | [max_by(.PY_VER | split(\".\") | map(tonumber))]"
+            MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | [max_by([.CUDA_VER | split(\".\") | map(tonumber), .PY_VER | split(\".\") | map(tonumber)])]"
           else
             MATRIX_FILTER="${MATRIX_FILTER}"
           fi
@@ -205,7 +205,7 @@ jobs:
           echo "CONDA_OUTPUT_DIR=${RAPIDS_CONDA_BLD_OUTPUT_DIR}" >> "${GITHUB_OUTPUT}"
         id: package-name
         env:
-          RAPIDS_PY_CONDA_NOARCH: ${{ inputs.noarch && '1' || '0' }}
+          RAPIDS_PY_CONDA_NOARCH: ${{ inputs.conda-noarch && '1' || '0' }}
       - name: Show files to be uploaded
         if: ${{ inputs.upload-artifacts }}
         env:

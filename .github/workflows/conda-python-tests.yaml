@@ -233,7 +233,7 @@ jobs:
         env:
           # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
-          RAPIDS_PY_CONDA_NOARCH: ${{ inputs.noarch && '1' || '0' }}
+          RAPIDS_PY_CONDA_NOARCH: ${{ inputs.conda-noarch && '1' || '0' }}
       - name: Generate test report
         uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4
         with:
