@@ -228,7 +228,7 @@ jobs:
 
       - if: ${{ !cancelled() && env.HAS_DEVCONTAINER == 'true' }}
         name: Upload sccache logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sccache-client-logs-${{ env.BUILD_SLUG }}-${{ env.ARTIFACT_SLUG }}
           path: repo/sccache*.log
