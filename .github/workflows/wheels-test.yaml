@@ -262,12 +262,15 @@ jobs:
         GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
 
     - name: Run tests
-      run: ${INPUTS_SCRIPT}
+      run: |
+        if test -n "${SCCACHE_DIST_TOKEN_NAME:+x}"; then ulimit -n "$(ulimit -Hn)"; fi
+        $INPUTS_SCRIPT
       env:
+        INPUTS_SCRIPT: "${{ inputs.script }}"
+        SCCACHE_DIST_TOKEN_NAME: "${{ inputs.sccache-dist-token-secret-name }}"
         # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
         GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
         RAPIDS_AUX_SECRET_1: ${{ inputs.rapids-aux-secret-1 != '' && secrets[inputs.rapids-aux-secret-1] || '' }} # zizmor: ignore[overprovisioned-secrets]
-        INPUTS_SCRIPT: ${{ inputs.script }}
 
     - name: Generate test report
       uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4
