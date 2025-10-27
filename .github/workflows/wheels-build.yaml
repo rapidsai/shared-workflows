@@ -261,8 +261,12 @@ jobs:
           # NEEDS alternative-gh-token-secret_name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
       - name: Build and repair the wheel
-        run: ${{ inputs.script }} # zizmor: ignore[template-injection]
+        run: |
+          if test -n "${SCCACHE_DIST_TOKEN_NAME:+x}"; then ulimit -n "$(ulimit -Hn)"; fi
+          $INPUTS_SCRIPT
         env:
+          INPUTS_SCRIPT: "${{ inputs.script }}"
+          SCCACHE_DIST_TOKEN_NAME: "${{ inputs.sccache-dist-token-secret-name }}"
           # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
         # Use a shell that loads the rc file so that we get the compiler settings
