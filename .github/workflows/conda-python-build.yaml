@@ -192,7 +192,12 @@ jobs:
       - name: Get Package Name and Location
         if: ${{ inputs.upload-artifacts }}
         run: |
-          echo "RAPIDS_PACKAGE_NAME=$(RAPIDS_NO_PKG_EXTENSION=true rapids-package-name conda_python)" >> "${GITHUB_OUTPUT}"
+          # Use custom RAPIDS_PACKAGE_NAME if already set, otherwise generate default
+          if [[ -n "${RAPIDS_PACKAGE_NAME:-}" ]]; then
+            echo "RAPIDS_PACKAGE_NAME=${RAPIDS_PACKAGE_NAME}" >> "${GITHUB_OUTPUT}"
+          else
+            echo "RAPIDS_PACKAGE_NAME=$(RAPIDS_NO_PKG_EXTENSION=true rapids-package-name conda_python)" >> "${GITHUB_OUTPUT}"
+          fi
           echo "CONDA_OUTPUT_DIR=${RAPIDS_CONDA_BLD_OUTPUT_DIR}" >> "${GITHUB_OUTPUT}"
         id: package-name
       - name: Show files to be uploaded
