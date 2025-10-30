@@ -75,13 +75,6 @@ on:
           When this is non-empty, that secret's value is used in place of the default repo-level token
           anywhere that environment variable GH_TOKEN is set. This is especially useful for downloading
           artifacts from other private repos, which repo tokens do not have access to.
-      pure-wheel:
-        required: false
-        type: boolean
-        default: false
-        description: |
-          One of [true, false], true if the wheel is not dependent on operating
-          system, Python minor version, or CPU architecture
 
 defaults:
   run:
@@ -250,9 +243,6 @@ jobs:
         GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
         RAPIDS_AUX_SECRET_1: ${{ inputs.rapids-aux-secret-1 != '' && secrets[inputs.rapids-aux-secret-1] || '' }} # zizmor: ignore[overprovisioned-secrets]
         INPUTS_SCRIPT: ${{ inputs.script }}
-        # For pure wheels we pass through `pure-wheel` so `rapids-package-name` names the artifact correctly
-        # `rapids-package-name` expects this `$RAPIDS_PY_WHEEL_PURE` to be set to "1" if the wheel is pure
-        RAPIDS_PY_WHEEL_PURE: ${{ inputs.pure-wheel && '1' || '0' }}
 
     - name: Generate test report
       uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4
