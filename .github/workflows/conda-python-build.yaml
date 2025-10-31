@@ -50,14 +50,6 @@ on:
           When this is non-empty, that secret's value is used in place of the default repo-level token
           anywhere that environment variable GH_TOKEN is set. This is especially useful for downloading
           artifacts from other private repos, which repo tokens do not have access to.
-      pure-python:
-        required: false
-        type: boolean
-        default: false
-        description: |
-          One of [true, false], true if the conda-package is not dependent on
-          operating system, Python minor version, CPU architecture, or CUDA
-          version
 
 defaults:
   run:
