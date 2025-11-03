@@ -277,9 +277,7 @@ jobs:
           fi
 
           # Use RAPIDS_PACKAGE_NAME from build step if available, otherwise check environment, otherwise generate default
-          if [[ -n "${BUILD_RAPIDS_PACKAGE_NAME:-}" ]]; then
-            echo "RAPIDS_PACKAGE_NAME=${BUILD_RAPIDS_PACKAGE_NAME}" >> "${GITHUB_OUTPUT}"
-          elif [[ -n "${RAPIDS_PACKAGE_NAME:-}" ]]; then
+          if [[ -n "${RAPIDS_PACKAGE_NAME:-}" ]]; then
             echo "RAPIDS_PACKAGE_NAME=${RAPIDS_PACKAGE_NAME}" >> "${GITHUB_OUTPUT}"
           else
             echo "RAPIDS_PACKAGE_NAME=$(RAPIDS_NO_PKG_EXTENSION=true rapids-package-name "wheel_${PACKAGE_TYPE}")" >> "${GITHUB_OUTPUT}"
