@@ -240,7 +240,7 @@ jobs:
       - name: Build and repair the wheel
         id: build-wheel
         run: |
-          ${{ inputs.script }} # zizmor: ignore[template-injection]
+          source ${{ inputs.script }} # zizmor: ignore[template-injection]
 
           # Capture RAPIDS_PACKAGE_NAME if set by the build script
           if [[ -n "${RAPIDS_PACKAGE_NAME:-}" ]]; then
