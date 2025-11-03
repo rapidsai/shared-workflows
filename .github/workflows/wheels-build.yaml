@@ -239,8 +239,8 @@ jobs:
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
       - name: Build and repair the wheel
         id: build-wheel
-        run: |
-          source ${{ inputs.script }} # zizmor: ignore[template-injection]
+        run: | # zizmor: ignore[template-injection]
+          source ${{ inputs.script }}
 
           # Capture RAPIDS_PACKAGE_NAME if set by the build script
           if [[ -n "${RAPIDS_PACKAGE_NAME:-}" ]]; then
