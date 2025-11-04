@@ -305,7 +305,7 @@ jobs:
           if [[ -n "${RAPIDS_PACKAGE_NAME:-}" ]]; then
             echo "RAPIDS_PACKAGE_NAME=${RAPIDS_PACKAGE_NAME}" >> "${GITHUB_OUTPUT}"
           else
-            echo "RAPIDS_PACKAGE_NAME=$(RAPIDS_NO_PKG_EXTENSION=true rapids-package-name "wheel_${PACKAGE_TYPE}")" >> "${GITHUB_OUTPUT}"
+            echo "RAPIDS_PACKAGE_NAME=$(rapids-package-name "wheel_${PACKAGE_TYPE}")" >> "${GITHUB_OUTPUT}"
           fi
           echo "WHEEL_OUTPUT_DIR=${RAPIDS_WHEEL_BLD_OUTPUT_DIR}" >> "${GITHUB_OUTPUT}"
         id: package-name
