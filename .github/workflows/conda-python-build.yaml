@@ -200,14 +200,30 @@ jobs:
           # NEEDS alternative-gh-token-secret_name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
       - name: Python build
-        run: ${{ inputs.script }} # zizmor: ignore[template-injection]
+        id: python-build
+        run: |
+          source $INPUTS_SCRIPT
+
+          # Capture RAPIDS_PACKAGE_NAME if set by the build script
+          if [[ -n "${RAPIDS_PACKAGE_NAME:-}" ]]; then
+            echo "rapids-package-name=${RAPIDS_PACKAGE_NAME}" >> "${GITHUB_OUTPUT}"
+          fi
         env:
           # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
+          INPUTS_SCRIPT: ${{ inputs.script }}
       - name: Get Package Name and Location
         if: ${{ inputs.upload-artifacts }}
+        env:
+          # Pass RAPIDS_PACKAGE_NAME from python-build step if available
+          RAPIDS_PACKAGE_NAME: ${{ steps.python-build.outputs.rapids-package-name }}
         run: |
-          echo "RAPIDS_PACKAGE_NAME=$(RAPIDS_NO_PKG_EXTENSION=true rapids-package-name conda_python)" >> "${GITHUB_OUTPUT}"
+          # Use RAPIDS_PACKAGE_NAME from build step if available, otherwise check environment, otherwise generate default
+          if [[ -n "${RAPIDS_PACKAGE_NAME:-}" ]]; then
+            echo "RAPIDS_PACKAGE_NAME=${RAPIDS_PACKAGE_NAME}" >> "${GITHUB_OUTPUT}"
+          else
+            echo "RAPIDS_PACKAGE_NAME=$(rapids-package-name conda_python)" >> "${GITHUB_OUTPUT}"
+          fi
           echo "CONDA_OUTPUT_DIR=${RAPIDS_CONDA_BLD_OUTPUT_DIR}" >> "${GITHUB_OUTPUT}"
         id: package-name
       - name: Show files to be uploaded

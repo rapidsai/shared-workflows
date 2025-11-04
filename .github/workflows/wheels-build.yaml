@@ -261,7 +261,14 @@ jobs:
           # NEEDS alternative-gh-token-secret_name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
       - name: Build and repair the wheel
-        run: $INPUTS_SCRIPT
+        id: build-wheel
+        run: |
+          source $INPUTS_SCRIPT
+
+          # Capture RAPIDS_PACKAGE_NAME if set by the build script
+          if [[ -n "${RAPIDS_PACKAGE_NAME:-}" ]]; then
+            echo "rapids-package-name=${RAPIDS_PACKAGE_NAME}" >> "${GITHUB_OUTPUT}"
+          fi
         env:
           INPUTS_SCRIPT: "${{ inputs.script }}"
           SCCACHE_DIST_TOKEN_NAME: "${{ inputs.sccache-dist-token-secret-name }}"
@@ -273,6 +280,9 @@ jobs:
       - name: Get package name
         if: ${{ inputs.upload-artifacts }}
         env:
+          # Pass RAPIDS_PACKAGE_NAME from build-wheel step if available
+          RAPIDS_PACKAGE_NAME: ${{ steps.build-wheel.outputs.rapids-package-name }}
+          # We won't need any of these after we switch over to `rapids-package-name` everywhere
           APPEND_CUDA_SUFFIX: ${{ inputs.append-cuda-suffix }}
           PACKAGE_NAME: ${{ inputs.package-name }}
           PACKAGE_TYPE: ${{ inputs.package-type }}
@@ -290,7 +300,13 @@ jobs:
           if [ "${PURE_WHEEL}" = "true" ]; then
             export "RAPIDS_PY_WHEEL_PURE=1"
           fi
-          echo "RAPIDS_PACKAGE_NAME=$(RAPIDS_NO_PKG_EXTENSION=true rapids-package-name "wheel_${PACKAGE_TYPE}")" >> "${GITHUB_OUTPUT}"
+
+          # Use RAPIDS_PACKAGE_NAME from build step if available, otherwise check environment, otherwise generate default
+          if [[ -n "${RAPIDS_PACKAGE_NAME:-}" ]]; then
+            echo "RAPIDS_PACKAGE_NAME=${RAPIDS_PACKAGE_NAME}" >> "${GITHUB_OUTPUT}"
+          else
+            echo "RAPIDS_PACKAGE_NAME=$(rapids-package-name "wheel_${PACKAGE_TYPE}")" >> "${GITHUB_OUTPUT}"
+          fi
           echo "WHEEL_OUTPUT_DIR=${RAPIDS_WHEEL_BLD_OUTPUT_DIR}" >> "${GITHUB_OUTPUT}"
         id: package-name
 
