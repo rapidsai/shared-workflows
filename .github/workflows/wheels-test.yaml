@@ -67,6 +67,16 @@ on:
           If not set (the default), artifact-handling scripts use RAPIDS-conventional defaults (like "build.yaml" when "build_type == nightly").
         required: false
         type: string
+      sccache-dist-request-timeout:
+        type: string
+        default: 7140
+        description: |
+          The maximum time (in seconds) the sccache client should wait for a distributed compilation to complete.
+      sccache-dist-token-secret-name:
+        type: string
+        required: false
+        description: |
+          The name of the secret that contains the token used to authenticate with the RAPIDS Build Engineering sccache-dist build cluster.
       alternative-gh-token-secret-name:
         type: string
         required: false
@@ -136,6 +146,7 @@ jobs:
             nightly:
               # amd64
               - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8', GPU: 'l4',   DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
+              - { ARCH: 'amd64', PY_VER: '3.10', CUDA_VER: '12.9.1', LINUX_VER: 'ubuntu22.04', GPU: 'v100', DRIVER: 'earliest', DEPENDENCIES: 'latest' }
               - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.9.1', LINUX_VER: 'ubuntu22.04', GPU: 'l4',   DRIVER: 'earliest', DEPENDENCIES: 'latest' }
               - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.9.1', LINUX_VER: 'ubuntu24.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '13.0.1', LINUX_VER: 'ubuntu24.04', GPU: 'h100', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
@@ -221,6 +232,20 @@ jobs:
       uses: nv-gha-runners/setup-proxy-cache@main
       continue-on-error: true
 
+
+    # Install latest rapidsai/sccache client and configure sccache-dist
+    - name: Setup sccache-dist
+      uses: rapidsai/shared-actions/setup-sccache-dist@main
+      if: ${{ inputs.sccache-dist-token-secret-name != '' }}
+      env:
+        AWS_REGION: "${{env.AWS_REGION}}"
+        AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
+        AWS_SECRET_ACCESS_KEY: "${{env.AWS_SECRET_ACCESS_KEY}}"
+      with:
+        auth: "${{ secrets[inputs.sccache-dist-token-secret-name] }}" # zizmor: ignore[overprovisioned-secrets]
+        cache-slug: "pip-py${{matrix.PY_VER}}-cuda${{matrix.CUDA_VER}}-${{matrix.ARCH}}"
+        log-file: "${{ env.RAPIDS_ARTIFACTS_DIR }}/sccache.log"
+        request-timeout: ${{ inputs.sccache-dist-request-timeout }}
     # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
     # checking '/rate_limit | jq .' should not itself count against any rate limits.
     #
@@ -237,12 +262,13 @@ jobs:
         GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
 
     - name: Run tests
-      run: ${INPUTS_SCRIPT}
+      run: $INPUTS_SCRIPT
       env:
+        INPUTS_SCRIPT: "${{ inputs.script }}"
+        SCCACHE_DIST_TOKEN_NAME: "${{ inputs.sccache-dist-token-secret-name }}"
         # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
         GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
         RAPIDS_AUX_SECRET_1: ${{ inputs.rapids-aux-secret-1 != '' && secrets[inputs.rapids-aux-secret-1] || '' }} # zizmor: ignore[overprovisioned-secrets]
-        INPUTS_SCRIPT: ${{ inputs.script }}
 
     - name: Generate test report
       uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4

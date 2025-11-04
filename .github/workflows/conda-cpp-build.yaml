@@ -42,6 +42,16 @@ on:
           For example, 'map(select(.ARCH == "amd64"))' to achieve "only run amd64 jobs".
         type: string
         default: "."
+      sccache-dist-request-timeout:
+        type: string
+        default: 7140
+        description: |
+          The maximum time (in seconds) the sccache client should wait for a distributed compilation to complete.
+      sccache-dist-token-secret-name:
+        type: string
+        required: false
+        description: |
+          The name of the secret that contains the token used to authenticate with the RAPIDS Build Engineering sccache-dist build cluster.
       alternative-gh-token-secret-name:
         type: string
         required: false
@@ -157,7 +167,19 @@ jobs:
         with:
           extra_attributes: "rapids.PACKAGER=conda,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
 
-
+      # Install latest rapidsai/sccache client and configure sccache-dist
+      - name: Setup sccache-dist
+        uses: rapidsai/shared-actions/setup-sccache-dist@main
+        if: ${{ inputs.sccache-dist-token-secret-name != '' }}
+        env:
+          AWS_REGION: "${{env.AWS_REGION}}"
+          AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
+          AWS_SECRET_ACCESS_KEY: "${{env.AWS_SECRET_ACCESS_KEY}}"
+        with:
+          auth: "${{ secrets[inputs.sccache-dist-token-secret-name] }}" # zizmor: ignore[overprovisioned-secrets]
+          cache-slug: "conda-py${{matrix.PY_VER}}-cuda${{matrix.CUDA_VER}}-${{matrix.ARCH}}"
+          log-file: "${{ env.RAPIDS_ARTIFACTS_DIR }}/sccache.log"
+          request-timeout: ${{ inputs.sccache-dist-request-timeout }}
       # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
       # checking '/rate_limit | jq .' should not itself count against any rate limits.
       #
@@ -173,8 +195,10 @@ jobs:
           # NEEDS alternative-gh-token-secret-name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
       - name: C++ build
-        run: ${{ inputs.script }}  # zizmor: ignore[template-injection]
+        run: $INPUTS_SCRIPT
         env:
+          INPUTS_SCRIPT: "${{ inputs.script }}"
+          SCCACHE_DIST_TOKEN_NAME: "${{ inputs.sccache-dist-token-secret-name }}"
           STEP_NAME: "C++ build"
           # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
