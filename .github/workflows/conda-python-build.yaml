@@ -201,8 +201,8 @@ jobs:
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
       - name: Python build
         id: python-build
-        run: | # zizmor: ignore[template-injection]
-          source ${{ inputs.script }}
+        run: |
+          source $INPUTS_SCRIPT
 
           # Capture RAPIDS_PACKAGE_NAME if set by the build script
           if [[ -n "${RAPIDS_PACKAGE_NAME:-}" ]]; then
@@ -211,6 +211,7 @@ jobs:
         env:
           # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
+          INPUTS_SCRIPT: ${{ inputs.script }}
       - name: Get Package Name and Location
         if: ${{ inputs.upload-artifacts }}
         env:
