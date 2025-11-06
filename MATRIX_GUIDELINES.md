@@ -13,7 +13,7 @@ This document describes the principles and practices for determining the CI test
 Test matrices span multiple dimensions:
 
 - **CPU Architecture** (`ARCH`): `amd64`, `arm64`
-- **CUDA Version** (`CUDA_VER`): e.g., `12.2.2`, `12.9.1`, `13.0.1`
+- **CUDA Version** (`CUDA_VER`): e.g., `12.2.2`, `12.9.1`, `13.0.2`
 - **Python Version** (`PY_VER`): e.g., `3.10`, `3.11`, `3.12`, `3.13`
 - **GPU Architecture** (`GPU`): `l4`, `a100`, `h100`
 - **Driver Version** (`DRIVER`): `earliest`, `latest`
