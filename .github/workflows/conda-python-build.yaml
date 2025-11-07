@@ -128,8 +128,8 @@ jobs:
           "
 
 
-          # When pure-conda is true, ignore matrix_filter and build one conda package with amd64, latest CUDA_VER, and the latest PY_VER
-          if [ "${PURE_CONDA}" = "true" ]; then
+          # When pure-conda is true and matrix_filter is default, override to build one conda package with amd64, latest CUDA_VER, and the latest PY_VER
+          if [ "${PURE_CONDA}" = "true" ] && [ "${MATRIX_FILTER}" = "." ]; then
             MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | sort_by(.CUDA_VER, .PY_VER) | [last]"
           else
             MATRIX_FILTER="${MATRIX_FILTER}"

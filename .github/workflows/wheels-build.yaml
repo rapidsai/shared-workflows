@@ -159,8 +159,8 @@ jobs:
           - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '13.0.2', LINUX_VER: 'rockylinux8' }
           "
 
-          # When pure-wheel is true, ignore matrix_filter and build one wheel per CUDA version with amd64 and the latest PY_VER
-          if [ "${PURE_WHEEL}" = "true" ]; then
+          # When pure-wheel is true and matrix_filter is default, override to build one wheel per CUDA version with amd64 and the latest PY_VER
+          if [ "${PURE_WHEEL}" = "true" ] && [ "${MATRIX_FILTER}" = "." ]; then
             MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | group_by(.CUDA_VER) | map(max_by(.PY_VER | split(\".\") | map(tonumber)))"
           else
             MATRIX_FILTER="${MATRIX_FILTER}"
