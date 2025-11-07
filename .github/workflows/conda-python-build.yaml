@@ -98,7 +98,7 @@ jobs:
         id: compute-matrix
         env:
           MATRIX_FILTER: ${{ inputs.matrix_filter }}
-          PURE: ${{ inputs.pure-conda }}
+          PURE_CONDA: ${{ inputs.pure-conda }}
         run: |
           set -eo pipefail
 
@@ -129,7 +129,7 @@ jobs:
 
 
           # When pure-conda is true, ignore matrix_filter and build one conda package with amd64, latest CUDA_VER, and the latest PY_VER
-          if [ "${PURE}" = "true" ]; then
+          if [ "${PURE_CONDA}" = "true" ]; then
             MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | [max_by([.CUDA_VER | split(\".\") | map(tonumber), .PY_VER | split(\".\") | map(tonumber)])]"
           else
             MATRIX_FILTER="${MATRIX_FILTER}"
