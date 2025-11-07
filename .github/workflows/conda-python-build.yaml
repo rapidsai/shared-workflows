@@ -130,7 +130,7 @@ jobs:
 
           # When pure-conda is true, ignore matrix_filter and build one conda package with amd64, latest CUDA_VER, and the latest PY_VER
           if [ "${PURE_CONDA}" = "true" ]; then
-            MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | [max_by([.CUDA_VER | split(\".\") | map(tonumber), .PY_VER | split(\".\") | map(tonumber)])]"
+            MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | sort_by(.CUDA_VER, .PY_VER) | [last]"
           else
             MATRIX_FILTER="${MATRIX_FILTER}"
           fi
