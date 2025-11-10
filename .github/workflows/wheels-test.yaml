@@ -85,6 +85,14 @@ on:
           When this is non-empty, that secret's value is used in place of the default repo-level token
           anywhere that environment variable GH_TOKEN is set. This is especially useful for downloading
           artifacts from other private repos, which repo tokens do not have access to.
+      continue-on-error:
+        description: |
+          If false (the default), treat job failures as workflow failures.
+          If true, job failures do not result in workflow failures (useful for implementing optional CI workflows).
+          See https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idcontinue-on-error
+        type: boolean
+        required: false
+        default: false
 
 defaults:
   run:
@@ -186,6 +194,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
     runs-on: "linux-${{ matrix.ARCH }}-gpu-${{ matrix.GPU }}-${{ matrix.DRIVER }}-1"
+    continue-on-error: ${{ inputs.continue-on-error }}
     container:
       image: "rapidsai/citestwheel:25.12-cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}"
       options: ${{ inputs.container-options }}
