@@ -215,7 +215,7 @@ jobs:
         run: |
           echo "Contents of directory to be uploaded:"
           ls -R "${CONDA_OUTPUT_DIR}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: ${{ inputs.upload-artifacts }}
         with:
           if-no-files-found: 'error'
