@@ -22,12 +22,12 @@ repos:
       - id: codespell
         additional_dependencies: [tomli]
   - repo: https://github.com/rapidsai/pre-commit-hooks
-    rev: v0.7.0
+    rev: v1.2.1
     hooks:
       - id: verify-copyright
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
     # Zizmor version.
-    rev: v1.14.2
+    rev: v1.16.3
     hooks:
       # Run the linter.
       - id: zizmor
