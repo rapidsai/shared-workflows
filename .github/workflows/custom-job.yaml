@@ -74,6 +74,16 @@ on:
           If not set (the default), artifact-handling scripts use RAPIDS-conventional defaults (like "build.yaml" when "build_type == nightly").
         required: false
         type: string
+      sccache-dist-request-timeout:
+        type: string
+        default: 7140
+        description: |
+          The maximum time (in seconds) the sccache client should wait for a distributed compilation to complete.
+      sccache-dist-token-secret-name:
+        type: string
+        required: false
+        description: |
+          The name of the secret that contains the token used to authenticate with the RAPIDS Build Engineering sccache-dist build cluster.
       alternative-gh-token-secret-name:
         type: string
         required: false
@@ -149,6 +159,19 @@ jobs:
           date: ${{ inputs.date }}
           sha: ${{ inputs.sha }}
           build_workflow_name: ${{ inputs.build_workflow_name }}
+      # Install latest rapidsai/sccache client and configure sccache-dist
+      - name: Setup sccache-dist
+        uses: rapidsai/shared-actions/setup-sccache-dist@main
+        if: ${{ inputs.sccache-dist-token-secret-name != '' }}
+        env:
+          AWS_REGION: "${{env.AWS_REGION}}"
+          AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
+          AWS_SECRET_ACCESS_KEY: "${{env.AWS_SECRET_ACCESS_KEY}}"
+        with:
+          auth: "${{ secrets[inputs.sccache-dist-token-secret-name] }}" # zizmor: ignore[overprovisioned-secrets]
+          cache-slug: "custom-job-${{inputs.arch}}"
+          log-file: "${{ env.RAPIDS_ARTIFACTS_DIR }}/sccache.log"
+          request-timeout: ${{ inputs.sccache-dist-request-timeout }}
       # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
       # checking '/rate_limit | jq .' should not itself count against any rate limits.
       #
@@ -175,6 +198,9 @@ jobs:
           name: ${{ inputs.artifact-name }}
           path: ${{ inputs.file_to_upload }}
           if-no-files-found: ignore
+      - name: Upload additional artifacts
+        if: "!cancelled()"
+        run: rapids-upload-artifacts-dir "custom-job-$(arch)"
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
