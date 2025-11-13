@@ -43,6 +43,10 @@ on:
           If not set (the default), artifact-handling scripts use RAPIDS-conventional defaults (like "build.yaml" when "build_type == nightly").
         required: false
         type: string
+      publish-wheel-search-key:
+        description: "Search key to use to override constructed search path in `rapids-wheels-anaconda-github`"
+        type: string
+        required: false
 
 permissions:
   actions: read
@@ -117,6 +121,8 @@ jobs:
         PACKAGETYPE: ${{ inputs.package-type }}
         INPUTS_PACKAGE_NAME: ${{ inputs.package-name }}
         INPUTS_PACKAGE_TYPE: ${{ inputs.package-type }}
+        # Used to override search key construction as needed
+        WHEEL_SEARCH_KEY: ${{ inputs.publish-wheel-search-key }}
 
     - name: Check if build is release
       id: check_if_release
