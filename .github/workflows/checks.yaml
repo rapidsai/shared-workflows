@@ -40,7 +40,7 @@ jobs:
   other-checks:
     runs-on: ubuntu-latest
     container:
-      image: rapidsai/ci-conda:25.12-latest # zizmor: ignore[unpinned-images]
+      image: rapidsai/ci-conda:26.02-latest # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -78,7 +78,7 @@ jobs:
     if: ${{ inputs.enable_check_style }}
     runs-on: ubuntu-latest
     container:
-      image: rapidsai/ci-conda:25.12-latest # zizmor: ignore[unpinned-images]
+      image: rapidsai/ci-conda:26.02-latest # zizmor: ignore[unpinned-images]
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
