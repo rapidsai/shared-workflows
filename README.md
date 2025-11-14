@@ -31,7 +31,7 @@ Not all projects need that, so they sometimes invoke the workflow like this:
 ```yaml
 wheel-build-nx-cugraph:
   secrets: inherit
-  uses: rapidsai/shared-workflows/.github/workflows/wheels-build.yaml@main
+  uses: rapidsai/shared-workflows/.github/workflows/wheels-build.yaml@release/25.12
   with:
     build_type: pull-request
     script: ci/build_wheel_nx-cugraph.sh
