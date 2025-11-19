@@ -85,7 +85,7 @@ jobs:
           python -m pip install dunamai
           expected_version="$(python -m dunamai from git --format '{base}')"
           if [ "$expected_version" != "$(cat VERSION)" ]; then
-            echo "Expected VERSION file to be \"$expected_version\", got:"
+            echo "ERROR: Expected VERSION file to be \"$expected_version\", got:"
             cat VERSION
             exit 1
           fi
