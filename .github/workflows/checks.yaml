@@ -30,7 +30,7 @@ on:
         description: "Whether to enable the version tag checker"
         default: true
         type: boolean
-        requred: false
+        required: false
       ignored_pr_jobs:
         description: "Space separated list of jobs to ignore when checking PR workflow dependencies"
         default: ""
