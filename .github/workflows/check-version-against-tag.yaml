@@ -1,0 +1,25 @@
+on:
+  workflow_call:
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check VERSION file against latest tag
+    runs-on: ubuntu-latest
+    steps:
+      - runs: actions/checkout@v5
+      - name: Check VERSION file against latest tag
+        run: |
+          python -m pip install dunamai
+          expected_version="$(python -m dunamai from git --format '{base}')"
+          if [ "$expected_version" != "$(cat VERSION)" ]; then
+            echo "Expected VERSION file to be \"$expected_version\", got:"
+            cat VERSION
+            exit 1
+          fi
