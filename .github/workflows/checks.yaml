@@ -26,6 +26,11 @@ on:
         default: true
         type: boolean
         required: false
+      enable_check_version_against_tag:
+        description: "Whether to enable the version tag checker"
+        default: true
+        type: boolean
+        requred: false
       ignored_pr_jobs:
         description: "Space separated list of jobs to ignore when checking PR workflow dependencies"
         default: ""
@@ -67,6 +72,22 @@ jobs:
         run: rapids-check-pr-job-dependencies "${IGNORED_JOBS}"
         env:
           IGNORED_JOBS: ${{ inputs.ignored_pr_jobs }}
+      - name: Fetch tags
+        if: ${{ inputs.enable_check_version_against_tag }}
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Check VERSION file against latest tag
+        if: ${{ inputs.enable_check_version_against_tag }}
+        run: |
+          python -m pip install dunamai
+          expected_version="$(python -m dunamai from git --format '{base}')"
+          if [ "$expected_version" != "$(cat VERSION)" ]; then
+            echo "Expected VERSION file to be \"$expected_version\", got:"
+            cat VERSION
+            exit 1
+          fi
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
