@@ -30,6 +30,11 @@ on:
         default: false
         type: boolean
 
+      OVERRIDE_ITEM:
+        description: "Whether to override the field if already set (true) or preserve existing values (false)"
+        default: true
+        type: boolean
+
       # Optional fields, used if UPDATE_ITEM is set to true
       ITEM_NODE_ID:
         description: "The issue or PR's graphQL node ID, only needed if updating linked issues"
@@ -117,9 +122,39 @@ jobs:
             echo "SINGLE_SELECT_OPTION_ID=$current_single_select_option_id" >> "${GITHUB_OUTPUT}"
         continue-on-error: true
 
+      - name: Check current field value
+        id: check_current_value
+        if: ${{ inputs.UPDATE_ITEM == true && inputs.OVERRIDE_ITEM == false }}
+        env:
+          GH_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
+          ENV_ITEM_PROJECT_ID: ${{ inputs.ITEM_PROJECT_ID }}
+          ENV_SINGLE_SELECT_FIELD_NAME: ${{ inputs.SINGLE_SELECT_FIELD_NAME }}
+        run: |
+            # Query the current field value to check if it's already set
+            # shellcheck disable=SC2016
+            gh api graphql -f itemId="$ENV_ITEM_PROJECT_ID" \
+                         -f fieldName="$ENV_SINGLE_SELECT_FIELD_NAME" \
+                         -f query='
+              query($itemId: ID!, $fieldName: String!) {
+                node(id: $itemId) {
+                  ... on ProjectV2Item {
+                    fieldValueByName(name: $fieldName) {
+                      ... on ProjectV2ItemFieldSingleSelectValue {
+                        name
+                      }
+                    }
+                  }
+                }
+              }' > current_field_data.json
+
+            current_value=$(jq -r '.data.node.fieldValueByName.name // ""' current_field_data.json)
+            echo "Current field value: '$current_value'"
+            echo "current-value=$current_value" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+
       - name: Update item single_select field
         id: update_item_single_select_field
-        if: ${{ inputs.UPDATE_ITEM == true }}
+        if: ${{ inputs.UPDATE_ITEM == true && (inputs.OVERRIDE_ITEM == true || steps.check_current_value.outputs.current-value == '') }}
         env:
           GH_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
           ENV_PROJECT_ID: ${{ inputs.PROJECT_ID }}
