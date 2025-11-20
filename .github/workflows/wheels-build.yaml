@@ -162,8 +162,6 @@ jobs:
           # When pure-wheel is true and matrix_filter is default, override to build one wheel per CUDA version with amd64 and the latest PY_VER
           if [ "${PURE_WHEEL}" = "true" ] && [ "${MATRIX_FILTER}" = "." ]; then
             MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | group_by(.CUDA_VER) | map(max_by(.PY_VER | split(\".\") | map(tonumber)))"
-          else
-            MATRIX_FILTER="${MATRIX_FILTER}"
           fi
 
           MATRIX="$(
@@ -271,7 +269,8 @@ jobs:
       - name: Build and repair the wheel
         id: build-wheel
         run: |
-          source $INPUTS_SCRIPT
+          # shellcheck disable=SC1090
+          source "${INPUTS_SCRIPT}"
 
           # Capture RAPIDS_PACKAGE_NAME if set by the build script
           if [[ -n "${RAPIDS_PACKAGE_NAME:-}" ]]; then
