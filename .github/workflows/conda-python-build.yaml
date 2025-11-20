@@ -62,12 +62,14 @@ on:
           artifacts from other private repos, which repo tokens do not have access to.
       pure-conda:
         required: false
-        type: boolean
-        default: false
+        type: string
+        default: "false"
         description: |
-          "One of [true, false], true if the conda package is not dependent on
-          operating system, Python minor version, CPU architecture, or CUDA
-          version"
+          "One of [true, false, cuda_major]. 'true' if the conda package is not
+          dependent on operating system, Python minor version, CPU architecture,
+          or CUDA version. 'cuda_major' if the package is not dependent on
+          operating system, Python minor version, or CPU architecture, but is
+          dependent on CUDA major version."
 
 defaults:
   run:
@@ -131,8 +133,8 @@ jobs:
           # When pure-conda is true and matrix_filter is default, override to build one conda package with amd64, latest CUDA_VER, and the latest PY_VER
           if [ "${PURE_CONDA}" = "true" ] && [ "${MATRIX_FILTER}" = "." ]; then
             MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | sort_by(.CUDA_VER, .PY_VER) | [last]"
-          else
-            MATRIX_FILTER="${MATRIX_FILTER}"
+          elif [ "${PURE_CONDA}" = "cuda_major" ] && [ "${MATRIX_FILTER}" = "." ]; then
+            MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | group_by(.CUDA_VER|split(\".\")|map(tonumber)|.[0]) | map(max_by([(.PY_VER|split(\".\")|map(tonumber)), (.CUDA_VER|split(\".\")|map(tonumber))]))"
           fi
 
           MATRIX="$(
@@ -219,7 +221,8 @@ jobs:
       - name: Python build
         id: python-build
         run: |
-          source $INPUTS_SCRIPT
+          # shellcheck disable=SC1090
+          source "${INPUTS_SCRIPT}"
 
           # Capture RAPIDS_PACKAGE_NAME if set by the build script
           if [[ -n "${RAPIDS_PACKAGE_NAME:-}" ]]; then
