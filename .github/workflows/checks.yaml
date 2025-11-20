@@ -49,6 +49,20 @@ defaults:
 jobs:
   changed-files:
     secrets: inherit
+    permissions:
+      actions: read
+      checks: none
+      contents: read
+      deployments: none
+      discussions: none
+      id-token: none
+      issues: none
+      packages: read
+      pages: none
+      pull-requests: read
+      repository-projects: none
+      security-events: none
+      statuses: none
     if: ${{ inputs.enable_check_version_file_changed }}
     uses: ./.github/workflows/changed-files.yaml
     with:
@@ -91,7 +105,7 @@ jobs:
       - name: Check if VERSION or RAPIDS_VERSION file has changed
         if: ${{ inputs.enable_check_version_file_changed }}
         run: |
-          if "$VERSION_FILES_CHANGED"; then
+          if [ "$VERSION_FILES_CHANGED" != "false" ]; then
             echo "ERROR: VERSION or RAPIDS_VERSION file has been changed"
             exit 1
           fi
