@@ -48,7 +48,7 @@ defaults:
 
 jobs:
   changed-files:
-    secrets: inherit
+    secrets: inherit # zizmor: ignore[secrets-inherit]
     permissions:
       actions: read
       checks: none
