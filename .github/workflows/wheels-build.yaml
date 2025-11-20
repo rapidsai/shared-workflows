@@ -251,7 +251,6 @@ jobs:
           AWS_SECRET_ACCESS_KEY: "${{env.AWS_SECRET_ACCESS_KEY}}"
         with:
           auth: "${{ secrets[inputs.sccache-dist-token-secret-name] }}" # zizmor: ignore[overprovisioned-secrets]
-          cache-slug: "pip-py${{matrix.PY_VER}}-cuda${{matrix.CUDA_VER}}-${{matrix.ARCH}}"
           log-file: "${{ env.RAPIDS_ARTIFACTS_DIR }}/sccache.log"
           request-timeout: ${{ inputs.sccache-dist-request-timeout }}
       # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,

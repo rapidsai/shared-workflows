@@ -155,24 +155,6 @@ jobs:
         uses: nv-gha-runners/setup-proxy-cache@main
         continue-on-error: true
 
-      - id: sccache-preprocessor-cache
-        if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Setup sccache preprocessor cache
-        uses: actions/cache@v4
-        with:
-          path: .cache/sccache/preprocessor
-          restore-keys: sccache-preprocessor-cache-${{ runner.os }}-${{ env.BUILD_SLUG }}
-          key: sccache-preprocessor-cache-${{ runner.os }}-${{ env.BUILD_SLUG }}-${{ env.ARTIFACT_SLUG }}
-
-      - id: sccache-dist-toolchains-cache
-        if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Setup sccache-dist client toolchains cache
-        uses: actions/cache@v4
-        with:
-          path: .cache/sccache-dist-client
-          restore-keys: sccache-toolchains-cache-${{ runner.os }}-${{ env.BUILD_SLUG }}
-          key: sccache-toolchains-cache-${{ runner.os }}-${{ env.BUILD_SLUG }}-${{ env.ARTIFACT_SLUG }}
-
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
         uses: devcontainers/ci@8bf61b26e9c3a98f69cb6ce2f88d24ff59b785c6 # v0.3.1900000417
