@@ -26,7 +26,7 @@ on:
         default: true
         type: boolean
         required: false
-      enable_check_version_file_changed:
+      enable_check_version_files_changed:
         description: "Whether to enable the version file changed checker"
         default: true
         type: boolean
@@ -63,7 +63,7 @@ jobs:
       repository-projects: none
       security-events: none
       statuses: none
-    if: ${{ inputs.enable_check_version_file_changed }}
+    if: ${{ inputs.enable_check_version_files_changed }}
     uses: ./.github/workflows/changed-files.yaml
     with:
       files_yaml: |
@@ -103,7 +103,7 @@ jobs:
         env:
           IGNORED_JOBS: ${{ inputs.ignored_pr_jobs }}
       - name: Check if VERSION or RAPIDS_VERSION file has changed
-        if: ${{ inputs.enable_check_version_file_changed }}
+        if: ${{ inputs.enable_check_version_files_changed }}
         run: |
           if [ "$VERSION_FILES_CHANGED" != "false" ]; then
             echo "ERROR: VERSION or RAPIDS_VERSION file has been changed"
