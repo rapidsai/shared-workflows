@@ -191,7 +191,7 @@ jobs:
           role-duration-seconds: 43200 # 12h
 
       - name: checkout code repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
@@ -216,7 +216,7 @@ jobs:
           echo "EXTRA_REPO_PATH=${EXTRA_REPO_PATH}" >> "${GITHUB_OUTPUT}"
 
       - name: checkout extra repos
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         if: ${{ inputs.extra-repo != '' }}
         with:
           repository: ${{ inputs.extra-repo }}

@@ -50,7 +50,7 @@ jobs:
         RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           persist-credentials: true
       - name: Telemetry setup
@@ -74,7 +74,7 @@ jobs:
           IGNORED_JOBS: ${{ inputs.ignored_pr_jobs }}
       - name: Fetch tags
         if: ${{ inputs.enable_check_version_against_tag }}
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
           fetch-depth: 0 # https://github.com/actions/checkout/issues/1471
@@ -102,7 +102,7 @@ jobs:
       image: rapidsai/ci-conda:26.02-latest # zizmor: ignore[unpinned-images]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: true
