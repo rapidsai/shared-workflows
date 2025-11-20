@@ -29,7 +29,7 @@ on:
           from_entries
     outputs:
       changed_file_groups:
-        value: ${{ jobs.changed-files.outputs.transformed_output }}
+        value: ${{ jobs.changed-files.outputs.changed_file_groups }}
 
 defaults:
   run:
@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     name: "Check changed files"
     outputs:
-      transformed_output: ${{ steps.changed-files.outputs.transformed-output }}
+      changed_file_groups: ${{ steps.changed-files.outputs.changed_file_groups }}
     steps:
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
