@@ -63,7 +63,6 @@ jobs:
       repository-projects: none
       security-events: none
       statuses: none
-    if: ${{ inputs.enable_check_version_files_changed }}
     uses: ./.github/workflows/changed-files.yaml
     with:
       files_yaml: |
