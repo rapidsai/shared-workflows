@@ -28,7 +28,7 @@ on:
         required: false
       enable_check_version_file_changed:
         description: "Whether to enable the version file changed checker"
-        defualt: true
+        default: true
         type: boolean
         required: false
       enable_check_version_against_tag:
