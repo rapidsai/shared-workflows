@@ -126,7 +126,7 @@ jobs:
         id: check_current_value
         if: ${{ inputs.UPDATE_ITEM == true && inputs.OVERRIDE_ITEM == false }}
         env:
-          GH_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.ADD_TO_PROJECT_GITHUB_TOKEN }}  # needed for the gh api call
           ENV_ITEM_PROJECT_ID: ${{ inputs.ITEM_PROJECT_ID }}
           ENV_SINGLE_SELECT_FIELD_NAME: ${{ inputs.SINGLE_SELECT_FIELD_NAME }}
         run: |
