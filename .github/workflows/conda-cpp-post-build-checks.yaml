@@ -59,7 +59,7 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           role-duration-seconds: 43200 # 12h
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
@@ -103,7 +103,7 @@ jobs:
           EXTRACTED_DIR=$(rapids-extract-conda-files "${CPP_DIR}")
           echo "RAPIDS_EXTRACTED_DIR=${EXTRACTED_DIR}" >> "${GITHUB_ENV}"
       - name: Get weak detection tool
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: rapidsai/detect-weak-linking
           ref: refs/heads/main
