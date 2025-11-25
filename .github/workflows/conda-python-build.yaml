@@ -220,6 +220,7 @@ jobs:
       - name: Python build
         id: python-build
         run: |
+          ulimit -n $(ulimit -Hn)
           # shellcheck disable=SC1090
           source "${INPUTS_SCRIPT}"
 
