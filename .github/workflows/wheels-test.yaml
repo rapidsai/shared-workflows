@@ -270,7 +270,9 @@ jobs:
         GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
 
     - name: Run tests
-      run: $INPUTS_SCRIPT
+      run: |
+        ulimit -n $(ulimit -Hn)
+        $INPUTS_SCRIPT
       env:
         INPUTS_SCRIPT: "${{ inputs.script }}"
         SCCACHE_DIST_TOKEN_NAME: "${{ inputs.sccache-dist-token-secret-name }}"
