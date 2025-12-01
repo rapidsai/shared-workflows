@@ -80,7 +80,7 @@ jobs:
       - name: Check changed files
         id: changed-files
         if: ${{ inputs.enable_check_version_files_changed }}
-        uses: rapidsai/shared-actions/changed-files@changed-files
+        uses: rapidsai/shared-actions/changed-files@main
         with:
           files_yaml: |
             version_files:
