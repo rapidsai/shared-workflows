@@ -151,9 +151,9 @@ jobs:
             echo "RAPIDS_NIGHTLY_DATE=${RAPIDS_NIGHTLY_DATE}"
           } >> "${GITHUB_ENV}"
 
-      - name: Setup proxy cache
-        uses: nv-gha-runners/setup-proxy-cache@main
-        continue-on-error: true
+      # - name: Setup proxy cache
+      #   uses: nv-gha-runners/setup-proxy-cache@main
+      #   continue-on-error: true
 
       # This has to be AFTER the checkout step. It creates a telemetry-artifacts directory,
       # and the checkout step would destroy it.
