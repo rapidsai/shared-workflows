@@ -29,7 +29,7 @@ on:
           from_entries
     outputs:
       changed_file_groups:
-        value: ${{ jobs.changed-files.outputs.transformed_output }}
+        value: ${{ jobs.changed-files.outputs.changed_file_groups }}
 
 defaults:
   run:
@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     name: "Check changed files"
     outputs:
-      transformed_output: ${{ steps.transform-changed-files.outputs.transformed-output }}
+      changed_file_groups: ${{ steps.changed-files.outputs.changed_file_groups }}
     steps:
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
@@ -63,41 +63,16 @@ jobs:
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
-      - name: Get PR info
-        id: get-pr-info
-        uses: nv-gha-runners/get-pr-info@main
       - name: Checkout code repo
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0
           persist-credentials: false
-      - name: Calculate merge base
-        id: calculate-merge-base
-        env:
-          PR_SHA: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).head.sha }}
-          BASE_SHA: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.sha }}
-        run: |
-          (echo -n "merge-base="; git merge-base "$BASE_SHA" "$PR_SHA") | tee --append "${GITHUB_OUTPUT}"
-      - name: Get changed files
+      - name: Calculate changed files
         id: changed-files
-        uses: step-security/changed-files@95b56dadb92a30ca9036f16423fd3c088a71ee94 # v46.0.5
+        uses: rapidsai/shared-actions/changed-files@main
         with:
-          base_sha: ${{ steps.calculate-merge-base.outputs.merge-base }}
-          sha: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).head.sha }}
           files_yaml: ${{ inputs.files_yaml }}
-          write_output_files: true
-          json: true
-      - name: Transform changed files into output
-        id: transform-changed-files
-        env:
-          TRANSFORM_EXPR: ${{ inputs.transform_expr }}
-        run: |
-          file_args=()
-          for file in .github/outputs/*.json; do
-            key="$(echo "$file" | sed -E 's/^\.github\/outputs\/(.*)\.json$/\1/g')"
-            file_args=("${file_args[@]}" --slurpfile "$key" "$file")
-          done
-          (echo -n "transformed-output="; jq -c -n "\$ARGS.named | to_entries | map({\"key\": .key, \"value\": .value[]}) | from_entries | $TRANSFORM_EXPR" "${file_args[@]}") | tee --append "${GITHUB_OUTPUT}"
+          transform_expr: ${{ inputs.transform_expr }}
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
