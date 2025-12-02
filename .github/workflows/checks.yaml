@@ -105,10 +105,10 @@ jobs:
       - name: Check VERSION file against latest tag
         if: ${{ inputs.enable_check_version_against_tag }}
         run: |
-          expected_version="$(python -m dunamai from git --format '{base}')"
-          if [ "$expected_version" != "$(cat VERSION)" ]; then
-            echo "ERROR: Expected VERSION file to be \"$expected_version\", got:"
-            cat VERSION
+          expected_version="$(cat VERSION)"
+          actual_version="$(python -m dunamai from git --format '{base}')"
+          if [ "$expected_version" != "$actual_version" ]; then
+            echo "ERROR: Expected latest tag to be '$expected_version', got '$actual_version'; did you accidentally merge 'main' into a release-bound PR?"
             exit 1
           fi
       - name: Telemetry upload attributes
