@@ -136,7 +136,8 @@ jobs:
     if: ${{ inputs.enable_check_style }}
     runs-on: ubuntu-latest
     container:
-      image: rapidsai/ci-conda:25.12-latest # zizmor: ignore[unpinned-images]
+      # Must pin to Python <3.13, cmake-format is broken, see https://github.com/python/cpython/issues/140797
+      image: rapidsai/ci-conda:25.12-cuda13.0.2-ubuntu24.04-py3.12 # zizmor: ignore[unpinned-images]
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
