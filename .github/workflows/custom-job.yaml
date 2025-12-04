@@ -34,7 +34,7 @@ on:
       container_image:
         description: "Container image URI"
         type: string
-        default: "rapidsai/ci-conda:25.12-latest"
+        default: "rapidsai/ci-conda:26.02-latest"
       container-options:
         description: |
           Command-line arguments passed to 'docker run' when starting the container this workflow runs in.
@@ -74,6 +74,16 @@ on:
           If not set (the default), artifact-handling scripts use RAPIDS-conventional defaults (like "build.yaml" when "build_type == nightly").
         required: false
         type: string
+      sccache-dist-request-timeout:
+        type: string
+        default: 7140
+        description: |
+          The maximum time (in seconds) the sccache client should wait for a distributed compilation to complete.
+      sccache-dist-token-secret-name:
+        type: string
+        required: false
+        description: |
+          The name of the secret that contains the token used to authenticate with the RAPIDS Build Engineering sccache-dist build cluster.
       alternative-gh-token-secret-name:
         type: string
         required: false
@@ -108,19 +118,21 @@ jobs:
       fail-fast: false
     runs-on: "linux-${{ inputs.arch }}-${{ inputs.node_type }}"
     continue-on-error: ${{ inputs.continue-on-error }}
+    env:
+      RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     container:
       image: ${{ inputs.container_image }} # zizmor: ignore[unpinned-images]
       options: ${{ inputs.container-options }}
       env:
-        RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
+        RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
-      - uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
+      - uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           role-duration-seconds: 43200 # 12h
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
@@ -149,6 +161,18 @@ jobs:
           date: ${{ inputs.date }}
           sha: ${{ inputs.sha }}
           build_workflow_name: ${{ inputs.build_workflow_name }}
+      # Install latest rapidsai/sccache client and configure sccache-dist
+      - name: Setup sccache-dist
+        uses: rapidsai/shared-actions/setup-sccache-dist@main
+        if: ${{ inputs.sccache-dist-token-secret-name != '' }}
+        env:
+          AWS_REGION: "${{env.AWS_REGION}}"
+          AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
+          AWS_SECRET_ACCESS_KEY: "${{env.AWS_SECRET_ACCESS_KEY}}"
+        with:
+          auth: "${{ secrets[inputs.sccache-dist-token-secret-name] }}" # zizmor: ignore[overprovisioned-secrets]
+          log-file: "${{ env.RAPIDS_ARTIFACTS_DIR }}/sccache.log"
+          request-timeout: ${{ inputs.sccache-dist-request-timeout }}
       # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
       # checking '/rate_limit | jq .' should not itself count against any rate limits.
       #
@@ -164,7 +188,9 @@ jobs:
           # NEEDS alternative-gh-token-secret_name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
       - name: Run script
-        run: ${INPUTS_SCRIPT}
+        run: |
+          ulimit -n $(ulimit -Hn)
+          $INPUTS_SCRIPT
         env:
           # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
@@ -175,6 +201,9 @@ jobs:
           name: ${{ inputs.artifact-name }}
           path: ${{ inputs.file_to_upload }}
           if-no-files-found: ignore
+      - name: Upload additional artifacts
+        if: "!cancelled()"
+        run: rapids-upload-artifacts-dir "custom-job-$(arch)"
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true

@@ -99,7 +99,7 @@ jobs:
     runs-on: "linux-${{ matrix.ARCH }}-${{ inputs.node_type }}"
     name: "${{ matrix.ARCH }}, ${{ matrix.CUDA_VER }}, ${{ matrix.PACKAGER }}"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
@@ -138,7 +138,7 @@ jobs:
           EOF
 
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -148,30 +148,12 @@ jobs:
         name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
 
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
         continue-on-error: true
-
-      - id: sccache-preprocessor-cache
-        if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Setup sccache preprocessor cache
-        uses: actions/cache@v4
-        with:
-          path: .cache/sccache/preprocessor
-          restore-keys: sccache-preprocessor-cache-${{ runner.os }}-${{ env.BUILD_SLUG }}
-          key: sccache-preprocessor-cache-${{ runner.os }}-${{ env.BUILD_SLUG }}-${{ env.ARTIFACT_SLUG }}
-
-      - id: sccache-dist-toolchains-cache
-        if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Setup sccache-dist client toolchains cache
-        uses: actions/cache@v4
-        with:
-          path: .cache/sccache-dist-client
-          restore-keys: sccache-toolchains-cache-${{ runner.os }}-${{ env.BUILD_SLUG }}
-          key: sccache-toolchains-cache-${{ runner.os }}-${{ env.BUILD_SLUG }}-${{ env.ARTIFACT_SLUG }}
 
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
