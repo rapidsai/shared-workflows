@@ -13,7 +13,7 @@ repos:
       - id: check-yaml
       - id: end-of-file-fixer
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.8
+    rev: v1.7.9
     hooks:
       - id: actionlint-docker
   - repo: https://github.com/codespell-project/codespell
@@ -27,7 +27,7 @@ repos:
       - id: verify-copyright
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
     # Zizmor version.
-    rev: v1.16.3
+    rev: v1.18.0
     hooks:
       # Run the linter.
       - id: zizmor

@@ -26,6 +26,16 @@ on:
         default: true
         type: boolean
         required: false
+      enable_check_version_files_changed:
+        description: "Whether to enable the version file changed checker"
+        default: true
+        type: boolean
+        required: false
+      enable_check_version_against_tag:
+        description: "Whether to enable the version tag checker"
+        default: true
+        type: boolean
+        required: false
       ignored_pr_jobs:
         description: "Space separated list of jobs to ignore when checking PR workflow dependencies"
         default: ""
@@ -40,12 +50,12 @@ jobs:
   other-checks:
     runs-on: ubuntu-latest
     container:
-      image: rapidsai/ci-conda:25.12-latest # zizmor: ignore[unpinned-images]
+      image: rapidsai/ci-conda:26.02-latest # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           persist-credentials: true
       - name: Telemetry setup
@@ -67,6 +77,40 @@ jobs:
         run: rapids-check-pr-job-dependencies "${IGNORED_JOBS}"
         env:
           IGNORED_JOBS: ${{ inputs.ignored_pr_jobs }}
+      - name: Check changed files
+        id: changed-files
+        if: ${{ inputs.enable_check_version_files_changed }}
+        uses: rapidsai/shared-actions/changed-files@main
+        with:
+          files_yaml: |
+            version_files:
+              - VERSION
+              - RAPIDS_VERSION
+      - name: Check if VERSION or RAPIDS_VERSION file has changed
+        if: ${{ inputs.enable_check_version_files_changed }}
+        run: |
+          if [ "$VERSION_FILES_CHANGED" != "false" ]; then
+            echo "ERROR: VERSION or RAPIDS_VERSION file has been changed"
+            exit 1
+          fi
+        env:
+          VERSION_FILES_CHANGED: ${{ fromJSON(steps.changed-files.outputs.changed_file_groups).version_files }}
+      - name: Fetch tags
+        if: ${{ inputs.enable_check_version_against_tag }}
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # https://github.com/actions/checkout/issues/1471
+          fetch-tags: true
+      - name: Check VERSION file against latest tag
+        if: ${{ inputs.enable_check_version_against_tag }}
+        run: |
+          expected_version="$(cat VERSION)"
+          actual_version="$(python -m dunamai from git --format '{base}')"
+          if [ "$expected_version" != "$actual_version" ]; then
+            echo "ERROR: Expected latest tag to be '$expected_version', got '$actual_version'; did you accidentally merge 'main' into a release-bound PR?"
+            exit 1
+          fi
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
@@ -78,10 +122,11 @@ jobs:
     if: ${{ inputs.enable_check_style }}
     runs-on: ubuntu-latest
     container:
-      image: rapidsai/ci-conda:25.12-latest # zizmor: ignore[unpinned-images]
+      # Must pin to Python <3.13, cmake-format is broken, see https://github.com/python/cpython/issues/140797
+      image: rapidsai/ci-conda:26.02-cuda13.0.2-ubuntu24.04-py3.12 # zizmor: ignore[unpinned-images]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: true

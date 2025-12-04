@@ -59,7 +59,7 @@ jobs:
   upload:
     runs-on: linux-amd64-cpu4
     container:
-      image: rapidsai/ci-conda:25.12-latest # zizmor: ignore[unpinned-images]
+      image: rapidsai/ci-conda:26.02-latest # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
@@ -69,7 +69,7 @@ jobs:
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.sha }}
