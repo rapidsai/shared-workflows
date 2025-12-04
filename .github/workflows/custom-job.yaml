@@ -196,7 +196,7 @@ jobs:
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
           INPUTS_SCRIPT: ${{ inputs.script }}
       - name: Upload file to GitHub Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ inputs.artifact-name }}
           path: ${{ inputs.file_to_upload }}
