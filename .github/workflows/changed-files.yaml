@@ -66,7 +66,7 @@ jobs:
       - name: Checkout code repo
         uses: actions/checkout@v6
         with:
-          persist-credentials: false
+          persist-credentials: true
       - name: Calculate changed files
         id: changed-files
         uses: rapidsai/shared-actions/changed-files@main
