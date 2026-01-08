@@ -194,13 +194,13 @@ jobs:
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
       - name: Get RAPIDS License Builder
         if: ${{ inputs.requires_license_builder }}
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: "rapidsai/spdx-license-builder"
           ref: "refs/heads/main"
           path: "./tool/"
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
       - name: Run script
         run: |
           ulimit -n $(ulimit -Hn)
