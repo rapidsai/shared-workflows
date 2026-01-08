@@ -126,37 +126,28 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
         run: |
-          HAS_DEVCONTAINER=false
-          if test -f "repo/.devcontainer/cuda${CUDA_VER}-${PACKAGER}/devcontainer.json"; then
-            HAS_DEVCONTAINER=true
-          fi
           cat <<EOF | tee -a "${GITHUB_ENV}"
           ARTIFACT_SLUG=${RUN_ID}-${RUN_ATTEMPT}-$RANDOM
           BUILD_SLUG=cuda${CUDA_VER}-${PACKAGER}-${ARCH}
-          HAS_DEVCONTAINER=$HAS_DEVCONTAINER
           REPOSITORY=$(basename "$(pwd)")
           EOF
 
-      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
+      - uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           role-duration-seconds: 43200 # 12h
 
-      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '24'
 
-      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Setup proxy cache
+      - name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
         continue-on-error: true
 
-      - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
-        name: Run build in devcontainer
+      - name: Run build in devcontainer
         uses: devcontainers/ci@8bf61b26e9c3a98f69cb6ce2f88d24ff59b785c6 # v0.3.1900000417
         with:
           push: never
@@ -208,7 +199,7 @@ jobs:
             mkdir -p telemetry-artifacts;
             ${{ inputs.build_command }}
 
-      - if: ${{ !cancelled() && env.HAS_DEVCONTAINER == 'true' }}
+      - if: ${{ !cancelled() }}
         name: Upload sccache logs
         uses: actions/upload-artifact@v6
         with:
