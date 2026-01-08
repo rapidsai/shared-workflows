@@ -92,6 +92,11 @@ on:
           When this is non-empty, that secret's value is used in place of the default repo-level token
           anywhere that environment variable GH_TOKEN is set. This is especially useful for downloading
           artifacts from other private repos, which repo tokens do not have access to.
+      requires_license_builder:
+        description: "Whether to ensure license builder scripts are provided in 'tools/'"
+        default: false
+        type: boolean
+        required: false
 
 defaults:
   run:
@@ -187,6 +192,15 @@ jobs:
         env:
           # NEEDS alternative-gh-token-secret_name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
+      - name: Get RAPIDS License Builder
+        if: ${{ inputs.requires_license_builder }}
+        uses: actions/checkout@v6
+        with:
+          repository: "rapidsai/spdx-license-builder"
+          ref: "refs/heads/main"
+          path: "./tool/"
+          fetch-depth: 0
+          persist-credentials: false
       - name: Run script
         run: |
           ulimit -n $(ulimit -Hn)
