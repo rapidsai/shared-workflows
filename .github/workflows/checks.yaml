@@ -41,6 +41,37 @@ on:
         default: ""
         type: string
         required: false
+    secrets:
+      script-env-secret-1-key:
+        description: |
+          Name of an environment variable in the environment where 'inputs.script' is run.
+          Variable's value will be set to the value passed as 'secrets.script-env-secret-1-value'.
+        required: false
+      script-env-secret-1-value:
+        description: |
+          Secret value.
+          Will be available via an environment variable named by 'secrets.script-env-secret-1-key'.
+        required: false
+      script-env-secret-2-key:
+        description: |
+          Name of an environment variable in the environment where 'inputs.script' is run.
+          Variable's value will be set to the value passed as 'secrets.script-env-secret-2-value'.
+        required: false
+      script-env-secret-2-value:
+        description: |
+          Secret value.
+          Will be available via an environment variable named by 'secrets.script-env-secret-2-key'.
+        required: false
+      script-env-secret-3-key:
+        description: |
+          Name of an environment variable in the environment where 'inputs.script' is run.
+          Variable's value will be set to the value passed as 'secrets.script-env-secret-3-value'.
+        required: false
+      script-env-secret-3-value:
+        description: |
+          Secret value.
+          Will be available via an environment variable named by 'secrets.script-env-secret-3-key'.
+        required: false
 
 defaults:
   run:
@@ -147,6 +178,9 @@ jobs:
         run: ci/check_style.sh
         env:
           RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
+          ${{ secrets.script-env-secret-1-key }}: ${{ secrets.script-env-secret-1-value }}
+          ${{ secrets.script-env-secret-2-key }}: ${{ secrets.script-env-secret-2-value }}
+          ${{ secrets.script-env-secret-3-key }}: ${{ secrets.script-env-secret-3-value }}
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
