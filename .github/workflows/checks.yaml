@@ -174,13 +174,23 @@ jobs:
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-0|${{ hashFiles('.pre-commit-config.yaml') }}
+      # cannot reference possibly-null things in the 'env:' block, so the secret inputs need to be
+      # processed in a shell script like this
+      - name: Set script env
+        run: |
+          if ! test -n "${{ secrets.script-env-secret-1-key }}"; then
+            echo "${{ secrets.script-env-secret-1-key }}=${{ secrets.script-env-secret-1-value }}" >> "${GITHUB_ENV}"
+          fi
+          if ! test -n "${{ secrets.script-env-secret-2-key }}"; then
+            echo "${{ secrets.script-env-secret-2-key }}=${{ secrets.script-env-secret-2-value }}" >> "${GITHUB_ENV}"
+          fi
+          if ! test -n "${{ secrets.script-env-secret-3-key }}"; then
+            echo "${{ secrets.script-env-secret-3-key }}=${{ secrets.script-env-secret-3-value }}" >> "${GITHUB_ENV}"
+          fi
       - name: Run ci/check_style.sh
         run: ci/check_style.sh
         env:
           RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
-          ${{ secrets.script-env-secret-1-key }}: ${{ secrets.script-env-secret-1-value }}
-          ${{ secrets.script-env-secret-2-key }}: ${{ secrets.script-env-secret-2-value }}
-          ${{ secrets.script-env-secret-3-key }}: ${{ secrets.script-env-secret-3-value }}
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
