@@ -77,3 +77,26 @@ MATRIX="$(
 
 echo "${MATRIX}" | jq
 ```
+
+### Secrets
+
+Some workflows support passing in arbitrary secrets and making them available as environment variables for the `script:` input.
+
+For example, if you had the following:
+
+* a repo secret called `PENGUINS_AND_POLAR_BEARS_DATASET_URI`
+* a testing script that downloads whatever it finds in environment variable `BENCHMARK_DATASET_URI`
+
+You could do something like the following:
+
+```yaml
+wheel-tests:
+  uses: rapidsai/shared-workflows/.github/workflows/wheels-test.yaml@main
+  with:
+    script: ci/test_wheel.sh
+  secrets:
+    script-env-secret-1-key: BENCHMARK_DATASET_URI
+    script-env-secret-1-value: ${{ secrets.PENGUINS_AND_POLAR_BEARS_DATASET_URI }}
+```
+
+Values passed through `secrets:` are redacted everywhere in the GitHub UI, including in logs, and in most cases are replaced with `***`.
