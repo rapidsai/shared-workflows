@@ -93,6 +93,37 @@ on:
         type: boolean
         required: false
         default: false
+    secrets:
+      script-env-secret-1-key:
+        description: |
+          Name of an environment variable in the environment where 'inputs.script' is run.
+          Variable's value will be set to the value passed as 'secrets.script-env-secret-1-value'.
+        required: false
+      script-env-secret-1-value:
+        description: |
+          Secret value.
+          Will be available via an environment variable named by 'secrets.script-env-secret-1-key'.
+        required: false
+      script-env-secret-2-key:
+        description: |
+          Name of an environment variable in the environment where 'inputs.script' is run.
+          Variable's value will be set to the value passed as 'secrets.script-env-secret-2-value'.
+        required: false
+      script-env-secret-2-value:
+        description: |
+          Secret value.
+          Will be available via an environment variable named by 'secrets.script-env-secret-2-key'.
+        required: false
+      script-env-secret-3-key:
+        description: |
+          Name of an environment variable in the environment where 'inputs.script' is run.
+          Variable's value will be set to the value passed as 'secrets.script-env-secret-3-value'.
+        required: false
+      script-env-secret-3-value:
+        description: |
+          Secret value.
+          Will be available via an environment variable named by 'secrets.script-env-secret-3-key'.
+        required: false
 
 defaults:
   run:
@@ -279,6 +310,9 @@ jobs:
         # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
         GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
         RAPIDS_AUX_SECRET_1: ${{ inputs.rapids-aux-secret-1 != '' && secrets[inputs.rapids-aux-secret-1] || '' }} # zizmor: ignore[overprovisioned-secrets]
+        ${{ secrets.script-env-secret-1-key }}: ${{ secrets.script-env-secret-1-value }}
+        ${{ secrets.script-env-secret-2-key }}: ${{ secrets.script-env-secret-2-value }}
+        ${{ secrets.script-env-secret-3-key }}: ${{ secrets.script-env-secret-3-value }}
 
     - name: Generate test report
       uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4
