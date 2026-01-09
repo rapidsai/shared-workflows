@@ -174,19 +174,25 @@ jobs:
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-0|${{ hashFiles('.pre-commit-config.yaml') }}
-      # cannot reference possibly-null things in the 'env:' block, so the secret inputs need to be
-      # processed in a shell script like this
-      - name: Set script env
+      # cannot put possibly-null things as keys in the 'env:' mapping, so need to process these in a script
+      - name: Set secrets in script env
         run: |
-          if test -n "${{ secrets.script-env-secret-1-key }}"; then
-            echo "${{ secrets.script-env-secret-1-key }}=${{ secrets.script-env-secret-1-value }}" >> "${GITHUB_ENV}"
-          fi
-          if test -n "${{ secrets.script-env-secret-2-key }}"; then
-            echo "${{ secrets.script-env-secret-2-key }}=${{ secrets.script-env-secret-2-value }}" >> "${GITHUB_ENV}"
-          fi
-          if test -n "${{ secrets.script-env-secret-3-key }}"; then
-            echo "${{ secrets.script-env-secret-3-key }}=${{ secrets.script-env-secret-3-value }}" >> "${GITHUB_ENV}"
-          fi
+          set_env_var() {
+            local input_prefix="script-env-secret-$1"
+            local key_str=$2
+            local val_str=$3
+            if test -n "${val_str}"; then
+              if ! test -n "${key_str}"; then
+                local input_name
+                echo "ERROR: '${input_prefix}-value' non-empty but '${input_prefix}-key' is empty. Set '${input_prefix}-key'."
+                exit 1
+              fi
+              echo "${key_str}=${val_str}" >> "${GITHUB_ENV}"
+            fi
+          }
+          set_env_var '1' '${{ secrets.script-env-secret-1-key }}' '${{ secrets.script-env-secret-1-value }}'
+          set_env_var '2' '${{ secrets.script-env-secret-2-key }}' '${{ secrets.script-env-secret-2-value }}'
+          set_env_var '3' '${{ secrets.script-env-secret-3-key }}' '${{ secrets.script-env-secret-3-value }}'
       - name: Run ci/check_style.sh
         run: ci/check_style.sh
         env:
