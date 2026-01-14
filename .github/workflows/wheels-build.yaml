@@ -268,7 +268,7 @@ jobs:
       - name: Build and repair the wheel
         id: build-wheel
         run: |
-          ulimit -n $(ulimit -Hn)
+          ulimit -n "$(ulimit -Hn)"
           # shellcheck disable=SC1090
           source "${INPUTS_SCRIPT}"
 
