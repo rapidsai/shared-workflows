@@ -195,7 +195,7 @@ jobs:
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
       - name: C++ build
         run: |
-          ulimit -n $(ulimit -Hn)
+          ulimit -n "$(ulimit -Hn)"
           $INPUTS_SCRIPT
         env:
           INPUTS_SCRIPT: "${{ inputs.script }}"

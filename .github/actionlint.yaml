@@ -1,12 +1,18 @@
-# Configuration related to self-hosted runners.
+# Avoid warnings about unrecognized runner types.
 self-hosted-runner:
-  # Labels of self-hosted runner in array of strings.
   labels:
     - linux-amd64-*
     - linux-arm64-*
 
-# Configuration variables in array of strings defined in your repository or organization.
+# Avoid warnings about referencing things in ${{ vars.* }} statements.
 config-variables:
   - AWS_REGION
   - AWS_ROLE_ARN
   - TELEMETRY_ENABLED
+
+paths:
+  .github/workflows/conda-python-tests.yaml:
+    ignore:
+      # ${{ secrets.CODECOV_TOKEN }} is valid if a secret like that exists in the calling repo,
+      # and we're confident that it's there in our repos, so this error can be silenced
+      - 'property "codecov_token" is not defined in object type'

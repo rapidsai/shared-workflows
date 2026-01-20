@@ -26,10 +26,8 @@ repos:
     hooks:
       - id: verify-copyright
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    # Zizmor version.
     rev: v1.22.0
     hooks:
-      # Run the linter.
       - id: zizmor
         exclude: |
           (?x)^(

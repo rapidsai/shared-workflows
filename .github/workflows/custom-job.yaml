@@ -203,7 +203,7 @@ jobs:
           persist-credentials: false
       - name: Run script
         run: |
-          ulimit -n $(ulimit -Hn)
+          ulimit -n "$(ulimit -Hn)"
           $INPUTS_SCRIPT
         env:
           # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
