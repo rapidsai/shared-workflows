@@ -1,2 +1,3 @@
+auto_merger: true
 forward_merger: true
 label_checker: true
