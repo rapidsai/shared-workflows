@@ -187,6 +187,10 @@ jobs:
           extra_attributes: "rapids.PACKAGER=conda,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
       - name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
+        continue-on-error: true
+        with:
+          enable-apt: true
+
       # Install latest rapidsai/sccache client and configure sccache-dist
       - name: Setup sccache-dist
         uses: rapidsai/shared-actions/setup-sccache-dist@main
