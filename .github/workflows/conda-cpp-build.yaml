@@ -154,6 +154,8 @@ jobs:
       - name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
         continue-on-error: true
+        with:
+          enable-apt: true
 
       # This has to be AFTER the checkout step. It creates a telemetry-artifacts directory,
       # and the checkout step would destroy it.
