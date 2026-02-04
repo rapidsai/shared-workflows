@@ -94,7 +94,7 @@ jobs:
             exit 1
           fi
         env:
-          VERSION_FILES_CHANGED: ${{ (steps.changed-files.outputs.changed_file_groups && fromJSON(steps.changed-files.outputs.changed_file_groups).version_files) || 'false' }}
+          VERSION_FILES_CHANGED: ${{ (inputs.enable_check_version_files_changed && fromJSON(steps.changed-files.outputs.changed_file_groups).version_files) || 'false' }}
       - name: Fetch tags
         if: ${{ inputs.enable_check_version_against_tag }}
         uses: actions/checkout@v6
