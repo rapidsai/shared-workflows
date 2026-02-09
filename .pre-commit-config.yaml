@@ -22,7 +22,7 @@ repos:
       - id: codespell
         additional_dependencies: [tomli]
   - repo: https://github.com/rapidsai/pre-commit-hooks
-    rev: v1.4.2
+    rev: v1.4.3
     hooks:
       - id: verify-copyright
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
