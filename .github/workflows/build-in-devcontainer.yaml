@@ -118,7 +118,7 @@ jobs:
         with:
           extra_attributes: "rapids.PACKAGER=${{ matrix.PACKAGER }},rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.ARCH=${{ matrix.ARCH }}"
 
-      - name: Check if repo has devcontainer
+      - name: Setup job env
         env:
           ARCH: ${{ matrix.ARCH }}
           CUDA_VER: ${{ matrix.CUDA_VER }}
@@ -130,6 +130,13 @@ jobs:
           ARTIFACT_SLUG=${RUN_ID}-${RUN_ATTEMPT}-$RANDOM
           BUILD_SLUG=cuda${CUDA_VER}-${PACKAGER}-${ARCH}
           REPOSITORY=$(basename "$(pwd)")
+          SCCACHE_DIST_AUTH_TOKEN=$(
+            curl -fsSL -H "Authorization: Bearer $(
+              curl -fsSL -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+                "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=token.rapids.nvidia.com" \
+            | jq -r '.value'
+            )" https://token.rapids.nvidia.com/gh/token/exchange \
+          | jq -r '.token')
           EOF
 
       - uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
@@ -161,6 +168,7 @@ jobs:
           # We have to pass them in explicitly.
           env: |
             REPOSITORY=${{ env.REPOSITORY }}
+            SCCACHE_DIST_AUTH_TOKEN=${{ env.SCCACHE_DIST_AUTH_TOKEN }}
             SCCACHE_IDLE_TIMEOUT=0
             SCCACHE_REGION=${{ vars.AWS_REGION }}
             SCCACHE_ERROR_LOG=/home/coder/${{ env.REPOSITORY }}/sccache.log
