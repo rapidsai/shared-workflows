@@ -194,13 +194,11 @@ jobs:
       # Install latest rapidsai/sccache client and configure sccache-dist
       - name: Setup sccache-dist
         uses: rapidsai/shared-actions/setup-sccache-dist@main
-        if: ${{ inputs.sccache-dist-token-secret-name != '' }}
         env:
           AWS_REGION: "${{env.AWS_REGION}}"
           AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
           AWS_SECRET_ACCESS_KEY: "${{env.AWS_SECRET_ACCESS_KEY}}"
         with:
-          auth: "${{ secrets[inputs.sccache-dist-token-secret-name] }}" # zizmor: ignore[overprovisioned-secrets]
           log-file: "${{ env.RAPIDS_ARTIFACTS_DIR }}/sccache.log"
           request-timeout: ${{ inputs.sccache-dist-request-timeout }}
       # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
