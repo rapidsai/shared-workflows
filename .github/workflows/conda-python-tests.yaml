@@ -255,6 +255,9 @@ jobs:
         continue-on-error: true
         with:
           enable-apt: true
+          enable-conda: true
+          enable-pip: true
+          enable-pypi-anaconda: true
 
       # Install latest rapidsai/sccache client and configure sccache-dist
       - name: Setup sccache-dist
