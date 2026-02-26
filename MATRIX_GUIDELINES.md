@@ -89,7 +89,7 @@ Make sure to test on CUDA versions new enough to support that hardware.
 ### 6. Dependency Version Coverage
 **Goal**: Validate against both oldest and latest dependencies
 
-- **Oldest dependencies**: Use at least once in the matrix
+- **Oldest dependencies**: Use at least once in the matrix (ideally once per CUDA major version)
 - **Latest dependencies**: Use latest dependencies in most jobs
 - It is up to each repository to use `rapids-dependency-file-generator` and `dependencies.yaml` to define its oldest supported dependencies, this just sets an environment variable that can be interpreted by the CI scripts
 
