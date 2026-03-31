@@ -19,6 +19,10 @@ on:
       repo:
         description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
         type: string
+      os:
+        description: "Operating system of the runner (e.g. 'linux', 'wsl')."
+        type: string
+        default: "linux"
       arch:
         description: "One of [amd64, arm64]. CPU architecture to run on."
         type: string
@@ -121,7 +125,7 @@ jobs:
   build:
     strategy:
       fail-fast: false
-    runs-on: "linux-${{ inputs.arch }}-${{ inputs.node_type }}"
+    runs-on: "${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.node_type }}"
     continue-on-error: ${{ inputs.continue-on-error }}
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
