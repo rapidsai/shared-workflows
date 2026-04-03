@@ -1,0 +1,132 @@
+on:
+  workflow_call:
+    inputs:
+      push:
+        type: string
+        default: true
+        description: "Whether to push the image."
+      repo:
+        type: string
+        required: true
+        description: "Devcontainer image repository."
+      tag:
+        type: string
+        required: true
+        description: "Devcontainer image tag."
+      workspace-dir:
+        type: string
+        default: '.'
+        description: "Devcontainer workspace directory."
+      devcontainer-json:
+        type: string
+        required: true
+        description: "Path to the devcontainer.json file."
+      timeout-minutes:
+        type: number
+        default: 360
+        description: "Maximum time (in minutes) allowed for a run of this workflow."
+      retries:
+        type: string
+        default: '3'
+        description: "Number of times to retry the image build"
+      runs-on:
+        type: string
+        default: "ubuntu-latest"
+        description: "GHA runner label."
+    outputs:
+      version:
+        value: ${{ jobs.build.outputs.version }}
+
+
+permissions:
+  actions: none
+  checks: none
+  contents: none
+  deployments: none
+  discussions: none
+  issues: none
+  packages: write
+  pages: none
+  pull-requests: none
+  repository-projects: none
+  security-events: none
+  statuses: none
+
+jobs:
+  build:
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    runs-on: ${{ fromJSON(github.actor != 'rapidsai' && '"ubuntu-latest"' || format('"${{ inputs.runs-on }}"', matrix.arch)) }}
+    name: "${{ inputs.tag }} (${{ matrix.arch }})"
+    outputs:
+      hash_amd64: ${{ steps.build.outputs.hash_amd64 }}
+      hash_arm64: ${{ steps.build.outputs.hash_arm64 }}
+      name: ${{ steps.build.outputs.name }}
+      repo: ${{ steps.build.outputs.repo }}
+      tag: ${{ steps.build.outputs.tag }}
+      version: ${{ steps.setup.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - id: setup
+        name: Setup versions
+        run: |
+          cat <<EOF | tee -a "$GITHUB_OUTPUT"
+          version=$(git describe --abbrev=0 --tags | sed 's/[a-zA-Z]//g' | cut -d '.' -f -2)
+          EOF
+
+      - name: Login to ghcr.io
+        if: inputs.push == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: "ghcr.io"
+          username: "${{ github.actor }}"
+          password: "${{ github.token }}"
+
+      - id: build
+        name: Build devcontainer (${{ matrix.arch }})
+        uses: rapidsai/shared-actions/build-devcontainer@fea/build-devcontainer
+        with:
+          arch: "${{ matrix.arch }}"
+          repo: "ghcr.io/${{ inputs.repo }}"
+          push: "${{ inputs.push }}"
+          retries: "${{ inputs.retries }}"
+          tag: "${{ inputs.tag }}"
+          version: "${{ steps.setup.outputs.version }}"
+          workspace-dir: "${{ inputs.workspace-dir }}"
+          devcontainer-json: "${{ inputs.devcontainer-json }}"
+
+  push:
+    if: inputs.push == 'true'
+    name: Push to ghcr.io
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to ghcr.io
+        uses: docker/login-action@v4
+        with:
+          registry: "ghcr.io"
+          username: "${{ github.actor }}"
+          password: "${{ github.token }}"
+
+      - id: push
+        name: Push manifest to ghcr.io
+        shell: bash --noprofile --norc -x -eo pipefail {0}
+        env:
+          hash_amd64: "${{ needs.build.outputs.hash_amd64 }}"
+          hash_arm64: "${{ needs.build.outputs.hash_arm64 }}"
+          name: "${{ needs.build.outputs.name }}"
+          name_latest: "${{ needs.build.outputs.name_latest }}"
+          ref_name: "${{ github.ref_name }}"
+        run: |
+          # Create the multiarch manifest
+          docker buildx imagetools create --tag "${name}" "${hash_amd64}" "${hash_arm64}";
+          if [[ "${ref_name}" == main ]]; then
+            docker buildx imagetools create --tag "${name_latest}" "${hash_amd64}" "${hash_arm64}";
+          fi

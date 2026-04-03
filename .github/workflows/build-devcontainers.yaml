@@ -1,0 +1,96 @@
+name: Build devcontainers
+
+on:
+  workflow_call:
+    inputs:
+      cuda:
+        description: |
+          Stringified JSON array of CUDA versions to run this workflow for.
+          This is used to select .devcontainer/ directories local to wherever this workflow is invoked from.
+          For example, if a repository has directories '.devcontainer/cuda12.9-pip/' and '.devcontainer/cuda13.1-pip/',
+          '["12.9", "13.1"]' could be passed here to build both of those devcontainers in CI.
+        type: string
+        default: '["12.9", "13.1"]'
+      python_package_manager:
+        description: |
+          Stringified JSON array of Python package managers to run devcontainer builds for.
+          One of: '["conda"]', '["pip"]', '["conda", "pip"]'.
+        type: string
+        default: '["conda", "pip"]'
+      retries:
+        type: string
+        default: '3'
+        description: "Number of times to retry the image build"
+      push:
+        type: string
+        default: true
+
+jobs:
+  build:
+    secrets: inherit
+    uses: ./.github/workflows/build-devcontainer.yaml
+    permissions:
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        cuda: ${{ fromJSON(inputs.cuda) }}
+        python_package_manager: ${{ fromJSON(inputs.python_package_manager) }}
+    with:
+      runs-on: 'linux-{0}-cpu4'
+      push: "${{ inputs.push }}"
+      retries: "${{ inputs.retries }}"
+      repo: "${{ github.repository }}/devcontainer"
+      tag: "cuda${{ matrix.cuda }}-${{ matrix.python_package_manager }}"
+      devcontainer-json: ".devcontainer/cuda${{ matrix.cuda }}-${{ matrix.python_package_manager }}/devcontainer.json"
+
+  cleanup:
+    if: inputs.push == 'true'
+    needs: [build]
+    name: Clean up untagged images
+    runs-on: ubuntu-latest
+    outputs:
+      digests: ${{ steps.values.outputs.digests }}
+      name: ${{ steps.values.outputs.name }}
+      tags: ${{ steps.values.outputs.tags }}
+    steps:
+      - id: vars
+        name: Get image name, tags, and digests
+        env:
+          NAME: "ghcr.io/${{ github.repository }}/devcontainer"
+          VERSIONS: '["latest", "${{ needs.build.outputs.version }}"]'
+        run: |
+          set -xeuo pipefail
+
+          declare -a TAGS="($(jq -cnr \
+            --argjson vers "${VERSIONS}" \
+            --argjson cuda '${{ inputs.cuda }}' \
+            --argjson pkgr '${{ inputs.python_package_manager }}' \
+            '[[$vers, $cuda, $pkgr] | combinations | [.[0], "cuda" + .[1], .[2]] | join("-")] | join(" ")'))"
+
+          declare -a DIGESTS=()
+          for TAG in "${TAGS[@]}"; do
+            mapfile -O "${#DIGESTS[@]}" -t DIGESTS < <(
+              docker buildx imagetools inspect --raw "${NAME}:${TAG}" | jq -r '.manifests.[] | .digest'
+            )
+          done
+
+          NAME="${NAME#ghcr.io/${{ github.actor }}/}"
+
+          # Set values to control ghcr.io cleanup below
+          cat <<EOF >> "$GITHUB_OUTPUT"
+          digests=${DIGESTS[*]}
+          name=${NAME}
+          tags=${TAGS[*]}
+          EOF
+
+      - name: Clean up untagged images
+        uses: snok/container-retention-policy@3b0972b2276b171b212f8c4efbca59ebba26eceb
+        with:
+          cut-off: 1hr
+          tag-selection: untagged
+          token: "${{ github.token }}"
+          image-tags: "${{ steps.vars.outputs.tags }}"
+          image-names: "${{ steps.vars.outputs.name }}"
+          skip-shas: "${{ steps.vars.outputs.digests }}"
+          account: "${{ github.actor == github.triggering_actor && 'user' || github.actor }}"
