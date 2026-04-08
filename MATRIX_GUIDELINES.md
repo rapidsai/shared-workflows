@@ -64,7 +64,7 @@ When trading off coverage for resource utilization, prioritize in this order:
 - **Previous major, minimum supported version**
 - **Latest major.minor version**
 - **Latest major, earliest minor version**
-  - e.g. if 13.1 is the latest, use 13.0
+  - e.g. if 13.2 is the latest, use 13.0
   - If this is the same as the latest major.minor, use the latest minor of the previous major (e.g. if 13.0 is the latest, use 12.9)
 - If resources allow, also test the latest minor of the previous major
 
