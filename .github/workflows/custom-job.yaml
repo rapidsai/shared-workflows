@@ -148,6 +148,10 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           role-duration-seconds: 43200 # 12h
+      - name: Ensure git is installed
+        run: |
+          # TODO: this (if it is even required) should be OS-agnostic
+          apt update && apt install -y git
       - uses: actions/checkout@v6
         with:
           repository: ${{ inputs.repo }}
