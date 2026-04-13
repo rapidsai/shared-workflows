@@ -97,6 +97,17 @@ on:
         default: false
         type: boolean
         required: false
+      bootstrap_script:
+        description: |
+          A script to run immediately after pulling the requested container
+          image to install any dependencies required for subsequent CI steps.
+
+          Scripts used here should not go beyond installing immediately
+          necessary dependencies, as any script passed in here will be executed
+          before telemetry and other steps are run.
+        required: false
+        type: string
+
 
 defaults:
   run:
@@ -143,6 +154,12 @@ jobs:
           ref: ${{ inputs.sha }}
           fetch-depth: 0
           persist-credentials: true
+      - name: Run bootstrap script
+        run: |
+          ulimit -n "$(ulimit -Hn)"
+          $BOOTSTRAP_SCRIPT
+        env:
+          BOOTSTRAP_SCRIPT: ${{ inputs.bootstrap_script }}
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true
