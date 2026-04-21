@@ -119,87 +119,18 @@ permissions:
 
 jobs:
   compute-matrix:
-    runs-on: ubuntu-latest
-    env:
-      BUILD_TYPE: ${{ inputs.build_type }}
-      MATRIX_TYPE: ${{ inputs.matrix_type }}
-    outputs:
-      MATRIX: ${{ steps.compute-matrix.outputs.MATRIX }}
-    steps:
-      - name: Validate Inputs
-        run: |
-          if [[ "$BUILD_TYPE" != "branch" ]] && [[ "$BUILD_TYPE" != "nightly" ]] && [[ "$BUILD_TYPE" != "pull-request" ]]; then
-              echo "Invalid build_type! Must be one of 'branch', 'nightly', or 'pull-request'."
-              exit 1
-          fi
-          if [[ "$MATRIX_TYPE" != "auto" ]] && [[ "$MATRIX_TYPE" != "nightly" ]] && [[ "$MATRIX_TYPE" != "pull-request" ]]; then
-              echo "Invalid matrix_type! Must be one of 'auto', 'nightly', or 'pull-request'."
-              exit 1
-          fi
-      - name: Compute C++ Test Matrix
-        id: compute-matrix
-        env:
-          MATRIX_FILTER: ${{ inputs.matrix_filter }}
-        run: |
-          set -eo pipefail
-
-          # please keep the matrices sorted in ascending order by the following:
-          #
-          #     [ARCH, PY_VER, CUDA_VER, LINUX_VER, GPU, DRIVER, DEPENDENCIES]
-          #
-          export MATRICES="
-            pull-request:
-              # amd64
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8', GPU: 'v100',       DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '13.0.2', LINUX_VER: 'ubuntu24.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '13.1.1', LINUX_VER: 'ubuntu24.04', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '12.9.1', LINUX_VER: 'ubuntu22.04', GPU: 'h100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '13.1.1', LINUX_VER: 'ubuntu24.04', GPU: 'h100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              # arm64
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '13.1.1', LINUX_VER: 'ubuntu24.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.0.2', LINUX_VER: 'rockylinux8', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-            nightly:
-              # amd64
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8', GPU: 'l4',         DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.9.1', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '13.0.2', LINUX_VER: 'rockylinux8', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8', GPU: 'v100',       DRIVER: 'earliest', DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '13.1.1', LINUX_VER: 'ubuntu24.04', GPU: 'h100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '12.9.1', LINUX_VER: 'ubuntu24.04', GPU: 'h100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '13.1.1', LINUX_VER: 'ubuntu24.04', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              # arm64
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
-              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '13.0.2', LINUX_VER: 'rockylinux8', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '13.1.1', LINUX_VER: 'rockylinux8', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '12.9.1', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-          "
-
-          # only overwrite MATRIX_TYPE if it was set to 'auto'
-          if [[ "${MATRIX_TYPE}" == "auto" ]]; then
-            if [[ "${BUILD_TYPE}" == "branch" ]]; then
-              # Use the nightly matrix for branch tests
-              MATRIX_TYPE="nightly"
-            else
-              MATRIX_TYPE="${BUILD_TYPE}"
-            fi
-          fi
-          export MATRIX_TYPE
-          TEST_MATRIX=$(yq -n 'env(MATRICES) | .[strenv(MATRIX_TYPE)]')
-          export TEST_MATRIX
-
-          MATRIX="$(
-            yq -n -o json 'env(TEST_MATRIX)' | \
-            jq -c "${MATRIX_FILTER} | if (. | length) > 0 then {include: .} else \"Error: Empty matrix\n\" | halt_error(1) end"
-          )"
-
-          echo "MATRIX=${MATRIX}" | tee --append "${GITHUB_OUTPUT}"
+    uses: ./.github/workflows/compute-matrix.yaml
+    with:
+      build_type: ${{ inputs.build_type }}
+      matrix_name: conda-cpp-tests
+      matrix_type: ${{ inputs.matrix_type }}
+      matrix_filter: ${{ inputs.matrix_filter }}
   tests:
     name: ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}, ${{ matrix.GPU }}, ${{ matrix.DRIVER }}-driver, ${{ matrix.DEPENDENCIES }}-deps
     needs: compute-matrix
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.compute-matrix.outputs.MATRIX) }}
+      matrix: ${{ fromJSON(needs.compute-matrix.outputs.matrix) }}
     runs-on: "linux-${{ matrix.ARCH }}-gpu-${{ matrix.GPU }}-${{ matrix.DRIVER }}-1"
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
