@@ -224,7 +224,7 @@ jobs:
           fi
 
           MATRIX="$(
-            jq -n -c "$ENV.MATRIX | .[$ENV.MATRIX_NAME].[$ENV.MATRIX_TYPE] | ${MATRIX_FILTER} | if (. | length) > 0 then {include: .} else \"Error: Empty matrix\n\" | halt_error(1) end"
+            jq -n -c "$ENV.MATRIX | fromjson | .[$ENV.MATRIX_NAME].[$ENV.MATRIX_TYPE] | ${MATRIX_FILTER} | if (. | length) > 0 then {include: .} else \"Error: Empty matrix\n\" | halt_error(1) end"
           )"
 
           echo "matrix=${MATRIX}" | tee --append "${GITHUB_OUTPUT}"
