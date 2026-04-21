@@ -31,6 +31,10 @@ on:
 jobs:
   compute-matrix:
     runs-on: ubuntu-latest
+    env:
+      BUILD_TYPE: ${{ inputs.build_type }}
+      MATRIX_NAME: ${{ inputs.matrix_name }}
+      MATRIX_TYPE: ${{ inputs.matrix_type }}
     outputs:
       matrix: ${{ steps.compute-matrix.outputs.matrix }}
     steps:
