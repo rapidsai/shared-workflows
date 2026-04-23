@@ -8,7 +8,8 @@
       "enabled": false,
       "matchPackageNames": [
         "/^rapidsai//"
-      ]
+      ],
+      "minimumReleaseAge": "7 days"
     }
   ]
 }
