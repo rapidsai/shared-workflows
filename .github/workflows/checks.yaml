@@ -55,7 +55,7 @@ jobs:
         RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: true
       - name: Telemetry setup
@@ -97,7 +97,7 @@ jobs:
           VERSION_FILES_CHANGED: ${{ (inputs.enable_check_version_files_changed && fromJSON(steps.changed-files.outputs.changed_file_groups).version_files) || 'false' }}
       - name: Fetch tags
         if: ${{ inputs.enable_check_version_against_tag }}
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
           fetch-depth: 0 # https://github.com/actions/checkout/issues/1471
@@ -126,7 +126,7 @@ jobs:
       image: rapidsai/ci-conda:26.06-cuda13.1.1-ubuntu24.04-py3.12 # zizmor: ignore[unpinned-images]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
           persist-credentials: true
@@ -139,7 +139,7 @@ jobs:
       - name: Get PR Info
         id: get-pr-info
         uses: nv-gha-runners/get-pr-info@main
-      - uses: actions/cache@v5
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-0|${{ hashFiles('.pre-commit-config.yaml') }}
