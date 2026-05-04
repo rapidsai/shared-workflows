@@ -48,10 +48,6 @@ jobs:
     needs: [build]
     name: Clean up untagged images
     runs-on: ubuntu-latest
-    outputs:
-      digests: ${{ steps.values.outputs.digests }}
-      name: ${{ steps.values.outputs.name }}
-      tags: ${{ steps.values.outputs.tags }}
     steps:
       - id: vars
         name: Get image name, tags, and digests
