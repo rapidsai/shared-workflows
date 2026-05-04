@@ -91,7 +91,7 @@ jobs:
 
       - id: build
         name: Build devcontainer (${{ matrix.arch }})
-        uses: rapidsai/shared-actions/build-devcontainer@f727ef8676873a0fac406e5f8a50d46b3fa36136
+        uses: rapidsai/shared-actions/build-devcontainer@main
         with:
           arch: "${{ matrix.arch }}"
           repo: "ghcr.io/${{ inputs.repo }}"
