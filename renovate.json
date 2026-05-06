@@ -6,6 +6,10 @@
   "packageRules": [
     {
       "enabled": false,
+      "groupName": "github-actions",
+      "matchManagers": [
+        "gh-actions"
+      ],
       "matchPackageNames": [
         "/^rapidsai//"
       ],
