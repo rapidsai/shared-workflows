@@ -26,6 +26,10 @@ on:
           For example, to ignore any function symbols coming from the 'thrust' or 'cub' namespaces,
           you might provide '(void (thrust::|cub::))'.
         type: string
+      package_name:
+        description: |
+          Name of package to use when constructing artifact name using `rapids-artifact-name`, e.g. `libcudf`, `libucxx`
+        type: string
 
 defaults:
   run:
@@ -97,9 +101,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - name: Download conda C++ build artifacts
         env:
+          PACKAGE_NAME: ${{ inputs.package_name }}
+          REPO: ${{ inputs.repo }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          CPP_DIR=$(rapids-download-conda-from-github cpp)
+          if [ -n "$PACKAGE_NAME" ]; then
+            CPP_DIR=$(rapids-download-from-github "$(rapids-artifact-name conda_cpp $PACKAGE_NAME "${REPO##*/}" --cuda)")
+          else
+            CPP_DIR=$(rapids-download-conda-from-github cpp)
+          fi
           EXTRACTED_DIR=$(rapids-extract-conda-files "${CPP_DIR}")
           echo "RAPIDS_EXTRACTED_DIR=${EXTRACTED_DIR}" >> "${GITHUB_ENV}"
       - name: Get weak detection tool
