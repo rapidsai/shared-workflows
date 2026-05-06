@@ -10,6 +10,13 @@
         "/^rapidsai//"
       ],
       "minimumReleaseAge": "7 days"
+    },
+    {
+      "matchManagers": [
+        "gh-actions"
+      ],
+      "groupName": "github-actions",
+      "minimumReleaseAge": "7 days"
     }
   ]
 }
