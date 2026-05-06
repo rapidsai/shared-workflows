@@ -6,16 +6,13 @@
   "packageRules": [
     {
       "enabled": false,
-      "matchPackageNames": [
-        "/^rapidsai//"
-      ],
-      "minimumReleaseAge": "7 days"
-    },
-    {
+      "groupName": "github-actions",
       "matchManagers": [
         "gh-actions"
       ],
-      "groupName": "github-actions",
+      "matchPackageNames": [
+        "/^rapidsai//"
+      ],
       "minimumReleaseAge": "7 days"
     }
   ]
