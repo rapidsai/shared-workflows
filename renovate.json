@@ -5,7 +5,7 @@
   ],
   "packageRules": [
     {
-      "enabled": false,
+      "enabled": true,
       "groupName": "github-actions",
       "matchManagers": [
         "gh-actions"
