@@ -47,6 +47,13 @@ on:
         description: "Search key to use to override constructed search path in `rapids-wheels-anaconda-github`"
         type: string
         required: false
+    secrets:
+      CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN:
+        description: "Anaconda token for RAPIDS wheel nightly uploads"
+        required: false
+      RAPIDSAI_PYPI_TOKEN:
+        description: "Anaconda token for RAPIDS wheel release uploads"
+        required: false
 
 permissions:
   actions: read

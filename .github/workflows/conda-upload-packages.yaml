@@ -35,6 +35,14 @@ on:
           If not set (the default), artifact-handling scripts use RAPIDS-conventional defaults (like "build.yaml" when "build_type == nightly").
         required: false
         type: string
+    secrets:
+      CONDA_RAPIDSAI_TOKEN:
+        description: "Anaconda token for RAPIDS conda release uploads"
+        required: false
+      CONDA_RAPIDSAI_NIGHTLY_TOKEN:
+        description: "Anaconda token for RAPIDS conda nightly uploads"
+        required: false
+
 
 defaults:
   run:
