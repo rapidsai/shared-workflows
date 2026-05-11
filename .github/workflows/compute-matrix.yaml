@@ -25,6 +25,16 @@ on:
         required: false
         type: boolean
         default: false
+      pure-conda:
+        required: false
+        type: string
+        default: "false"
+        description: |
+          One of [true, false, cuda_major]. 'true' if the conda package is not
+          dependent on operating system, Python minor version, CPU architecture,
+          or CUDA version. 'cuda_major' if the package is not dependent on
+          operating system, Python minor version, or CPU architecture, but is
+          dependent on CUDA major version.
     outputs:
       matrix:
         value: ${{ jobs.compute-matrix.outputs.matrix }}
@@ -204,6 +214,7 @@ jobs:
           MATRIX: ${{ steps.prepare-matrix.outputs.matrix }}
           MATRIX_FILTER: ${{ inputs.matrix_filter }}
           PURE_WHEEL: ${{ inputs.pure_wheel }}
+          PURE_CONDA: ${{ inputs.pure-conda }}
         run: |
           set -eo pipefail
 
@@ -221,6 +232,13 @@ jobs:
           # When pure-wheel is true and matrix_filter is default, override to build one wheel per CUDA version with amd64 and the latest PY_VER
           if [ "${PURE_WHEEL}" = "true" ] && [ "${MATRIX_FILTER}" = "." ]; then
             MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | group_by(.CUDA_VER) | map(max_by(.PY_VER | split(\".\") | map(tonumber)))"
+          fi
+
+          # When pure-conda is true and matrix_filter is default, override to build one conda package with amd64, latest CUDA_VER, and the latest PY_VER
+          if [ "${PURE_CONDA}" = "true" ] && [ "${MATRIX_FILTER}" = "." ]; then
+            MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | sort_by(.CUDA_VER, .PY_VER) | [last]"
+          elif [ "${PURE_CONDA}" = "cuda_major" ] && [ "${MATRIX_FILTER}" = "." ]; then
+            MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | group_by(.CUDA_VER|split(\".\")|map(tonumber)|.[0]) | map(max_by([(.PY_VER|split(\".\")|map(tonumber)), (.CUDA_VER|split(\".\")|map(tonumber))]))"
           fi
 
           MATRIX="$(
