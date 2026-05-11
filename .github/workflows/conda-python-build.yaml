@@ -97,6 +97,7 @@ jobs:
       build_type: ${{ inputs.build_type }}
       matrix_name: conda-python-build
       matrix_filter: ${{ inputs.matrix_filter }}
+      pure-conda: ${{ inputs.pure-conda }}
   build:
     name:  ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}
     needs: compute-matrix
