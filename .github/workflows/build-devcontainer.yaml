@@ -2,7 +2,7 @@ on:
   workflow_call:
     inputs:
       push:
-        type: string
+        type: boolean
         default: true
         description: "Whether to push the image."
       repo:
@@ -59,7 +59,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [amd64, arm64]
-    runs-on: ${{ fromJSON(github.actor != 'rapidsai' && '"ubuntu-latest"' || format('"${{ inputs.runs-on }}"', matrix.arch)) }}
+    runs-on: ${{ fromJSON(github.repository_owner != 'rapidsai' && '"ubuntu-latest"' || format('"${{ inputs.runs-on }}"', matrix.arch)) }}
     name: "${{ inputs.tag }} (${{ matrix.arch }})"
     outputs:
       hash_amd64: ${{ steps.build.outputs.hash_amd64 }}
@@ -76,13 +76,14 @@ jobs:
 
       - id: setup
         name: Setup versions
+        shell: bash --noprofile --norc -x -eo pipefail {0}
         run: |
           cat <<EOF | tee -a "$GITHUB_OUTPUT"
           version=$(git describe --abbrev=0 --tags | sed 's/[a-zA-Z]//g' | cut -d '.' -f -2)
           EOF
 
       - name: Login to ghcr.io
-        if: inputs.push == 'true'
+        if: inputs.push
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
           registry: "ghcr.io"
@@ -103,7 +104,7 @@ jobs:
           devcontainer-json: "${{ inputs.devcontainer-json }}"
 
   push:
-    if: inputs.push == 'true'
+    if: inputs.push
     name: Push to ghcr.io
     needs: [build]
     runs-on: ubuntu-latest
@@ -115,8 +116,7 @@ jobs:
           username: "${{ github.actor }}"
           password: "${{ github.token }}"
 
-      - id: push
-        name: Push manifest to ghcr.io
+      - name: Push manifest to ghcr.io
         shell: bash --noprofile --norc -x -eo pipefail {0}
         env:
           hash_amd64: "${{ needs.build.outputs.hash_amd64 }}"
