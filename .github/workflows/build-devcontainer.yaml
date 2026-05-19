@@ -59,7 +59,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [amd64, arm64]
-    runs-on: ${{ fromJSON(github.repository_owner != 'rapidsai' && '"ubuntu-latest"' || format('"${{ inputs.runs-on }}"', matrix.arch)) }}
+    runs-on: ${{ fromJSON(github.repository_owner != 'rapidsai' && '"ubuntu-latest"' || format(format('"{0}"', inputs.runs-on), matrix.arch)) }}
     name: "${{ inputs.tag }} (${{ matrix.arch }})"
     outputs:
       hash_amd64: ${{ steps.build.outputs.hash_amd64 }}
@@ -69,7 +69,7 @@ jobs:
       tag: ${{ steps.build.outputs.tag }}
       version: ${{ steps.setup.outputs.version }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
           persist-credentials: false
