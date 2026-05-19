@@ -59,7 +59,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [amd64, arm64]
-    runs-on: ${{ fromJSON(github.repository_owner != 'rapidsai' && '"ubuntu-latest"' || format('"${{ inputs.runs-on }}"', matrix.arch)) }}
+    runs-on: ${{ fromJSON(github.repository_owner != 'rapidsai' && '"ubuntu-latest"' || format(format('"{0}"', inputs.runs-on), matrix.arch)) }}
     name: "${{ inputs.tag }} (${{ matrix.arch }})"
     outputs:
       hash_amd64: ${{ steps.build.outputs.hash_amd64 }}
