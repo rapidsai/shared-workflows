@@ -80,7 +80,7 @@ jobs:
         shell: bash --noprofile --norc -x -eo pipefail {0}
         run: |
           cat <<EOF | tee -a "$GITHUB_OUTPUT"
-          version=$(git describe --abbrev=0 --tags | sed 's/[a-zA-Z]//g' | cut -d '.' -f -2)
+          version=$(git describe --abbrev=0 --tags --first-parent | sed 's/[a-zA-Z]//g' | cut -d '.' -f -2)
           EOF
 
       - name: Login to ghcr.io
