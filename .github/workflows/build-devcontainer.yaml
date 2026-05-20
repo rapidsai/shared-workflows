@@ -65,6 +65,7 @@ jobs:
       hash_amd64: ${{ steps.build.outputs.hash_amd64 }}
       hash_arm64: ${{ steps.build.outputs.hash_arm64 }}
       name: ${{ steps.build.outputs.name }}
+      name_latest: ${{ steps.build.outputs.name_latest }}
       repo: ${{ steps.build.outputs.repo }}
       tag: ${{ steps.build.outputs.tag }}
       version: ${{ steps.setup.outputs.version }}
