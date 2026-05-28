@@ -54,6 +54,11 @@ jobs:
       env:
         RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - name: bootstrap `sudo`
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt update
+          apt install sudo --yes --no-install-recommends
       - name: audit action permissions
         uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1.0
         with:
