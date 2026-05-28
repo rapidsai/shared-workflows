@@ -48,6 +48,10 @@ jobs:
     outputs:
       matrix: ${{ steps.compute-matrix.outputs.matrix }}
     steps:
+      - name: audit action permissions
+        uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1.0
+        with:
+          config: '{ "create_artifact": true, "enabled": true, "debug": false }'
       - name: Prepare Build Matrix
         id: prepare-matrix
         run: |

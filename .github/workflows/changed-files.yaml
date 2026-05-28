@@ -57,6 +57,10 @@ jobs:
     outputs:
       changed_file_groups: ${{ steps.changed-files.outputs.changed_file_groups }}
     steps:
+      - name: audit action permissions
+        uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1.0
+        with:
+          config: '{ "create_artifact": true, "enabled": true, "debug": false }'
       - name: Telemetry setup
         uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
         continue-on-error: true

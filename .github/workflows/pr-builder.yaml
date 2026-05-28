@@ -13,6 +13,10 @@ jobs:
   run:
     runs-on: ubuntu-latest
     steps:
+      - name: audit action permissions
+        uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1.0
+        with:
+          config: '{ "create_artifact": true, "enabled": true, "debug": false }'
       # This reusable workflow should depend on all other jobs in the calling workflow.
       - name: "Check all dependent jobs"
         env:

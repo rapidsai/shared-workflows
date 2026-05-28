@@ -19,6 +19,10 @@ jobs:
   update-latest-branch:
     runs-on: ubuntu-latest
     steps:
+      - name: audit action permissions
+        uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1.0
+        with:
+          config: '{ "create_artifact": true, "enabled": true, "debug": false }'
       - name: Update latest branch
         id: update-latest-branch
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
