@@ -47,12 +47,6 @@ defaults:
     shell: bash
 
 jobs:
-  monitor:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1.0
-        with:
-          config: '{ "create_artifact": true, "enabled": true, "debug": false }'
   other-checks:
     runs-on: ubuntu-latest
     container:
