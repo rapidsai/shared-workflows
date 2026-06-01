@@ -45,9 +45,9 @@ on:
         required: true
         type: boolean
     secrets:
-      NV_SLACK_BREAKING_CHANGE_ALERT:
-        required: false
-        description: "Token for posting breaking change alerts to Slack"
+      slack-webhook-url:
+        required: true
+        description: "Webhook URL to post breaking changes to a Slack channel."
 
 defaults:
   run:
@@ -170,5 +170,5 @@ jobs:
               ]
             }
           payload-templated: true
-          webhook: ${{ secrets.NV_SLACK_BREAKING_CHANGE_NOTIFIER_APP }}
+          webhook: ${{ secrets.slack-webhook-url }}
           webhook-type: incoming-webhook
