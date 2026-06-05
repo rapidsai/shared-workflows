@@ -232,6 +232,11 @@ jobs:
           INPUTS_SCRIPT: "${{ inputs.script }}"
           # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
+          # opt out of conda sharded repodata
+          #
+          # TODO: remove these when this is resolved: https://github.com/conda/infrastructure/issues/1286#issuecomment-4628580232
+          CONDA_PLUGINS_USE_SHARDED_REPODATA: false
+          RATTLER_SHARDED: false
       - name: Generate test report
         uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4
         with:

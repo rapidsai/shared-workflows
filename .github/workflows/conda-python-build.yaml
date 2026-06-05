@@ -189,6 +189,11 @@ jobs:
           # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
           INPUTS_SCRIPT: ${{ inputs.script }}
+          # opt out of conda sharded repodata
+          #
+          # TODO: remove these when this is resolved: https://github.com/conda/infrastructure/issues/1286#issuecomment-4628580232
+          CONDA_PLUGINS_USE_SHARDED_REPODATA: false
+          RATTLER_SHARDED: false
       - name: Get Package Name and Location
         if: ${{ inputs.upload-artifacts }}
         env:
