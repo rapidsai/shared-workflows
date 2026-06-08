@@ -193,6 +193,7 @@ jobs:
           #
           # TODO: remove these when this is resolved: https://github.com/conda/infrastructure/issues/1286#issuecomment-4628580232
           CONDA_PLUGINS_USE_SHARDED_REPODATA: false
+          MAMBA_USE_SHARDED_REPODATA: false
           RATTLER_SHARDED: false
       - name: Get Package Name and Location
         if: ${{ inputs.upload-artifacts }}
