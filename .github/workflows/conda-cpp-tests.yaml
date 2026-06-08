@@ -236,6 +236,7 @@ jobs:
           #
           # TODO: remove these when this is resolved: https://github.com/conda/infrastructure/issues/1286#issuecomment-4628580232
           CONDA_PLUGINS_USE_SHARDED_REPODATA: false
+          MAMBA_USE_SHARDED_REPODATA: false
           RATTLER_SHARDED: false
       - name: Generate test report
         uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
