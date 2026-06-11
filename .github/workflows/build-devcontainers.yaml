@@ -49,6 +49,8 @@ jobs:
     name: Clean up untagged images
     runs-on: ubuntu-latest
     continue-on-error: true
+    permissions:
+      packages: write
     steps:
       - id: vars
         name: Get image name, tags, and digests
