@@ -119,6 +119,11 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
 
+    - name: use gha-tools from PR branch
+      run: |
+        git clone https://github.com/rapidsai/gha-tools.git --branch support-sdists /tmp/gha-tools
+        echo "/tmp/gha-tools/tools" >> "$GITHUB_PATH"
+
     - name: Download wheels from artifact storage and publish to anaconda repository
       run: rapids-wheels-anaconda-github "${INPUTS_PACKAGE_NAME}" "${INPUTS_PACKAGE_TYPE}"
       env:
@@ -130,28 +135,3 @@ jobs:
         INPUTS_PACKAGE_TYPE: ${{ inputs.package-type }}
         # Used to override search key construction as needed
         WHEEL_SEARCH_KEY: ${{ inputs.publish-wheel-search-key }}
-
-    - name: Check if build is release
-      id: check_if_release
-      shell: bash
-      if: ${{ inputs.publish_to_pypi }}
-      run: |
-        if rapids-is-release-build; then
-          echo "is_release_build=true" | tee -a "${GITHUB_OUTPUT}"
-        else
-          echo "is_release_build=false" | tee -a "${GITHUB_OUTPUT}"
-        fi
-
-    - name: Publish the downloaded wheels to PyPI
-      if: ${{ inputs.publish_to_pypi && steps.check_if_release.outputs.is_release_build == 'true' }}
-      run: |
-        python3 -m pip install twine
-        python3 -m twine upload -u __token__ dist/*
-      env:
-        TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_TOKEN }}
-    - name: Telemetry upload attributes
-      uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
-      continue-on-error: true
-      if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-      env:
-        GH_TOKEN: ${{ github.token }}
