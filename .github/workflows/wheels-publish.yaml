@@ -125,7 +125,10 @@ jobs:
         echo "/tmp/gha-tools/tools" >> "$GITHUB_PATH"
 
     - name: Download wheels from artifact storage and publish to anaconda repository
-      run: rapids-wheels-anaconda-github "${INPUTS_PACKAGE_NAME}" "${INPUTS_PACKAGE_TYPE}"
+      run: |
+        # get RAPIDS SHA
+        export RAPIDS_SHA=$(git rev-parse HEAD)
+        rapids-wheels-anaconda-github "${INPUTS_PACKAGE_NAME}" "${INPUTS_PACKAGE_TYPE}"
       env:
         GH_TOKEN: ${{ github.token }}
         RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
