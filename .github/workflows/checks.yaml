@@ -55,7 +55,7 @@ jobs:
         RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           persist-credentials: true
       - name: Telemetry setup
@@ -97,7 +97,7 @@ jobs:
           VERSION_FILES_CHANGED: ${{ (inputs.enable_check_version_files_changed && fromJSON(steps.changed-files.outputs.changed_file_groups).version_files) || 'false' }}
       - name: Fetch tags
         if: ${{ inputs.enable_check_version_against_tag }}
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           persist-credentials: false
           fetch-depth: 0 # https://github.com/actions/checkout/issues/1471
@@ -123,10 +123,10 @@ jobs:
     runs-on: ubuntu-latest
     container:
       # Must pin to Python <3.13, cmake-format is broken, see https://github.com/python/cpython/issues/140797
-      image: rapidsai/ci-conda:26.08-cuda13.2.0-ubuntu24.04-py3.12 # zizmor: ignore[unpinned-images]
+      image: rapidsai/ci-conda:26.08-cuda13.3.0-ubuntu24.04-py3.12 # zizmor: ignore[unpinned-images]
     steps:
       - name: Checkout code
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           fetch-depth: 0
           persist-credentials: true
