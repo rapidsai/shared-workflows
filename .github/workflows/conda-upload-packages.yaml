@@ -87,7 +87,7 @@ jobs:
             git
 
           # install gha-tools
-          git clone --depth 1 --branch test-uploads https://github.com/rapidsai/gha-tools /tmp/gha-tools
+        git clone --depth 1 https://github.com/rapidsai/gha-tools /tmp/gha-tools
           echo "/tmp/gha-tools/tools" >> "${GITHUB_PATH}"
           export PATH="/tmp/gha-tools/tools:${PATH}"
 
