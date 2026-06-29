@@ -83,23 +83,6 @@ jobs:
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
-    - name: checkout code repo
-      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      with:
-        repository: ${{ inputs.repo }}
-        ref: ${{ inputs.sha }}
-        fetch-depth: 1
-        # fetch all tags even though we're only fetching 1 commit
-        # (for use in logic that checks recent tags to determine versions)
-        fetch-tags: true
-        persist-credentials: false
-
-    - name: Telemetry setup
-      uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
-      continue-on-error: true
-      if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-      env:
-        GH_TOKEN: ${{ github.token }}
 
     - name: Standardize repository information
       uses: rapidsai/shared-actions/rapids-github-info@main
@@ -160,9 +143,3 @@ jobs:
       env:
         UPLOAD_DIR: ${{ steps.download_wheels.outputs.package_upload_dir }}
         TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_TOKEN }}
-    - name: Telemetry upload attributes
-      uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
-      continue-on-error: true
-      if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-      env:
-        GH_TOKEN: ${{ github.token }}
