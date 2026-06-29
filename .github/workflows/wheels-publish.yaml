@@ -84,11 +84,14 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
     - name: checkout code repo
-      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         repository: ${{ inputs.repo }}
         ref: ${{ inputs.sha }}
-        fetch-depth: 0 # unshallow fetch for setuptools-scm
+        fetch-depth: 1
+        # fetch all tags even though we're only fetching 1 commit
+        # (for use in logic that checks recent tags to determine versions)
+        fetch-tags: true
         persist-credentials: false
 
     - name: Telemetry setup
