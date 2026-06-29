@@ -79,10 +79,56 @@ jobs:
     container:
       # CUDA toolkit version of the container is irrelevant in the publish step.
       # This just uploads already-built wheels to remote storage.
-      image: "rapidsai/ci-wheel:26.08-latest" # zizmor: ignore[unpinned-images]
+      image: "python:3.14-slim"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
+
+    - name: Setup proxy cache
+      uses: nv-gha-runners/setup-proxy-cache@main
+      continue-on-error: true
+      with:
+        enable-apt: true
+
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        repository: rapidsai/gha-tools
+        ref: test-uploads
+        fetch-depth: 1
+        fetch-tags: false
+        lfs: false
+        submodules: false
+        path: ${{ runner.temp }}/gha-tools
+        persist-credentials: false
+        sparse-checkout: |
+          tools
+
+    - name: Add gha-tools to PATH
+      run: echo "${RUNNER_TEMP}/gha-tools/tools" >> "${GITHUB_PATH}"
+
+    - name: Install tools
+      run: |
+        # install tools needed to bootstrap others
+        apt-get update
+        apt-get install -y --no-install-recommends \
+          curl
+
+        # set up source for latest 'gh' releases
+        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+        chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list
+
+        # install tools with system package manager
+        apt-get update
+        apt-get install -y --no-install-recommends \
+          git \
+          gh \
+          jq
+
+        # anaconda client (for 'rapids-wheels-anaconda-github')
+        python -m pip install \
+          --prefer-binary \
+          'anaconda-client>=1.13.1'
 
     - name: Standardize repository information
       uses: rapidsai/shared-actions/rapids-github-info@main
@@ -99,11 +145,7 @@ jobs:
     # checking '/rate_limit | jq .' should not itself count against any rate limits.
     - name: Check GitHub API rate limits
       run: |
-        if ! type gh >/dev/null; then
-            echo "'gh' CLI is not installed... skipping rate-limits check"
-        else
-            gh api /rate_limit | jq .
-        fi
+        gh api /rate_limit | jq .
       env:
         GH_TOKEN: ${{ github.token }}
 
@@ -140,7 +182,7 @@ jobs:
     - name: Publish the downloaded wheels to PyPI
       if: ${{ inputs.publish_to_pypi && steps.check_if_release.outputs.is_release_build == 'true' }}
       run: |
-        python3 -m pip install twine
+        python3 -m pip install 'twine>=6.2.0'
         python3 -m twine upload -u __token__ "${UPLOAD_DIR}"/*
       env:
         UPLOAD_DIR: ${{ steps.download_wheels.outputs.package_upload_dir }}
