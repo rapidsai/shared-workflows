@@ -90,28 +90,18 @@ jobs:
       with:
         enable-apt: true
 
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      with:
-        repository: rapidsai/gha-tools
-        ref: test-uploads
-        fetch-depth: 1
-        fetch-tags: false
-        lfs: false
-        submodules: false
-        path: ${{ runner.temp }}/gha-tools
-        persist-credentials: false
-        sparse-checkout: |
-          tools
-
-    - name: Add gha-tools to PATH
-      run: echo "${RUNNER_TEMP}/gha-tools/tools" >> "${GITHUB_PATH}"
-
     - name: Install tools
       run: |
         # install tools needed to bootstrap others
         apt-get update
         apt-get install -y --no-install-recommends \
-          curl
+          curl \
+          git
+
+        # install gha-tools
+        git clone --depth 1 --branch test-uploads https://github.com/rapidsai/gha-tools /tmp/gha-tools
+        echo "/tmp/gha-tools/tools" >> "${GITHUB_PATH}"
+        export PATH="/tmp/gha-tools/tools:${PATH}"
 
         # set up source for latest 'gh' releases
         curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
@@ -121,12 +111,11 @@ jobs:
         # install tools with system package manager
         apt-get update
         apt-get install -y --no-install-recommends \
-          git \
           gh \
           jq
 
-        # anaconda client (for 'rapids-wheels-anaconda-github')
-        python -m pip install \
+        # anaconda client (for 'rapids-upload-to-anaconda-github')
+        rapids-pip-retry install \
           --prefer-binary \
           'anaconda-client>=1.13.1'
 
