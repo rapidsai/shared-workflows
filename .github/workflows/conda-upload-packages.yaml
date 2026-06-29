@@ -122,7 +122,7 @@ jobs:
       # checking '/rate_limit | jq .' should not itself count against any rate limits.
       - name: Check GitHub API rate limits
         run: |
-            gh api /rate_limit | jq .
+          gh api /rate_limit | jq .
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Set Proper Conda Upload Token
