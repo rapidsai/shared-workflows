@@ -91,7 +91,9 @@ jobs:
         branch: ${{ inputs.branch }}
         build_workflow_name: ${{ inputs.build_workflow_name }}
         date: ${{ inputs.date }}
-        sha: ${{ inputs.sha }}
+        # On 'push' or 'tag', 'inputs.sha' is null.
+        # Fall back to 'github.sha' to avoid needing a repo checkout.
+        sha: ${{ inputs.sha || github.sha }}
 
     # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
     # checking '/rate_limit | jq .' should not itself count against any rate limits.
