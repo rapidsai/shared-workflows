@@ -5,11 +5,17 @@
   ],
   "packageRules": [
     {
+      "description": "Wait for 7 days post-release before updating",
+      "matchPackageNames": [
+        "*"
+      ],
+      "minimumReleaseAge": "7 days"
+    },
+    {
       "enabled": false,
       "matchPackageNames": [
         "/^rapidsai//"
-      ],
-      "minimumReleaseAge": "7 days"
+      ]
     },
     {
       "enabled": false,
@@ -21,8 +27,7 @@
       "matchManagers": [
         "github-actions"
       ],
-      "groupName": "github-actions",
-      "minimumReleaseAge": "7 days"
+      "groupName": "github-actions"
     }
   ]
 }

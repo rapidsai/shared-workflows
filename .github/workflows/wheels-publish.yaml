@@ -79,24 +79,45 @@ jobs:
     container:
       # CUDA toolkit version of the container is irrelevant in the publish step.
       # This just uploads already-built wheels to remote storage.
-      image: "rapidsai/ci-wheel:26.08-latest" # zizmor: ignore[unpinned-images]
+      image: "python:3.14-slim"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
-    - name: checkout code repo
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-      with:
-        repository: ${{ inputs.repo }}
-        ref: ${{ inputs.sha }}
-        fetch-depth: 0 # unshallow fetch for setuptools-scm
-        persist-credentials: false
 
-    - name: Telemetry setup
-      uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
+    - name: Setup proxy cache
+      uses: nv-gha-runners/setup-proxy-cache@main
       continue-on-error: true
-      if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-      env:
-        GH_TOKEN: ${{ github.token }}
+      with:
+        enable-apt: true
+
+    - name: Install tools
+      run: |
+        # install tools needed to bootstrap others
+        apt-get update
+        apt-get install -y --no-install-recommends \
+          curl \
+          git
+
+        # install gha-tools
+        git clone --depth 1 https://github.com/rapidsai/gha-tools /tmp/gha-tools
+        echo "/tmp/gha-tools/tools" >> "${GITHUB_PATH}"
+        export PATH="/tmp/gha-tools/tools:${PATH}"
+
+        # set up source for latest 'gh' releases
+        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+        chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list
+
+        # install tools with system package manager
+        apt-get update
+        apt-get install -y --no-install-recommends \
+          gh \
+          jq
+
+        # anaconda client (for 'rapids-upload-to-anaconda-github')
+        rapids-pip-retry install \
+          --prefer-binary \
+          'anaconda-client>=1.13.1'
 
     - name: Standardize repository information
       uses: rapidsai/shared-actions/rapids-github-info@main
@@ -105,22 +126,27 @@ jobs:
         branch: ${{ inputs.branch }}
         build_workflow_name: ${{ inputs.build_workflow_name }}
         date: ${{ inputs.date }}
-        sha: ${{ inputs.sha }}
+        # On 'push' or 'tag', 'inputs.sha' is null.
+        # Fall back to 'github.sha' to avoid needing a repo checkout.
+        sha: ${{ inputs.sha || github.sha }}
 
     # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
     # checking '/rate_limit | jq .' should not itself count against any rate limits.
     - name: Check GitHub API rate limits
       run: |
-        if ! type gh >/dev/null; then
-            echo "'gh' CLI is not installed... skipping rate-limits check"
-        else
-            gh api /rate_limit | jq .
-        fi
+        gh api /rate_limit | jq .
       env:
         GH_TOKEN: ${{ github.token }}
 
     - name: Download wheels from artifact storage and publish to anaconda repository
-      run: rapids-wheels-anaconda-github "${INPUTS_PACKAGE_NAME}" "${INPUTS_PACKAGE_TYPE}"
+      id: download_wheels
+      run: |
+        UPLOAD_DIR="$(mktemp -d)"
+        rapids-wheels-anaconda-github \
+          "${INPUTS_PACKAGE_NAME}" \
+          "${INPUTS_PACKAGE_TYPE}" \
+          "${UPLOAD_DIR}"
+        echo "package_upload_dir=${UPLOAD_DIR}" >> "${GITHUB_OUTPUT}"
       env:
         GH_TOKEN: ${{ github.token }}
         RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
@@ -145,13 +171,8 @@ jobs:
     - name: Publish the downloaded wheels to PyPI
       if: ${{ inputs.publish_to_pypi && steps.check_if_release.outputs.is_release_build == 'true' }}
       run: |
-        python3 -m pip install twine
-        python3 -m twine upload -u __token__ dist/*
+        python3 -m pip install 'twine>=6.2.0'
+        python3 -m twine upload -u __token__ "${UPLOAD_DIR}"/*
       env:
+        UPLOAD_DIR: ${{ steps.download_wheels.outputs.package_upload_dir }}
         TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_TOKEN }}
-    - name: Telemetry upload attributes
-      uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
-      continue-on-error: true
-      if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-      env:
-        GH_TOKEN: ${{ github.token }}
