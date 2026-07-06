@@ -146,6 +146,7 @@ jobs:
       - name: Run ci/check_style.sh
         run: ci/check_style.sh
         env:
+          GH_TOKEN: ${{ github.token }}
           RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
