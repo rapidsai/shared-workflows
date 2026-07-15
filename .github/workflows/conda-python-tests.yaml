@@ -100,6 +100,16 @@ on:
           Secret value.
           Will be available via an environment variable named by 'secrets.script-env-secret-3-key'.
         required: false
+      script-env-secret-4-key:
+        description: |
+          Name of an environment variable in the environment where 'inputs.script' is run.
+          Variable's value will be set to the value passed as 'secrets.script-env-secret-4-value'.
+        required: false
+      script-env-secret-4-value:
+        description: |
+          Secret value.
+          Will be available via an environment variable named by 'secrets.script-env-secret-4-key'.
+        required: false
 
 defaults:
   run:
@@ -229,6 +239,7 @@ jobs:
           set_env_var '1' '${{ secrets.script-env-secret-1-key }}' '${{ secrets.script-env-secret-1-value }}'
           set_env_var '2' '${{ secrets.script-env-secret-2-key }}' '${{ secrets.script-env-secret-2-value }}'
           set_env_var '3' '${{ secrets.script-env-secret-3-key }}' '${{ secrets.script-env-secret-3-value }}'
+          set_env_var '4' '${{ secrets.script-env-secret-4-key }}' '${{ secrets.script-env-secret-4-value }}'
       - name: Python tests
         run: |
           ulimit -n "$(ulimit -Hn)"
@@ -251,7 +262,7 @@ jobs:
       - name: Run codecov
         if: inputs.run_codecov
         env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          CODECOV_TOKEN: ${{ env.CODECOV_TOKEN || secrets.CODECOV_TOKEN }}
         run: |
           codecovcli \
             -v \
