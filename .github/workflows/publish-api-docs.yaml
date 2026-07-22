@@ -3,6 +3,11 @@ name: Publish API docs
 on:
   workflow_call:
     inputs:
+      akamai-emails-to-notify:
+        default: svc-rapids@nvidia.com
+        description: Comma-delimited list of email addresses to notify
+        required: false
+        type: string
       dry-run:
         default: "false"
         description: If true, run without making any changes
@@ -21,11 +26,6 @@ on:
       source-s3-key:
         description: The S3 key to download files from, e.g. the repo name
         required: true
-        type: string
-      akamai-emails-to-notify:
-        default: svc-rapids@nvidia.com
-        description: Comma-delimited list of email addresses to notify
-        required: false
         type: string
       version-map:
         default: '{"26.08": "legacy", "26.10": "stable"}'
