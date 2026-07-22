@@ -79,6 +79,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         path: /tmp/repo
+        persist-credentials: false
 
     - name: Read VERSION file
       id: version
