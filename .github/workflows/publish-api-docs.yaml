@@ -28,9 +28,9 @@ on:
         required: true
         type: string
       version-map:
-        default: '{"26.08": "legacy", "26.10": "stable"}'
-        description: JSON map of RAPIDS version to tag (e.g. stable, legacy)
-        required: false
+        description: |
+          JSON map of RAPIDS version to tag, e.g. '{"26.08": "legacy", "26.10": "stable"}'
+        required: true
         type: string
     secrets:
       akamai-access-token:
