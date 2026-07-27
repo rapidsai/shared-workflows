@@ -106,7 +106,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if [ -n "$PACKAGE_NAME" ]; then
-            CPP_DIR=$(rapids-download-from-github "$(rapids-artifact-name conda_cpp $PACKAGE_NAME "${REPO##*/}" --cuda)")
+            CPP_DIR=$(rapids-download-from-github "$(rapids-artifact-name conda_cpp "$PACKAGE_NAME" "${REPO##*/}" --cuda)")
           else
             CPP_DIR=$(rapids-download-conda-from-github cpp)
           fi
