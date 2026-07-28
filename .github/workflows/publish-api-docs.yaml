@@ -162,7 +162,7 @@ jobs:
         target-s3-key-suffix: ${{ steps.version.outputs.rapids-version-major-minor }}
         target-s3-key: ${{ matrix.project }}
 
-    # publish <project>/<tag> (e.g. stable, legacy)
+    # publish <project>/<tag> (e.g. stable, legacy) if in version map
     - name: Publish tagged version to docs.nvidia.com
       if: steps.version-tag.outputs.rapids-version-tag != '' && startsWith(github.ref_name, 'release/')
       uses: rapidsai/shared-actions/publish-docs@main
@@ -182,9 +182,9 @@ jobs:
         target-s3-key-suffix: ${{ steps.version-tag.outputs.rapids-version-tag }}
         target-s3-key: ${{ matrix.project }}
 
-    # publish <project>/latest
+    # publish <project>/latest if stable
     - name: Publish "latest" version to docs.nvidia.com
-      if: steps.version-tag.outputs.rapids-version-tag == 'stable'
+      if: steps.version-tag.outputs.rapids-version-tag == 'stable' && startsWith(github.ref_name, 'release/')
       uses: rapidsai/shared-actions/publish-docs@main
       with:
         akamai-access-token: ${{ secrets.akamai-access-token }}
@@ -202,7 +202,7 @@ jobs:
         target-s3-key-suffix: latest
         target-s3-key: ${{ matrix.project }}
 
-    # publish <project>/nightly
+    # publish <project>/nightly if main
     - name: Publish "nightly" version to docs.nvidia.com
       if: github.ref_name == 'main'
       uses: rapidsai/shared-actions/publish-docs@main
