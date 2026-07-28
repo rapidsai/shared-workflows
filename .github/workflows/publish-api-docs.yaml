@@ -145,7 +145,7 @@ jobs:
 
     # publish <project>/<version>
     - name: Publish numeric version to docs.nvidia.com
-      uses: rapidsai/shared-actions/publish-docs@josephine/x-org-123-finesse-shared-action-more
+      uses: rapidsai/shared-actions/publish-docs@main
       with:
         akamai-access-token: ${{ secrets.akamai-access-token }}
         akamai-client-secret: ${{ secrets.akamai-client-secret }}
@@ -165,7 +165,7 @@ jobs:
     # publish <project>/<tag> (e.g. stable, legacy)
     - name: Publish tagged version to docs.nvidia.com
       if: steps.version-tag.outputs.rapids-version-tag != '' && startsWith(github.ref_name, 'release/')
-      uses: rapidsai/shared-actions/publish-docs@josephine/x-org-123-finesse-shared-action-more
+      uses: rapidsai/shared-actions/publish-docs@main
       with:
         akamai-access-token: ${{ secrets.akamai-access-token }}
         akamai-client-secret: ${{ secrets.akamai-client-secret }}
@@ -185,7 +185,7 @@ jobs:
     # publish <project>/latest
     - name: Publish "latest" version to docs.nvidia.com
       if: steps.version-tag.outputs.rapids-version-tag == 'stable'
-      uses: rapidsai/shared-actions/publish-docs@josephine/x-org-123-finesse-shared-action-more
+      uses: rapidsai/shared-actions/publish-docs@main
       with:
         akamai-access-token: ${{ secrets.akamai-access-token }}
         akamai-client-secret: ${{ secrets.akamai-client-secret }}
@@ -205,7 +205,7 @@ jobs:
     # publish <project>/nightly
     - name: Publish "nightly" version to docs.nvidia.com
       if: github.ref_name == 'main'
-      uses: rapidsai/shared-actions/publish-docs@josephine/x-org-123-finesse-shared-action-more
+      uses: rapidsai/shared-actions/publish-docs@main
       with:
         akamai-access-token: ${{ secrets.akamai-access-token }}
         akamai-client-secret: ${{ secrets.akamai-client-secret }}
