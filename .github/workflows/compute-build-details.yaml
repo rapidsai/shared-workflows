@@ -16,4 +16,4 @@ jobs:
       - name: build
         id: build-details
         run: |
-          echo "version-suffix=.post$(date +%s)" | tee -a "${GITHUB_OUTPUT}"
+          echo "version-suffix=.post$(date -u +'%y%m%d%H%M%S')" | tee -a "${GITHUB_OUTPUT}"
