@@ -8,6 +8,8 @@ self-hosted-runner:
 config-variables:
   - AWS_REGION
   - AWS_ROLE_ARN
+  - RAPIDS_ARTIFACTORY_REPO
+  - RAPIDS_ARTIFACTORY_URL
   - TELEMETRY_ENABLED
 
 paths:

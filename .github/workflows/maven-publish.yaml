@@ -1,0 +1,140 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Publishes a bundle of release-candidate Maven artifacts (jars, POMs,
+# sources, javadoc) to Maven Central via the Sonatype Central Publisher
+# Portal. Every file is GPG-signed and staged through Artifactory first.
+#
+# TODO: add nightly -> Sonatype snapshots
+name: Maven publish
+
+on:
+  workflow_call:
+    inputs:
+      publication-type:
+        description: |
+          Only "rc" (release candidate) is currently supported. Nightly is a
+          future addition. The input is kept single-valued so callers do not
+          have to change their `with:` block when nightly is introduced.
+        required: true
+        type: string
+      artifact-name:
+        description: |
+          Name of the GitHub Actions artifact (uploaded by the caller job via
+          actions/upload-artifact) to download and publish. Contents must be
+          a Maven repository directory.
+        required: true
+        type: string
+      stage-for-maven-central-publish:
+        description: |
+          When true, leave the bundle PENDING in the Sonatype Central
+          Publisher Portal for a human to release via the Portal UI
+          (https://central.sonatype.com). When false (default), validate then
+          drop the bundle.
+        required: false
+        type: boolean
+        default: false
+      source-git-sha:
+        description: |
+          Git SHA to attach as the Artifactory source.git-sha property on
+          every uploaded file.
+        required: false
+        type: string
+        default: ''
+    secrets:
+      GPG_PRIVATE_KEY:
+        description: Armored GPG private key used to sign every artifact at upload.
+        required: true
+      GPG_PASSPHRASE:
+        description: Passphrase for GPG_PRIVATE_KEY.
+        required: true
+      ARTIFACTORY_USERNAME:
+        description: Artifactory account with write access.
+        required: true
+      ARTIFACTORY_TOKEN:
+        description: Auth token for ARTIFACTORY_USERNAME.
+        required: true
+      MAVEN_DEPLOY_USERNAME:
+        description: Sonatype user token username for the Publisher Portal.
+        required: true
+      MAVEN_DEPLOY_TOKEN:
+        description: Auth token for MAVEN_DEPLOY_USERNAME.
+        required: true
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  maven-publish:
+    name: maven publish (${{ inputs.publication-type }})
+    runs-on: linux-amd64-cpu4
+    steps:
+      # Derive from github.workflow_ref. github.ref points at the
+      # caller's context, not this workflow's repo/ref.
+      - name: Resolve shared-workflows repo and ref
+        id: sw_ref
+        run: |
+          echo "repo=${GITHUB_WORKFLOW_REF%%/.github/*}" >> "${GITHUB_OUTPUT}"
+          echo "ref=${GITHUB_WORKFLOW_REF##*@}"         >> "${GITHUB_OUTPUT}"
+        env:
+          GITHUB_WORKFLOW_REF: ${{ github.workflow_ref }}
+
+      - name: Self-checkout shared-workflows
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: ${{ steps.sw_ref.outputs.repo }}
+          ref: ${{ steps.sw_ref.outputs.ref }}
+          path: shared-workflows
+          persist-credentials: false
+
+      - name: Download Maven repository artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: maven-repo
+
+      - name: Sign and upload to Artifactory
+        id: upload
+        run: |
+          shared-workflows/ci/maven-publish/artifactory_upload.sh \
+            --input maven-repo \
+            --publication-type "${PUBLICATION_TYPE}" \
+            --artifactory-url "${ARTIFACTORY_URL}" \
+            --artifactory-repository "${ARTIFACTORY_REPOSITORY}" \
+            ${SOURCE_GIT_SHA:+--source-git-sha "${SOURCE_GIT_SHA}"}
+        env:
+          PUBLICATION_TYPE: ${{ inputs.publication-type }}
+          ARTIFACTORY_URL: ${{ vars.RAPIDS_ARTIFACTORY_URL }}
+          ARTIFACTORY_REPOSITORY: ${{ vars.RAPIDS_ARTIFACTORY_REPO }}
+          SOURCE_GIT_SHA: ${{ inputs.source-git-sha }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
+          ARTIFACTORY_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+
+      - name: Promote to Maven Central
+        run: |
+          shared-workflows/ci/maven-publish/maven_central_publish.sh \
+            --group-id "${GROUP_ID}" \
+            --artifact-id "${ARTIFACT_ID}" \
+            --version "${VERSION}" \
+            --artifactory-url "${ARTIFACTORY_URL}" \
+            --artifactory-repository "${ARTIFACTORY_REPOSITORY}" \
+            --auto-drop "${AUTO_DROP}"
+        env:
+          GROUP_ID: ${{ steps.upload.outputs.GROUP_ID }}
+          ARTIFACT_ID: ${{ steps.upload.outputs.ARTIFACT_ID }}
+          VERSION: ${{ steps.upload.outputs.VERSION }}
+          ARTIFACTORY_URL: ${{ vars.RAPIDS_ARTIFACTORY_URL }}
+          ARTIFACTORY_REPOSITORY: ${{ vars.RAPIDS_ARTIFACTORY_REPO }}
+          # Invert: stage-for-...=true means don't auto-drop.
+          AUTO_DROP: ${{ !inputs.stage-for-maven-central-publish }}
+          ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
+          ARTIFACTORY_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+          MAVEN_DEPLOY_USERNAME: ${{ secrets.MAVEN_DEPLOY_USERNAME }}
+          MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
