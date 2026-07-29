@@ -140,7 +140,7 @@ jobs:
             echo "is_release=false" >> "${GITHUB_OUTPUT}"
           fi
       - name: Upload packages to release location
-        if: ${{ steps.conda-upload-destination.outputs.is_release == true }}
+        if: ${{ steps.conda-upload-destination.outputs.is_release == 'true' }}
         run: rapids-upload-to-anaconda-github
         env:
           SKIP_UPLOAD_PKGS: ${{ inputs.skip_upload_pkgs }}
@@ -148,7 +148,7 @@ jobs:
           RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_TOKEN }}
           GH_TOKEN: ${{ github.token }}
       - name: Upload packages to nightly location
-        if: ${{ steps.conda-upload-destination.outputs.is_release == false || inputs.dual_publish }}
+        if: ${{ steps.conda-upload-destination.outputs.is_release == 'false' || inputs.dual_publish }}
         run: rapids-upload-to-anaconda-github
         env:
           SKIP_UPLOAD_PKGS: ${{ inputs.skip_upload_pkgs }}
