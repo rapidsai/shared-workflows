@@ -96,7 +96,7 @@ jobs:
       matrix_name: conda-cpp-build
       matrix_filter: ${{ inputs.matrix_filter }}
   build:
-    name:  ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}
+    name: ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}
     needs: compute-matrix
     timeout-minutes: 480
     strategy:

@@ -84,95 +84,95 @@ jobs:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
 
-    - name: Setup proxy cache
-      uses: nv-gha-runners/setup-proxy-cache@main
-      continue-on-error: true
-      with:
-        enable-apt: true
+      - name: Setup proxy cache
+        uses: nv-gha-runners/setup-proxy-cache@main
+        continue-on-error: true
+        with:
+          enable-apt: true
 
-    - name: Install tools
-      run: |
-        # install tools needed to bootstrap others
-        apt-get update
-        apt-get install -y --no-install-recommends \
-          curl \
-          git
+      - name: Install tools
+        run: |
+          # install tools needed to bootstrap others
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            curl \
+            git
 
-        # install gha-tools
-        git clone --depth 1 https://github.com/rapidsai/gha-tools /tmp/gha-tools
-        echo "/tmp/gha-tools/tools" >> "${GITHUB_PATH}"
-        export PATH="/tmp/gha-tools/tools:${PATH}"
+          # install gha-tools
+          git clone --depth 1 https://github.com/rapidsai/gha-tools /tmp/gha-tools
+          echo "/tmp/gha-tools/tools" >> "${GITHUB_PATH}"
+          export PATH="/tmp/gha-tools/tools:${PATH}"
 
-        # set up source for latest 'gh' releases
-        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-        chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list
+          # set up source for latest 'gh' releases
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list
 
-        # install tools with system package manager
-        apt-get update
-        apt-get install -y --no-install-recommends \
-          gh \
-          jq
+          # install tools with system package manager
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            gh \
+            jq
 
-        # anaconda client (for 'rapids-upload-to-anaconda-github')
-        rapids-pip-retry install \
-          --prefer-binary \
-          'anaconda-client>=1.13.1'
+          # anaconda client (for 'rapids-upload-to-anaconda-github')
+          rapids-pip-retry install \
+            --prefer-binary \
+            'anaconda-client>=1.13.1'
 
-    - name: Standardize repository information
-      uses: rapidsai/shared-actions/rapids-github-info@main
-      with:
-        repo: ${{ inputs.repo }}
-        branch: ${{ inputs.branch }}
-        build_workflow_name: ${{ inputs.build_workflow_name }}
-        date: ${{ inputs.date }}
-        # On 'push' or 'tag', 'inputs.sha' is null.
-        # Fall back to 'github.sha' to avoid needing a repo checkout.
-        sha: ${{ inputs.sha || github.sha }}
+      - name: Standardize repository information
+        uses: rapidsai/shared-actions/rapids-github-info@main
+        with:
+          repo: ${{ inputs.repo }}
+          branch: ${{ inputs.branch }}
+          build_workflow_name: ${{ inputs.build_workflow_name }}
+          date: ${{ inputs.date }}
+          # On 'push' or 'tag', 'inputs.sha' is null.
+          # Fall back to 'github.sha' to avoid needing a repo checkout.
+          sha: ${{ inputs.sha || github.sha }}
 
-    # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
-    # checking '/rate_limit | jq .' should not itself count against any rate limits.
-    - name: Check GitHub API rate limits
-      run: |
-        gh api /rate_limit | jq .
-      env:
-        GH_TOKEN: ${{ github.token }}
+      # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
+      # checking '/rate_limit | jq .' should not itself count against any rate limits.
+      - name: Check GitHub API rate limits
+        run: |
+          gh api /rate_limit | jq .
+        env:
+          GH_TOKEN: ${{ github.token }}
 
-    - name: Download wheels from artifact storage and publish to anaconda repository
-      id: download_wheels
-      run: |
-        UPLOAD_DIR="$(mktemp -d)"
-        rapids-wheels-anaconda-github \
-          "${INPUTS_PACKAGE_NAME}" \
-          "${INPUTS_PACKAGE_TYPE}" \
-          "${UPLOAD_DIR}"
-        echo "package_upload_dir=${UPLOAD_DIR}" >> "${GITHUB_OUTPUT}"
-      env:
-        GH_TOKEN: ${{ github.token }}
-        RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
-        PACKAGENAME: ${{ inputs.package-name }}
-        PACKAGETYPE: ${{ inputs.package-type }}
-        INPUTS_PACKAGE_NAME: ${{ inputs.package-name }}
-        INPUTS_PACKAGE_TYPE: ${{ inputs.package-type }}
-        # Used to override search key construction as needed
-        WHEEL_SEARCH_KEY: ${{ inputs.publish-wheel-search-key }}
+      - name: Download wheels from artifact storage and publish to anaconda repository
+        id: download_wheels
+        run: |
+          UPLOAD_DIR="$(mktemp -d)"
+          rapids-wheels-anaconda-github \
+            "${INPUTS_PACKAGE_NAME}" \
+            "${INPUTS_PACKAGE_TYPE}" \
+            "${UPLOAD_DIR}"
+          echo "package_upload_dir=${UPLOAD_DIR}" >> "${GITHUB_OUTPUT}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
+          PACKAGENAME: ${{ inputs.package-name }}
+          PACKAGETYPE: ${{ inputs.package-type }}
+          INPUTS_PACKAGE_NAME: ${{ inputs.package-name }}
+          INPUTS_PACKAGE_TYPE: ${{ inputs.package-type }}
+          # Used to override search key construction as needed
+          WHEEL_SEARCH_KEY: ${{ inputs.publish-wheel-search-key }}
 
-    - name: Check if build is release
-      id: check_if_release
-      shell: bash
-      if: ${{ inputs.publish_to_pypi }}
-      run: |
-        if rapids-is-release-build; then
-          echo "is_release_build=true" | tee -a "${GITHUB_OUTPUT}"
-        else
-          echo "is_release_build=false" | tee -a "${GITHUB_OUTPUT}"
-        fi
+      - name: Check if build is release
+        id: check_if_release
+        shell: bash
+        if: ${{ inputs.publish_to_pypi }}
+        run: |
+          if rapids-is-release-build; then
+            echo "is_release_build=true" | tee -a "${GITHUB_OUTPUT}"
+          else
+            echo "is_release_build=false" | tee -a "${GITHUB_OUTPUT}"
+          fi
 
-    - name: Publish the downloaded wheels to PyPI
-      if: ${{ inputs.publish_to_pypi && steps.check_if_release.outputs.is_release_build == 'true' }}
-      run: |
-        python3 -m pip install 'twine>=6.2.0'
-        python3 -m twine upload -u __token__ "${UPLOAD_DIR}"/*
-      env:
-        UPLOAD_DIR: ${{ steps.download_wheels.outputs.package_upload_dir }}
-        TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_TOKEN }}
+      - name: Publish the downloaded wheels to PyPI
+        if: ${{ inputs.publish_to_pypi && steps.check_if_release.outputs.is_release_build == 'true' }}
+        run: |
+          python3 -m pip install 'twine>=6.2.0'
+          python3 -m twine upload -u __token__ "${UPLOAD_DIR}"/*
+        env:
+          UPLOAD_DIR: ${{ steps.download_wheels.outputs.package_upload_dir }}
+          TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_TOKEN }}

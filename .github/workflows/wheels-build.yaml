@@ -137,7 +137,7 @@ jobs:
       matrix_filter: ${{ inputs.matrix_filter }}
       pure_wheel: ${{ inputs.pure-wheel }}
   build:
-    name:  ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}
+    name: ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}
     needs: [compute-matrix]
     strategy:
       fail-fast: false

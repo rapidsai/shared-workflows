@@ -171,113 +171,113 @@ jobs:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
-    - uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6.2.2
-      with:
-        role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-        aws-region: ${{ vars.AWS_REGION }}
-        role-duration-seconds: 43200 # 12h
-    - name: Run nvidia-smi to make sure GPU is working
-      run: nvidia-smi
+      - uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6.2.2
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-duration-seconds: 43200 # 12h
+      - name: Run nvidia-smi to make sure GPU is working
+        run: nvidia-smi
 
-    - name: checkout code repo
-      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      with:
-        repository: ${{ inputs.repo }}
-        ref: ${{ inputs.sha }}
-        fetch-depth: 0
-        persist-credentials: false
+      - name: checkout code repo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: ${{ inputs.repo }}
+          ref: ${{ inputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
 
-    - name: Telemetry setup
-      uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
-      continue-on-error: true
-      if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-      env:
-        # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
-        GH_TOKEN: ${{ github.token }}
-      with:
-        extra_attributes: "rapids.PACKAGER=wheel,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }},rapids.GPU=${{ matrix.GPU }},rapids.DRIVER=${{ matrix.DRIVER }},rapids.DEPENDENCIES=${{ matrix.DEPENDENCIES }}"
+      - name: Telemetry setup
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
+        continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
+          GH_TOKEN: ${{ github.token }}
+        with:
+          extra_attributes: "rapids.PACKAGER=wheel,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }},rapids.GPU=${{ matrix.GPU }},rapids.DRIVER=${{ matrix.DRIVER }},rapids.DEPENDENCIES=${{ matrix.DEPENDENCIES }}"
 
-    - name: Standardize repository information
-      uses: rapidsai/shared-actions/rapids-github-info@main
-      with:
-        repo: ${{ inputs.repo }}
-        branch: ${{ inputs.branch }}
-        date: ${{ inputs.date }}
-        sha: ${{ inputs.sha }}
-        build_workflow_name: ${{ inputs.build_workflow_name }}
+      - name: Standardize repository information
+        uses: rapidsai/shared-actions/rapids-github-info@main
+        with:
+          repo: ${{ inputs.repo }}
+          branch: ${{ inputs.branch }}
+          date: ${{ inputs.date }}
+          sha: ${{ inputs.sha }}
+          build_workflow_name: ${{ inputs.build_workflow_name }}
 
-    - name: Setup proxy cache
-      uses: nv-gha-runners/setup-proxy-cache@main
-      continue-on-error: true
-      with:
-        enable-apt: true
+      - name: Setup proxy cache
+        uses: nv-gha-runners/setup-proxy-cache@main
+        continue-on-error: true
+        with:
+          enable-apt: true
 
-    # Install latest rapidsai/sccache client and configure sccache-dist
-    - name: Setup sccache-dist
-      uses: rapidsai/shared-actions/setup-sccache-dist@main
-      env:
-        AWS_REGION: "${{env.AWS_REGION}}"
-        AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
-        AWS_SECRET_ACCESS_KEY: "${{env.AWS_SECRET_ACCESS_KEY}}"
-      with:
-        log-file: "${{ env.RAPIDS_ARTIFACTS_DIR }}/sccache.log"
-        request-timeout: ${{ inputs.sccache-dist-request-timeout }}
-    # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
-    # checking '/rate_limit | jq .' should not itself count against any rate limits.
-    #
-    # gh CLI is pre-installed on Github-hosted runners, but may not be on self-hosted runners.
-    - name: Check GitHub API rate limits
-      run: |
-        if ! type gh >/dev/null; then
-            echo "'gh' CLI is not installed... skipping rate-limits check"
-        else
-            gh api /rate_limit | jq .
-        fi
-      env:
-        # NEEDS alternative-gh-token-secret_name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
-        GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
-    # cannot put possibly-null things as keys in the 'env:' mapping, so need to process these in a script
-    - name: Set secrets in script env
-      run: |
-        set_env_var() {
-          local input_prefix="script-env-secret-$1"
-          local key_str=$2
-          local val_str=$3
-          if test -n "${val_str}"; then
-            if ! test -n "${key_str}"; then
-              echo "ERROR: '${input_prefix}-value' non-empty but '${input_prefix}-key' is empty. Set '${input_prefix}-key'."
-              exit 1
-            fi
-            echo "${key_str}=${val_str}" >> "${GITHUB_ENV}"
+      # Install latest rapidsai/sccache client and configure sccache-dist
+      - name: Setup sccache-dist
+        uses: rapidsai/shared-actions/setup-sccache-dist@main
+        env:
+          AWS_REGION: "${{env.AWS_REGION}}"
+          AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
+          AWS_SECRET_ACCESS_KEY: "${{env.AWS_SECRET_ACCESS_KEY}}"
+        with:
+          log-file: "${{ env.RAPIDS_ARTIFACTS_DIR }}/sccache.log"
+          request-timeout: ${{ inputs.sccache-dist-request-timeout }}
+      # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
+      # checking '/rate_limit | jq .' should not itself count against any rate limits.
+      #
+      # gh CLI is pre-installed on Github-hosted runners, but may not be on self-hosted runners.
+      - name: Check GitHub API rate limits
+        run: |
+          if ! type gh >/dev/null; then
+              echo "'gh' CLI is not installed... skipping rate-limits check"
+          else
+              gh api /rate_limit | jq .
           fi
-        }
-        set_env_var '1' '${{ secrets.script-env-secret-1-key }}' '${{ secrets.script-env-secret-1-value }}'
-        set_env_var '2' '${{ secrets.script-env-secret-2-key }}' '${{ secrets.script-env-secret-2-value }}'
-        set_env_var '3' '${{ secrets.script-env-secret-3-key }}' '${{ secrets.script-env-secret-3-value }}'
-    - name: Run tests
-      run: |
-        ulimit -n "$(ulimit -Hn)"
-        $INPUTS_SCRIPT
-      env:
-        INPUTS_SCRIPT: "${{ inputs.script }}"
-        # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
-        GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
-        RAPIDS_AUX_SECRET_1: ${{ inputs.rapids-aux-secret-1 != '' && secrets[inputs.rapids-aux-secret-1] || '' }} # zizmor: ignore[overprovisioned-secrets]
+        env:
+          # NEEDS alternative-gh-token-secret_name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
+      # cannot put possibly-null things as keys in the 'env:' mapping, so need to process these in a script
+      - name: Set secrets in script env
+        run: |
+          set_env_var() {
+            local input_prefix="script-env-secret-$1"
+            local key_str=$2
+            local val_str=$3
+            if test -n "${val_str}"; then
+              if ! test -n "${key_str}"; then
+                echo "ERROR: '${input_prefix}-value' non-empty but '${input_prefix}-key' is empty. Set '${input_prefix}-key'."
+                exit 1
+              fi
+              echo "${key_str}=${val_str}" >> "${GITHUB_ENV}"
+            fi
+          }
+          set_env_var '1' '${{ secrets.script-env-secret-1-key }}' '${{ secrets.script-env-secret-1-value }}'
+          set_env_var '2' '${{ secrets.script-env-secret-2-key }}' '${{ secrets.script-env-secret-2-value }}'
+          set_env_var '3' '${{ secrets.script-env-secret-3-key }}' '${{ secrets.script-env-secret-3-value }}'
+      - name: Run tests
+        run: |
+          ulimit -n "$(ulimit -Hn)"
+          $INPUTS_SCRIPT
+        env:
+          INPUTS_SCRIPT: "${{ inputs.script }}"
+          # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
+          RAPIDS_AUX_SECRET_1: ${{ inputs.rapids-aux-secret-1 != '' && secrets[inputs.rapids-aux-secret-1] || '' }} # zizmor: ignore[overprovisioned-secrets]
 
-    - name: Generate test report
-      uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
-      with:
-        paths: "${{ env.RAPIDS_TESTS_DIR }}/*.xml"
-        show: ${{ inputs.test_summary_show }}
-      if: always()
+      - name: Generate test report
+        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
+        with:
+          paths: "${{ env.RAPIDS_TESTS_DIR }}/*.xml"
+          show: ${{ inputs.test_summary_show }}
+        if: always()
 
-    - name: Upload additional artifacts
-      if: "!cancelled()"
-      run: rapids-upload-artifacts-dir "cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}"
-    - name: Telemetry upload attributes
-      uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
-      continue-on-error: true
-      if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-      env:
-        # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
-        GH_TOKEN: ${{ github.token }}
+      - name: Upload additional artifacts
+        if: "!cancelled()"
+        run: rapids-upload-artifacts-dir "cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}"
+      - name: Telemetry upload attributes
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
+        continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
+          GH_TOKEN: ${{ github.token }}
