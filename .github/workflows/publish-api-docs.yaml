@@ -3,13 +3,24 @@ name: Publish API docs
 on:
   workflow_call:
     inputs:
-      akamai-emails-to-notify:
-        default: svc-rapids@nvidia.com
-        description: Comma-delimited list of email addresses to notify
+      container-image:
+        description: Container image URI
+        type: string
+        default: rapidsai/ci-conda:26.10-latest
+      container-options:
+        description: |
+          Command-line arguments passed to 'docker run' when starting the container this workflow runs in.
+          This should be provided as a single string to be inlined into 'docker run', not an array.
+          For example, '--quiet --ulimit nofile=2048'.
         required: false
         type: string
+        default: -e _NOOP
+      docs-projects:
+        description: Comma-delimited list of project names, e.g. "cudf,libcudf"
+        required: true
+        type: string
       dry-run:
-        default: "false"
+        default: false
         description: If true, run without making any changes
         required: false
         type: boolean
@@ -22,10 +33,6 @@ on:
         default: rapidsai-docs
         description: The S3 bucket to download files from
         required: false
-        type: string
-      source-s3-key:
-        description: The S3 key to download files from, e.g. the repo name
-        required: true
         type: string
       version-map:
         description: |
@@ -42,6 +49,9 @@ on:
       akamai-client-secret:
         description: Akamai EdgeGrid client secret
         required: true
+      akamai-emails-to-notify:
+        description: Comma-delimited list of email addresses to notify
+        required: false
       akamai-host:
         description: Akamai API hostname
         required: true
@@ -50,9 +60,6 @@ on:
         required: true
       target-aws-region:
         description: AWS region
-        required: true
-      target-aws-role-to-assume:
-        description: AWS role to assume
         required: true
       target-aws-secret-access-key:
         description: AWS secret access key
@@ -66,24 +73,40 @@ defaults:
     shell: bash
 
 jobs:
-  publish-api-docs:
+  compute-matrix:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
+      - name: Set matrix
+        id: set-matrix
+        env:
+          DOCS_PROJECTS: ${{ inputs.docs-projects }}
+        run: |
+          matrix=$(echo "${DOCS_PROJECTS}" | jq -Rc 'split(",")')
+          echo "matrix=${matrix}" >> "${GITHUB_OUTPUT}"
 
-    - name: Download gha-tools with git clone
-      run: |
-        git clone https://github.com/rapidsai/gha-tools.git -b main /tmp/gha-tools
-        echo "/tmp/gha-tools/tools" >> "${GITHUB_PATH}"
+  publish-api-docs:
+    needs: compute-matrix
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.container-image }} # zizmor: ignore[unpinned-images]
+      options: ${{ inputs.container-options }}
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJSON(needs.compute-matrix.outputs.matrix) }}
+    steps:
 
     - name: Checkout
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
-        path: /tmp/repo
+        path: repo
         persist-credentials: false
 
     - name: Read VERSION file
       id: version
-      working-directory: /tmp/repo
+      working-directory: repo
       run: |
         echo rapids-version-major-minor="$(rapids-version-major-minor)" >> "${GITHUB_OUTPUT}"
 
@@ -114,54 +137,32 @@ jobs:
     - name: Download docs
       env:
         S3_BUCKET: ${{ inputs.source-s3-bucket }}
-        S3_KEY: ${{ inputs.source-s3-key }}
+        S3_KEY: ${{ matrix.project }}
         S3_KEY_SUFFIX: ${{ steps.version.outputs.rapids-version-major-minor }}
         SOURCE_PATH: ${{ inputs.source-path }}
       run: |
-        aws s3 sync "s3://${S3_BUCKET}/${S3_KEY}/${S3_KEY_SUFFIX}" "${SOURCE_PATH}"
+        aws s3 sync "s3://${S3_BUCKET}/${S3_KEY}/html/${S3_KEY_SUFFIX}" "${SOURCE_PATH}"
 
     # publish <project>/<version>
-    - name: Publish version to docs.nvidia.com
+    - name: Publish numeric version to docs.nvidia.com
       uses: rapidsai/shared-actions/publish-docs@main
       with:
         akamai-access-token: ${{ secrets.akamai-access-token }}
         akamai-client-secret: ${{ secrets.akamai-client-secret }}
         akamai-client-token: ${{ secrets.akamai-client-token }}
-        akamai-emails-to-notify: ${{ inputs.akamai-emails-to-notify }}
+        akamai-emails-to-notify: ${{ secrets.akamai-emails-to-notify }}
         akamai-host: ${{ secrets.akamai-host }}
         akamai-request-name: ${{ steps.akamai.outputs.request-name }}-${{ steps.version.outputs.rapids-version-major-minor }}
         dry-run: ${{ inputs.dry-run }}
         source-path: ${{ inputs.source-path }}
         target-aws-access-key-id: ${{ secrets.target-aws-access-key-id }}
         target-aws-region: ${{ secrets.target-aws-region }}
-        target-aws-role-to-assume: ${{ secrets.target-aws-role-to-assume }}
         target-aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
         target-s3-bucket: ${{ secrets.target-s3-bucket }}
         target-s3-key-suffix: ${{ steps.version.outputs.rapids-version-major-minor }}
-        target-s3-key: ${{ inputs.source-s3-key }}
+        target-s3-key: ${{ matrix.project }}
 
-    # publish <project>/nightly
-    - name: Publish nightly to docs.nvidia.com
-      if: github.ref_name == 'main'
-      uses: rapidsai/shared-actions/publish-docs@main
-      with:
-        akamai-access-token: ${{ secrets.akamai-access-token }}
-        akamai-client-secret: ${{ secrets.akamai-client-secret }}
-        akamai-client-token: ${{ secrets.akamai-client-token }}
-        akamai-emails-to-notify: ${{ inputs.akamai-emails-to-notify }}
-        akamai-host: ${{ secrets.akamai-host }}
-        akamai-request-name: ${{ steps.akamai.outputs.request-name }}-nightly
-        dry-run: ${{ inputs.dry-run }}
-        source-path: ${{ inputs.source-path }}
-        target-aws-access-key-id: ${{ secrets.target-aws-access-key-id }}
-        target-aws-region: ${{ secrets.target-aws-region }}
-        target-aws-role-to-assume: ${{ secrets.target-aws-role-to-assume }}
-        target-aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
-        target-s3-bucket: ${{ secrets.target-s3-bucket }}
-        target-s3-key-suffix: nightly
-        target-s3-key: ${{ inputs.source-s3-key }}
-
-    # publish <project>/<tag> (e.g. stable, legacy)
+    # publish <project>/<tag> (e.g. stable, legacy) if in version map
     - name: Publish tagged version to docs.nvidia.com
       if: steps.version-tag.outputs.rapids-version-tag != '' && startsWith(github.ref_name, 'release/')
       uses: rapidsai/shared-actions/publish-docs@main
@@ -169,15 +170,54 @@ jobs:
         akamai-access-token: ${{ secrets.akamai-access-token }}
         akamai-client-secret: ${{ secrets.akamai-client-secret }}
         akamai-client-token: ${{ secrets.akamai-client-token }}
-        akamai-emails-to-notify: ${{ inputs.akamai-emails-to-notify }}
+        akamai-emails-to-notify: ${{ secrets.akamai-emails-to-notify }}
         akamai-host: ${{ secrets.akamai-host }}
         akamai-request-name: ${{ steps.akamai.outputs.request-name }}-${{ steps.version-tag.outputs.rapids-version-tag }}
         dry-run: ${{ inputs.dry-run }}
         source-path: ${{ inputs.source-path }}
         target-aws-access-key-id: ${{ secrets.target-aws-access-key-id }}
         target-aws-region: ${{ secrets.target-aws-region }}
-        target-aws-role-to-assume: ${{ secrets.target-aws-role-to-assume }}
         target-aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
         target-s3-bucket: ${{ secrets.target-s3-bucket }}
         target-s3-key-suffix: ${{ steps.version-tag.outputs.rapids-version-tag }}
-        target-s3-key: ${{ inputs.source-s3-key }}
+        target-s3-key: ${{ matrix.project }}
+
+    # publish <project>/latest if main, same as nightly
+    - name: Publish "latest" version to docs.nvidia.com
+      if: github.ref_name == 'main'
+      uses: rapidsai/shared-actions/publish-docs@main
+      with:
+        akamai-access-token: ${{ secrets.akamai-access-token }}
+        akamai-client-secret: ${{ secrets.akamai-client-secret }}
+        akamai-client-token: ${{ secrets.akamai-client-token }}
+        akamai-emails-to-notify: ${{ secrets.akamai-emails-to-notify }}
+        akamai-host: ${{ secrets.akamai-host }}
+        akamai-request-name: ${{ steps.akamai.outputs.request-name }}-latest
+        dry-run: ${{ inputs.dry-run }}
+        source-path: ${{ inputs.source-path }}
+        target-aws-access-key-id: ${{ secrets.target-aws-access-key-id }}
+        target-aws-region: ${{ secrets.target-aws-region }}
+        target-aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
+        target-s3-bucket: ${{ secrets.target-s3-bucket }}
+        target-s3-key-suffix: latest
+        target-s3-key: ${{ matrix.project }}
+
+    # publish <project>/nightly if main
+    - name: Publish "nightly" version to docs.nvidia.com
+      if: github.ref_name == 'main'
+      uses: rapidsai/shared-actions/publish-docs@main
+      with:
+        akamai-access-token: ${{ secrets.akamai-access-token }}
+        akamai-client-secret: ${{ secrets.akamai-client-secret }}
+        akamai-client-token: ${{ secrets.akamai-client-token }}
+        akamai-emails-to-notify: ${{ secrets.akamai-emails-to-notify }}
+        akamai-host: ${{ secrets.akamai-host }}
+        akamai-request-name: ${{ steps.akamai.outputs.request-name }}-nightly
+        dry-run: ${{ inputs.dry-run }}
+        source-path: ${{ inputs.source-path }}
+        target-aws-access-key-id: ${{ secrets.target-aws-access-key-id }}
+        target-aws-region: ${{ secrets.target-aws-region }}
+        target-aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
+        target-s3-bucket: ${{ secrets.target-s3-bucket }}
+        target-s3-key-suffix: nightly
+        target-s3-key: ${{ matrix.project }}
