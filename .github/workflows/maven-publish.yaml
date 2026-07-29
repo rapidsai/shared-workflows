@@ -74,21 +74,11 @@ jobs:
     name: maven publish (${{ inputs.publication-type }})
     runs-on: linux-amd64-cpu4
     steps:
-      # Derive from github.workflow_ref. github.ref points at the
-      # caller's context, not this workflow's repo/ref.
-      - name: Resolve shared-workflows repo and ref
-        id: sw_ref
-        run: |
-          echo "repo=${GITHUB_WORKFLOW_REF%%/.github/*}" >> "${GITHUB_OUTPUT}"
-          echo "ref=${GITHUB_WORKFLOW_REF##*@}"         >> "${GITHUB_OUTPUT}"
-        env:
-          GITHUB_WORKFLOW_REF: ${{ github.workflow_ref }}
-
       - name: Self-checkout shared-workflows
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          repository: ${{ steps.sw_ref.outputs.repo }}
-          ref: ${{ steps.sw_ref.outputs.ref }}
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
           path: shared-workflows
           persist-credentials: false
 
