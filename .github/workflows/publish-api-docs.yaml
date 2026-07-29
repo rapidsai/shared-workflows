@@ -182,9 +182,9 @@ jobs:
         target-s3-key-suffix: ${{ steps.version-tag.outputs.rapids-version-tag }}
         target-s3-key: ${{ matrix.project }}
 
-    # publish <project>/latest if stable
+    # publish <project>/latest if main, same as nightly
     - name: Publish "latest" version to docs.nvidia.com
-      if: steps.version-tag.outputs.rapids-version-tag == 'stable' && startsWith(github.ref_name, 'release/')
+      if: github.ref_name == 'main'
       uses: rapidsai/shared-actions/publish-docs@main
       with:
         akamai-access-token: ${{ secrets.akamai-access-token }}
