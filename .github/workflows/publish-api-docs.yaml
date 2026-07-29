@@ -98,126 +98,126 @@ jobs:
         project: ${{ fromJSON(needs.compute-matrix.outputs.matrix) }}
     steps:
 
-    - name: Checkout
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      with:
-        path: repo
-        persist-credentials: false
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: repo
+          persist-credentials: false
 
-    - name: Read VERSION file
-      id: version
-      working-directory: repo
-      run: |
-        echo rapids-version-major-minor="$(rapids-version-major-minor)" >> "${GITHUB_OUTPUT}"
+      - name: Read VERSION file
+        id: version
+        working-directory: repo
+        run: |
+          echo rapids-version-major-minor="$(rapids-version-major-minor)" >> "${GITHUB_OUTPUT}"
 
-    - name: Resolve VERSION tag
-      id: version-tag
-      env:
-        RAPIDS_VERSION_MAJOR_MINOR: ${{ steps.version.outputs.rapids-version-major-minor }}
-        VERSION_MAP: ${{ inputs.version-map }}
-      run: |
-        tag="$(echo "${VERSION_MAP}" | jq -r --arg v "${RAPIDS_VERSION_MAJOR_MINOR}" '.[$v] // ""')"
-        echo "rapids-version-tag=${tag}" >> "${GITHUB_OUTPUT}"
+      - name: Resolve VERSION tag
+        id: version-tag
+        env:
+          RAPIDS_VERSION_MAJOR_MINOR: ${{ steps.version.outputs.rapids-version-major-minor }}
+          VERSION_MAP: ${{ inputs.version-map }}
+        run: |
+          tag="$(echo "${VERSION_MAP}" | jq -r --arg v "${RAPIDS_VERSION_MAJOR_MINOR}" '.[$v] // ""')"
+          echo "rapids-version-tag=${tag}" >> "${GITHUB_OUTPUT}"
 
-    - name: Compute Akamai request name
-      id: akamai
-      env:
-        REPO: ${{ github.repository }}
-        RUN_ID: ${{ github.run_id }}
-      run: |
-        name="$(echo "${REPO}" | tr '[:upper:]' '[:lower:]' | tr '/' '-')-${RUN_ID}"
-        echo "request-name=${name}" >> "${GITHUB_OUTPUT}"
+      - name: Compute Akamai request name
+        id: akamai
+        env:
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          name="$(echo "${REPO}" | tr '[:upper:]' '[:lower:]' | tr '/' '-')-${RUN_ID}"
+          echo "request-name=${name}" >> "${GITHUB_OUTPUT}"
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
-      with:
-        aws-region: ${{ vars.AWS_REGION }}
-        role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
 
-    - name: Download docs
-      env:
-        S3_BUCKET: ${{ inputs.source-s3-bucket }}
-        S3_KEY: ${{ matrix.project }}
-        S3_KEY_SUFFIX: ${{ steps.version.outputs.rapids-version-major-minor }}
-        SOURCE_PATH: ${{ inputs.source-path }}
-      run: |
-        aws s3 sync "s3://${S3_BUCKET}/${S3_KEY}/html/${S3_KEY_SUFFIX}" "${SOURCE_PATH}"
+      - name: Download docs
+        env:
+          S3_BUCKET: ${{ inputs.source-s3-bucket }}
+          S3_KEY: ${{ matrix.project }}
+          S3_KEY_SUFFIX: ${{ steps.version.outputs.rapids-version-major-minor }}
+          SOURCE_PATH: ${{ inputs.source-path }}
+        run: |
+          aws s3 sync "s3://${S3_BUCKET}/${S3_KEY}/html/${S3_KEY_SUFFIX}" "${SOURCE_PATH}"
 
-    # publish <project>/<version>
-    - name: Publish numeric version to docs.nvidia.com
-      uses: rapidsai/shared-actions/publish-docs@main
-      with:
-        akamai-access-token: ${{ secrets.akamai-access-token }}
-        akamai-client-secret: ${{ secrets.akamai-client-secret }}
-        akamai-client-token: ${{ secrets.akamai-client-token }}
-        akamai-emails-to-notify: ${{ secrets.akamai-emails-to-notify }}
-        akamai-host: ${{ secrets.akamai-host }}
-        akamai-request-name: ${{ steps.akamai.outputs.request-name }}-${{ steps.version.outputs.rapids-version-major-minor }}
-        dry-run: ${{ inputs.dry-run }}
-        source-path: ${{ inputs.source-path }}
-        target-aws-access-key-id: ${{ secrets.target-aws-access-key-id }}
-        target-aws-region: ${{ secrets.target-aws-region }}
-        target-aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
-        target-s3-bucket: ${{ secrets.target-s3-bucket }}
-        target-s3-key-suffix: ${{ steps.version.outputs.rapids-version-major-minor }}
-        target-s3-key: ${{ matrix.project }}
+      # publish <project>/<version>
+      - name: Publish numeric version to docs.nvidia.com
+        uses: rapidsai/shared-actions/publish-docs@main
+        with:
+          akamai-access-token: ${{ secrets.akamai-access-token }}
+          akamai-client-secret: ${{ secrets.akamai-client-secret }}
+          akamai-client-token: ${{ secrets.akamai-client-token }}
+          akamai-emails-to-notify: ${{ secrets.akamai-emails-to-notify }}
+          akamai-host: ${{ secrets.akamai-host }}
+          akamai-request-name: ${{ steps.akamai.outputs.request-name }}-${{ steps.version.outputs.rapids-version-major-minor }}
+          dry-run: ${{ inputs.dry-run }}
+          source-path: ${{ inputs.source-path }}
+          target-aws-access-key-id: ${{ secrets.target-aws-access-key-id }}
+          target-aws-region: ${{ secrets.target-aws-region }}
+          target-aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
+          target-s3-bucket: ${{ secrets.target-s3-bucket }}
+          target-s3-key-suffix: ${{ steps.version.outputs.rapids-version-major-minor }}
+          target-s3-key: ${{ matrix.project }}
 
-    # publish <project>/<tag> (e.g. stable, legacy) if in version map
-    - name: Publish tagged version to docs.nvidia.com
-      if: steps.version-tag.outputs.rapids-version-tag != '' && startsWith(github.ref_name, 'release/')
-      uses: rapidsai/shared-actions/publish-docs@main
-      with:
-        akamai-access-token: ${{ secrets.akamai-access-token }}
-        akamai-client-secret: ${{ secrets.akamai-client-secret }}
-        akamai-client-token: ${{ secrets.akamai-client-token }}
-        akamai-emails-to-notify: ${{ secrets.akamai-emails-to-notify }}
-        akamai-host: ${{ secrets.akamai-host }}
-        akamai-request-name: ${{ steps.akamai.outputs.request-name }}-${{ steps.version-tag.outputs.rapids-version-tag }}
-        dry-run: ${{ inputs.dry-run }}
-        source-path: ${{ inputs.source-path }}
-        target-aws-access-key-id: ${{ secrets.target-aws-access-key-id }}
-        target-aws-region: ${{ secrets.target-aws-region }}
-        target-aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
-        target-s3-bucket: ${{ secrets.target-s3-bucket }}
-        target-s3-key-suffix: ${{ steps.version-tag.outputs.rapids-version-tag }}
-        target-s3-key: ${{ matrix.project }}
+      # publish <project>/<tag> (e.g. stable, legacy) if in version map
+      - name: Publish tagged version to docs.nvidia.com
+        if: steps.version-tag.outputs.rapids-version-tag != '' && startsWith(github.ref_name, 'release/')
+        uses: rapidsai/shared-actions/publish-docs@main
+        with:
+          akamai-access-token: ${{ secrets.akamai-access-token }}
+          akamai-client-secret: ${{ secrets.akamai-client-secret }}
+          akamai-client-token: ${{ secrets.akamai-client-token }}
+          akamai-emails-to-notify: ${{ secrets.akamai-emails-to-notify }}
+          akamai-host: ${{ secrets.akamai-host }}
+          akamai-request-name: ${{ steps.akamai.outputs.request-name }}-${{ steps.version-tag.outputs.rapids-version-tag }}
+          dry-run: ${{ inputs.dry-run }}
+          source-path: ${{ inputs.source-path }}
+          target-aws-access-key-id: ${{ secrets.target-aws-access-key-id }}
+          target-aws-region: ${{ secrets.target-aws-region }}
+          target-aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
+          target-s3-bucket: ${{ secrets.target-s3-bucket }}
+          target-s3-key-suffix: ${{ steps.version-tag.outputs.rapids-version-tag }}
+          target-s3-key: ${{ matrix.project }}
 
-    # publish <project>/latest if main, same as nightly
-    - name: Publish "latest" version to docs.nvidia.com
-      if: github.ref_name == 'main'
-      uses: rapidsai/shared-actions/publish-docs@main
-      with:
-        akamai-access-token: ${{ secrets.akamai-access-token }}
-        akamai-client-secret: ${{ secrets.akamai-client-secret }}
-        akamai-client-token: ${{ secrets.akamai-client-token }}
-        akamai-emails-to-notify: ${{ secrets.akamai-emails-to-notify }}
-        akamai-host: ${{ secrets.akamai-host }}
-        akamai-request-name: ${{ steps.akamai.outputs.request-name }}-latest
-        dry-run: ${{ inputs.dry-run }}
-        source-path: ${{ inputs.source-path }}
-        target-aws-access-key-id: ${{ secrets.target-aws-access-key-id }}
-        target-aws-region: ${{ secrets.target-aws-region }}
-        target-aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
-        target-s3-bucket: ${{ secrets.target-s3-bucket }}
-        target-s3-key-suffix: latest
-        target-s3-key: ${{ matrix.project }}
+      # publish <project>/latest if main, same as nightly
+      - name: Publish "latest" version to docs.nvidia.com
+        if: github.ref_name == 'main'
+        uses: rapidsai/shared-actions/publish-docs@main
+        with:
+          akamai-access-token: ${{ secrets.akamai-access-token }}
+          akamai-client-secret: ${{ secrets.akamai-client-secret }}
+          akamai-client-token: ${{ secrets.akamai-client-token }}
+          akamai-emails-to-notify: ${{ secrets.akamai-emails-to-notify }}
+          akamai-host: ${{ secrets.akamai-host }}
+          akamai-request-name: ${{ steps.akamai.outputs.request-name }}-latest
+          dry-run: ${{ inputs.dry-run }}
+          source-path: ${{ inputs.source-path }}
+          target-aws-access-key-id: ${{ secrets.target-aws-access-key-id }}
+          target-aws-region: ${{ secrets.target-aws-region }}
+          target-aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
+          target-s3-bucket: ${{ secrets.target-s3-bucket }}
+          target-s3-key-suffix: latest
+          target-s3-key: ${{ matrix.project }}
 
-    # publish <project>/nightly if main
-    - name: Publish "nightly" version to docs.nvidia.com
-      if: github.ref_name == 'main'
-      uses: rapidsai/shared-actions/publish-docs@main
-      with:
-        akamai-access-token: ${{ secrets.akamai-access-token }}
-        akamai-client-secret: ${{ secrets.akamai-client-secret }}
-        akamai-client-token: ${{ secrets.akamai-client-token }}
-        akamai-emails-to-notify: ${{ secrets.akamai-emails-to-notify }}
-        akamai-host: ${{ secrets.akamai-host }}
-        akamai-request-name: ${{ steps.akamai.outputs.request-name }}-nightly
-        dry-run: ${{ inputs.dry-run }}
-        source-path: ${{ inputs.source-path }}
-        target-aws-access-key-id: ${{ secrets.target-aws-access-key-id }}
-        target-aws-region: ${{ secrets.target-aws-region }}
-        target-aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
-        target-s3-bucket: ${{ secrets.target-s3-bucket }}
-        target-s3-key-suffix: nightly
-        target-s3-key: ${{ matrix.project }}
+      # publish <project>/nightly if main
+      - name: Publish "nightly" version to docs.nvidia.com
+        if: github.ref_name == 'main'
+        uses: rapidsai/shared-actions/publish-docs@main
+        with:
+          akamai-access-token: ${{ secrets.akamai-access-token }}
+          akamai-client-secret: ${{ secrets.akamai-client-secret }}
+          akamai-client-token: ${{ secrets.akamai-client-token }}
+          akamai-emails-to-notify: ${{ secrets.akamai-emails-to-notify }}
+          akamai-host: ${{ secrets.akamai-host }}
+          akamai-request-name: ${{ steps.akamai.outputs.request-name }}-nightly
+          dry-run: ${{ inputs.dry-run }}
+          source-path: ${{ inputs.source-path }}
+          target-aws-access-key-id: ${{ secrets.target-aws-access-key-id }}
+          target-aws-region: ${{ secrets.target-aws-region }}
+          target-aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
+          target-s3-bucket: ${{ secrets.target-s3-bucket }}
+          target-s3-key-suffix: nightly
+          target-s3-key: ${{ matrix.project }}
