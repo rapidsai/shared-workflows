@@ -100,7 +100,7 @@ jobs:
         env:
           PUBLICATION_TYPE: ${{ inputs.publication-type }}
           ARTIFACTORY_URL: ${{ vars.RAPIDS_ARTIFACTORY_URL }}
-          ARTIFACTORY_REPOSITORY: ${{ vars.RAPIDS_ARTIFACTORY_REPO }}
+          ARTIFACTORY_REPOSITORY: ${{ vars.RAPIDS_ARTIFACTORY_MAVEN_STAGING_REPO }}
           SOURCE_GIT_SHA: ${{ inputs.source-git-sha }}
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
@@ -121,7 +121,7 @@ jobs:
           ARTIFACT_ID: ${{ steps.upload.outputs.ARTIFACT_ID }}
           VERSION: ${{ steps.upload.outputs.VERSION }}
           ARTIFACTORY_URL: ${{ vars.RAPIDS_ARTIFACTORY_URL }}
-          ARTIFACTORY_REPOSITORY: ${{ vars.RAPIDS_ARTIFACTORY_REPO }}
+          ARTIFACTORY_REPOSITORY: ${{ vars.RAPIDS_ARTIFACTORY_MAVEN_STAGING_REPO }}
           # Invert: stage-for-...=true means don't auto-drop.
           AUTO_DROP: ${{ !inputs.stage-for-maven-central-publish }}
           ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
