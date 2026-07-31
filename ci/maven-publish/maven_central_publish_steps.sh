@@ -153,8 +153,10 @@ find_open_staging_repository() {
   fi
   STAGING_REPOSITORY_KEY=$(jq -er '.repositories[0].key | select(type == "string" and length > 0)' \
     <<< "${response}") || fatal "OSSRH staging response did not contain a repository key"
-  if [[ ! ${STAGING_REPOSITORY_KEY} =~ ^[A-Za-z0-9._-]+$ ]]; then
-    fatal "OSSRH staging service returned an invalid repository key"
+  # Keys are composite paths of the form <profileId>/<clientIp>/<groupId>--default-repository,
+  # so slashes are expected. Just guard against characters that would break URL path use.
+  if [[ ! ${STAGING_REPOSITORY_KEY} =~ ^[A-Za-z0-9._/-]+$ ]]; then
+    fatal "OSSRH staging service returned an invalid repository key: ${STAGING_REPOSITORY_KEY}"
   fi
   echo "  staging repository: ${STAGING_REPOSITORY_KEY}"
 }
