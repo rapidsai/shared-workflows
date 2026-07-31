@@ -3,7 +3,9 @@
 #
 # Publishes a bundle of release-candidate Maven artifacts (jars, POMs,
 # sources, javadoc) to Maven Central via the Sonatype Central Publisher
-# Portal. Every file is GPG-signed and staged through Artifactory first.
+# Portal. Every file is GPG-signed before the repository is uploaded through
+# Sonatype's OSSRH staging compatibility API for validation and human-gated
+# publication.
 #
 # TODO: add nightly -> Sonatype snapshots
 name: Maven publish
@@ -36,8 +38,7 @@ on:
         default: false
       source-git-sha:
         description: |
-          Git SHA to attach as the Artifactory source.git-sha property on
-          every uploaded file.
+          Git SHA to include in the retained bundle name for provenance.
         required: false
         type: string
         default: ''
@@ -47,12 +48,6 @@ on:
         required: true
       GPG_PASSPHRASE:
         description: Passphrase for GPG_PRIVATE_KEY.
-        required: true
-      ARTIFACTORY_USERNAME:
-        description: Artifactory account with write access.
-        required: true
-      ARTIFACTORY_TOKEN:
-        description: Auth token for ARTIFACTORY_USERNAME.
         required: true
       MAVEN_DEPLOY_USERNAME:
         description: Sonatype user token username for the Publisher Portal.
@@ -88,43 +83,42 @@ jobs:
           name: ${{ inputs.artifact-name }}
           path: maven-repo
 
-      - name: Sign and upload to Artifactory
-        id: upload
+      - name: Prepare signed Maven bundle
+        id: prepare
         run: |
-          shared-workflows/ci/maven-publish/artifactory_upload.sh \
+          shared-workflows/ci/maven-publish/prepare_maven_bundle.sh \
             --input maven-repo \
-            --publication-type "${PUBLICATION_TYPE}" \
-            --artifactory-url "${ARTIFACTORY_URL}" \
-            --artifactory-repository "${ARTIFACTORY_REPOSITORY}" \
-            ${SOURCE_GIT_SHA:+--source-git-sha "${SOURCE_GIT_SHA}"}
+            --output signed-maven-repo \
+            --publication-type "${PUBLICATION_TYPE}"
         env:
           PUBLICATION_TYPE: ${{ inputs.publication-type }}
-          ARTIFACTORY_URL: ${{ vars.RAPIDS_ARTIFACTORY_URL }}
-          ARTIFACTORY_REPOSITORY: ${{ vars.RAPIDS_ARTIFACTORY_MAVEN_STAGING_REPO }}
-          SOURCE_GIT_SHA: ${{ inputs.source-git-sha }}
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-          ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
-          ARTIFACTORY_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
 
-      - name: Promote to Maven Central
+      - name: Upload to Maven Central
+        id: publish
         run: |
           shared-workflows/ci/maven-publish/maven_central_publish.sh \
+            --input signed-maven-repo \
             --group-id "${GROUP_ID}" \
             --artifact-id "${ARTIFACT_ID}" \
             --version "${VERSION}" \
-            --artifactory-url "${ARTIFACTORY_URL}" \
-            --artifactory-repository "${ARTIFACTORY_REPOSITORY}" \
+            --output-bundle central-bundle.zip \
             --auto-drop "${AUTO_DROP}"
         env:
-          GROUP_ID: ${{ steps.upload.outputs.GROUP_ID }}
-          ARTIFACT_ID: ${{ steps.upload.outputs.ARTIFACT_ID }}
-          VERSION: ${{ steps.upload.outputs.VERSION }}
-          ARTIFACTORY_URL: ${{ vars.RAPIDS_ARTIFACTORY_URL }}
-          ARTIFACTORY_REPOSITORY: ${{ vars.RAPIDS_ARTIFACTORY_MAVEN_STAGING_REPO }}
+          GROUP_ID: ${{ steps.prepare.outputs.GROUP_ID }}
+          ARTIFACT_ID: ${{ steps.prepare.outputs.ARTIFACT_ID }}
+          VERSION: ${{ steps.prepare.outputs.VERSION }}
           # Invert: stage-for-...=true means don't auto-drop.
           AUTO_DROP: ${{ !inputs.stage-for-maven-central-publish }}
-          ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
-          ARTIFACTORY_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
           MAVEN_DEPLOY_USERNAME: ${{ secrets.MAVEN_DEPLOY_USERNAME }}
           MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
+
+      - name: Retain signed Maven Central bundle
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: maven-central-bundle-${{ steps.prepare.outputs.ARTIFACT_ID }}-${{ steps.prepare.outputs.VERSION }}-${{ inputs.source-git-sha }}
+          path: central-bundle.zip
+          if-no-files-found: ignore
+          retention-days: 90

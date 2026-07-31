@@ -27,16 +27,21 @@ require_release_version() {
   fi
 }
 
-# Maven groupId (a.b.c) -> filesystem path (a/b/c).
-maven_group_path() {
-  echo "${1//./\/}"
+require_maven_coordinates() {
+  local group_id=$1 artifact_id=$2 version=$3
+  local coordinate_pattern='^[A-Za-z0-9][A-Za-z0-9_.+-]*$'
+  if [[ ! ${group_id} =~ ${coordinate_pattern} ]]; then
+    fatal "invalid Maven groupId '${group_id}'"
+  fi
+  if [[ ! ${artifact_id} =~ ${coordinate_pattern} ]]; then
+    fatal "invalid Maven artifactId '${artifact_id}'"
+  fi
+  if [[ ! ${version} =~ ${coordinate_pattern} ]]; then
+    fatal "invalid Maven version '${version}'"
+  fi
 }
 
-# Repo-relative Maven path: <groupPath>/<artifactId>/<version>.
-# Re-uploading the same X.Y.Z overwrites in place. RC iteration is not
-# part of the path. Artifactory lastModified + sha256 give per-file
-# provenance. source.git-sha (matrix property) records the commit.
-maven_release_path() {
-  local group_id=$1 artifact_id=$2 version=$3
-  echo "$(maven_group_path "${group_id}")/${artifact_id}/${version}"
+# Maven groupId (a.b.c) -> filesystem path (a/b/c).
+maven_group_path() {
+  printf '%s\n' "$1" | tr '.' '/'
 }
