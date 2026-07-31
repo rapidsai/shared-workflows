@@ -17,4 +17,4 @@ jobs:
         id: build-details
         run: |
           BUILD_DATETIME="$(date -u +'%y%m%d%H%M%S')"
-          echo "build-datetime="${BUILD_DATETIME}" | tee -a "${GITHUB_OUTPUT}"
+          echo "build-datetime=${BUILD_DATETIME}" | tee -a "${GITHUB_OUTPUT}"
