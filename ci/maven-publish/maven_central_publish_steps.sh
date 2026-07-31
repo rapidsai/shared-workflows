@@ -9,67 +9,99 @@ _portal_auth() {
     | base64 | tr -d '\n'
 }
 
+# _sonatype_error_log METHOD URL STATUS BODY_FILE
+_sonatype_error_log() {
+  echo "Sonatype request failed"
+  echo "  method: $1"
+  echo "  URL:    $2"
+  echo "  status: $3"
+  echo "  body:   $(cat "$4")"
+}
+
+# _sonatype_call METHOD URL
+# Bearer auth, no request body. Prints response body on 2xx; logs failure and
+# returns 1 on non-2xx.
+_sonatype_call() {
+  local method=$1 url=$2
+  local body_file status
+  body_file=$(mktemp)
+  status=$(curl -sS --retry 3 --retry-delay 2 \
+    -H "Authorization: Bearer $(_portal_auth)" \
+    -X "${method}" -o "${body_file}" -w '%{http_code}' "${url}") \
+    || status="transport-error"
+  if [[ ${status} != 2* ]]; then
+    _sonatype_error_log "${method}" "${url}" "${status}" "${body_file}" >&2
+    rm -f "${body_file}"
+    return 1
+  fi
+  cat "${body_file}"
+  rm -f "${body_file}"
+}
+
+# _sonatype_upload FILE URL
+# Basic auth, PUT FILE. Logs failure and returns 1 on non-2xx.
+_sonatype_upload() {
+  local upload_file=$1 url=$2
+  local body_file status
+  body_file=$(mktemp)
+  status=$(curl -sS --retry 3 --retry-delay 2 \
+    --user "${MAVEN_DEPLOY_USERNAME}:${MAVEN_DEPLOY_TOKEN}" \
+    --upload-file "${upload_file}" \
+    -o "${body_file}" -w '%{http_code}' "${url}") \
+    || status="transport-error"
+  if [[ ${status} != 2* ]]; then
+    _sonatype_error_log PUT "${url}" "${status}" "${body_file}" >&2
+    rm -f "${body_file}"
+    return 1
+  fi
+  rm -f "${body_file}"
+}
+
 staging_search_repositories() {
   local state=${1:-}
-  local retries=${2:-3} retry_delay_sec=${3:-2}
   local url
   url="${OSSRH_STAGING_API_URL}/manual/search/repositories?ip=client&profile_id=$(printf %s "${GROUP_ID}" | jq -sRr @uri)"
   if [[ -n ${state} ]]; then
     url+="&state=$(printf %s "${state}" | jq -sRr @uri)"
   fi
-  curl -sS -f --retry "${retries}" --retry-delay "${retry_delay_sec}" \
-    -H "Authorization: Bearer $(_portal_auth)" "${url}"
+  _sonatype_call GET "${url}"
 }
 
 staging_upload_file() {
   local file_path=$1 repository_path=$2
-  local retries=${3:-3} retry_delay_sec=${4:-2}
   local encoded_path
   encoded_path=$(jq -rn --arg path "${repository_path}" \
     '$path | split("/") | map(@uri) | join("/")')
-  curl -sS -f --retry "${retries}" --retry-delay "${retry_delay_sec}" \
-    --user "${MAVEN_DEPLOY_USERNAME}:${MAVEN_DEPLOY_TOKEN}" \
-    --upload-file "${file_path}" \
-    "${OSSRH_STAGING_API_URL}/service/local/staging/deploy/maven2/${encoded_path}" \
-    -o /dev/null
+  _sonatype_upload "${file_path}" \
+    "${OSSRH_STAGING_API_URL}/service/local/staging/deploy/maven2/${encoded_path}"
 }
 
 staging_handoff_repository() {
   local repository_key=$1
-  local retries=${2:-3} retry_delay_sec=${3:-2}
-  curl -sS -f --retry "${retries}" --retry-delay "${retry_delay_sec}" \
-    -H "Authorization: Bearer $(_portal_auth)" \
-    -X POST \
+  _sonatype_call POST \
     "${OSSRH_STAGING_API_URL}/manual/upload/repository/${repository_key}?publishing_type=portal_api" \
-    -o /dev/null
+    >/dev/null
 }
 
 staging_drop_repository() {
   local repository_key=$1
-  local retries=${2:-3} retry_delay_sec=${3:-2}
-  curl -sS -f --retry "${retries}" --retry-delay "${retry_delay_sec}" \
-    -H "Authorization: Bearer $(_portal_auth)" \
-    -X DELETE \
+  _sonatype_call DELETE \
     "${OSSRH_STAGING_API_URL}/manual/drop/repository/${repository_key}" \
-    -o /dev/null
+    >/dev/null
 }
 
 portal_get_status() {
   local deployment_id=$1
-  local retries=${2:-3} retry_delay_sec=${3:-2}
-  local url="${CENTRAL_PORTAL_URL}/api/v1/publisher/status?id=${deployment_id}"
-  curl -sS -f --retry "${retries}" --retry-delay "${retry_delay_sec}" \
-    -H "Authorization: Bearer $(_portal_auth)" \
-    -X POST "${url}" || echo '{}'
+  _sonatype_call POST \
+    "${CENTRAL_PORTAL_URL}/api/v1/publisher/status?id=${deployment_id}" \
+    || echo '{}'
 }
 
 portal_drop_deployment() {
   local deployment_id=$1
-  local retries=${2:-3} retry_delay_sec=${3:-2}
-  curl -sS -f --retry "${retries}" --retry-delay "${retry_delay_sec}" \
-    -H "Authorization: Bearer $(_portal_auth)" \
-    -X DELETE "${CENTRAL_PORTAL_URL}/api/v1/publisher/deployment/${deployment_id}" \
-    -o /dev/null
+  _sonatype_call DELETE \
+    "${CENTRAL_PORTAL_URL}/api/v1/publisher/deployment/${deployment_id}" \
+    >/dev/null
 }
 
 copy_bundle() {

@@ -159,13 +159,13 @@ cleanup() {
     && [[ ${STAGING_FILE_UPLOADED} == "true" ]] \
     && [[ ${STAGING_HANDED_OFF} != "true" ]]; then
     if [[ -z ${STAGING_REPOSITORY_KEY} ]]; then
-      STAGING_REPOSITORY_KEY=$(staging_search_repositories open 1 0 2>/dev/null \
+      STAGING_REPOSITORY_KEY=$(staging_search_repositories open 2>/dev/null \
         | jq -r 'if (.repositories | length) == 1 then .repositories[0].key else empty end' \
         2>/dev/null) || true
     fi
     if [[ -n ${STAGING_REPOSITORY_KEY} ]]; then
       echo "Cleaning up open OSSRH staging repository ${STAGING_REPOSITORY_KEY}" >&2
-      staging_drop_repository "${STAGING_REPOSITORY_KEY}" 1 0 \
+      staging_drop_repository "${STAGING_REPOSITORY_KEY}" \
         || echo "Warning: could not drop staging repository ${STAGING_REPOSITORY_KEY}; remove it before retrying" >&2
     fi
   fi
