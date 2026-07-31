@@ -35,6 +35,12 @@ on:
           If not set (the default), artifact-handling scripts use RAPIDS-conventional defaults (like "build.yaml" when "build_type == nightly").
         required: false
         type: string
+      dual_publish:
+        description: |
+          If true, release builds are uploaded to both release and nightly
+          channels. Channel is determined by which token is used.
+        type: boolean
+        default: false
     secrets:
       CONDA_RAPIDSAI_TOKEN:
         description: "Anaconda token for RAPIDS conda release uploads"
@@ -125,16 +131,27 @@ jobs:
           gh api /rate_limit | jq .
         env:
           GH_TOKEN: ${{ github.token }}
-      - name: Set Proper Conda Upload Token
+      - name: Determine Conda Upload Destination
+        id: conda-upload-destination
         run: |
-          RAPIDS_CONDA_TOKEN=${{ secrets.CONDA_RAPIDSAI_NIGHTLY_TOKEN }}
           if rapids-is-release-build; then
-            RAPIDS_CONDA_TOKEN=${{ secrets.CONDA_RAPIDSAI_TOKEN }}
+            echo "is_release=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "is_release=false" >> "${GITHUB_OUTPUT}"
           fi
-          echo "RAPIDS_CONDA_TOKEN=${RAPIDS_CONDA_TOKEN}" >> "${GITHUB_ENV}"
-      - name: Upload packages
+      - name: Upload packages to release location
+        if: ${{ steps.conda-upload-destination.outputs.is_release == 'true' }}
         run: rapids-upload-to-anaconda-github
         env:
           SKIP_UPLOAD_PKGS: ${{ inputs.skip_upload_pkgs }}
           RAPIDS_CONDA_UPLOAD_LABEL: ${{ inputs.upload_to_label }}
+          RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+      - name: Upload packages to nightly location
+        if: ${{ steps.conda-upload-destination.outputs.is_release == 'false' || inputs.dual_publish }}
+        run: rapids-upload-to-anaconda-github
+        env:
+          SKIP_UPLOAD_PKGS: ${{ inputs.skip_upload_pkgs }}
+          RAPIDS_CONDA_UPLOAD_LABEL: ${{ inputs.upload_to_label }}
+          RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_NIGHTLY_TOKEN }}
           GH_TOKEN: ${{ github.token }}

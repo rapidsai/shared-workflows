@@ -50,7 +50,7 @@ jobs:
   other-checks:
     runs-on: ubuntu-latest
     container:
-      image: rapidsai/ci-conda:26.08-latest # zizmor: ignore[unpinned-images]
+      image: rapidsai/ci-conda:26.10-latest # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -123,7 +123,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       # Must pin to Python <3.13, cmake-format is broken, see https://github.com/python/cpython/issues/140797
-      image: rapidsai/ci-conda:26.08-cuda13.3.0-ubuntu24.04-py3.12 # zizmor: ignore[unpinned-images]
+      image: rapidsai/ci-conda:26.10-cuda13.3.0-ubuntu24.04-py3.12 # zizmor: ignore[unpinned-images]
     steps:
       - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0

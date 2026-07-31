@@ -2,6 +2,9 @@ rules:
   unpinned-uses:
     config:
       policies:
-        rapidsai/shared-actions/*: ref-pin
-        nv-gha-runners/*: ref-pin
-        actions/*: ref-pin
+        # We require SHA-pinning for all workflows and actions _except_ for those from
+        # known NVIDIA-controlled repos
+        "nv-gha-runners/*": ref-pin
+        "rapidsai/shared-workflows/*": ref-pin
+        "rapidsai/shared-actions/*": ref-pin
+        "*": hash-pin
