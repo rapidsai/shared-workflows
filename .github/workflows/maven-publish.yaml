@@ -49,11 +49,8 @@ on:
       GPG_PASSPHRASE:
         description: Passphrase for GPG_PRIVATE_KEY.
         required: true
-      MAVEN_DEPLOY_USERNAME:
-        description: Sonatype user token username for the Publisher Portal.
-        required: true
       MAVEN_DEPLOY_TOKEN:
-        description: Auth token for MAVEN_DEPLOY_USERNAME.
+        description: Auth token paired with vars.MAVEN_DEPLOY_USERNAME.
         required: true
 
 defaults:
@@ -111,7 +108,7 @@ jobs:
           VERSION: ${{ steps.prepare.outputs.VERSION }}
           # Invert: stage-for-...=true means don't auto-drop.
           AUTO_DROP: ${{ !inputs.stage-for-maven-central-publish }}
-          MAVEN_DEPLOY_USERNAME: ${{ secrets.MAVEN_DEPLOY_USERNAME }}
+          MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME }}
           MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
 
       - name: Retain signed Maven Central bundle
