@@ -111,6 +111,25 @@ jobs:
           MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME }}
           MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
 
+      - name: Upload to Maven Central (--skip-staging fallback)
+        if: ${{ failure() && steps.publish.conclusion == 'failure' }}
+        run: |
+          shared-workflows/ci/maven-publish/maven_central_publish.sh \
+            --input signed-maven-repo \
+            --group-id "${GROUP_ID}" \
+            --artifact-id "${ARTIFACT_ID}" \
+            --version "${VERSION}" \
+            --output-bundle central-bundle.zip \
+            --auto-drop "${AUTO_DROP}" \
+            --skip-staging
+        env:
+          GROUP_ID: ${{ steps.prepare.outputs.GROUP_ID }}
+          ARTIFACT_ID: ${{ steps.prepare.outputs.ARTIFACT_ID }}
+          VERSION: ${{ steps.prepare.outputs.VERSION }}
+          AUTO_DROP: ${{ !inputs.stage-for-maven-central-publish }}
+          MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME }}
+          MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
+
       - name: Retain signed Maven Central bundle
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

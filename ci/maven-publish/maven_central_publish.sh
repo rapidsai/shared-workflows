@@ -6,6 +6,9 @@
 # files through Sonatype's OSSRH staging compatibility API, and polls the
 # Publisher Portal until the deployment passes validation.
 # Never calls the /publish endpoint: publication always requires a human click.
+#
+# --skip-staging is a diagnostic path that POSTs the bundle straight to the
+# Portal, exposing the real error body the OSSRH bridge otherwise hides.
 
 set -euo pipefail
 
@@ -32,6 +35,7 @@ ARTIFACT_ID=""
 VERSION=""
 OUTPUT_BUNDLE=""
 AUTO_DROP="true"
+SKIP_STAGING="false"
 
 print_help() {
   cat << EOF
@@ -54,6 +58,8 @@ REQUIRED:
 
 OPTIONS:
     --auto-drop <true|false>       Drop after VALIDATED (default: true).
+    --skip-staging                 Diagnostic. POST straight to the Portal
+                                   instead of routing through OSSRH.
     -h, --help                     Show this help message.
 
 ENVIRONMENT VARIABLES:
@@ -102,6 +108,10 @@ parse_args() {
         AUTO_DROP=$2
         shift 2
         ;;
+      --skip-staging)
+        SKIP_STAGING="true"
+        shift
+        ;;
       *)
         echo "Error: Unknown argument $1"
         print_help
@@ -143,6 +153,7 @@ fi
 echo "Maven Central upload"
 echo "  coordinates:   ${GROUP_ID}:${ARTIFACT_ID}:${VERSION}"
 echo "  auto-drop:     ${AUTO_DROP}"
+echo "  skip staging:  ${SKIP_STAGING}"
 echo "  input dir:     ${INPUT_DIR}"
 echo "  output bundle: ${OUTPUT_BUNDLE}"
 echo "  staging API:   ${OSSRH_STAGING_API_URL}"
@@ -152,6 +163,8 @@ WORK_DIR="$(mktemp -d)"
 STAGING_REPOSITORY_KEY=""
 STAGING_FILE_UPLOADED="false"
 STAGING_HANDED_OFF="false"
+
+DEPLOYMENT_ID=""
 
 cleanup() {
   local status=$?
@@ -169,6 +182,14 @@ cleanup() {
         || echo "Warning: could not drop staging repository ${STAGING_REPOSITORY_KEY}; remove it before retrying" >&2
     fi
   fi
+  # --skip-staging: drop any stranded PENDING deployment.
+  if (( status != 0 )) \
+    && [[ ${SKIP_STAGING} == "true" ]] \
+    && [[ -n ${DEPLOYMENT_ID} ]]; then
+    echo "Cleaning up stranded deployment ${DEPLOYMENT_ID}" >&2
+    portal_drop_deployment "${DEPLOYMENT_ID}" \
+      || echo "Warning: could not drop deployment ${DEPLOYMENT_ID}; drop it manually" >&2
+  fi
   rm -rf "${WORK_DIR}"
   return "${status}"
 }
@@ -178,7 +199,9 @@ BUNDLE_DIR="${WORK_DIR}/bundle"
 BUNDLE_ARTIFACT_DIR="${BUNDLE_DIR}/$(maven_group_path "${GROUP_ID}")/${ARTIFACT_ID}/${VERSION}"
 mkdir -p "${BUNDLE_DIR}"
 
-require_no_open_staging_repository
+if [[ ${SKIP_STAGING} != "true" ]]; then
+  require_no_open_staging_repository
+fi
 copy_bundle "${INPUT_DIR}" "${BUNDLE_DIR}"
 require_bundle_contents "${BUNDLE_ARTIFACT_DIR}"
 generate_bundle_checksums "${BUNDLE_ARTIFACT_DIR}"
@@ -187,15 +210,21 @@ BUNDLE_ZIP="${WORK_DIR}/${ARTIFACT_ID}-${VERSION}.zip"
 create_bundle_zip "${BUNDLE_ZIP}" "${BUNDLE_DIR}"
 mv "${BUNDLE_ZIP}" "${OUTPUT_BUNDLE}"
 
-DEPLOYMENT_ID=""
-upload_tree_to_staging "${BUNDLE_DIR}"
-find_open_staging_repository
-echo "Handing staging repository to the Publisher Portal"
-staging_handoff_repository "${STAGING_REPOSITORY_KEY}"
-wait_for_portal_handoff "${STAGING_REPOSITORY_KEY}"
-STAGING_HANDED_OFF="true"
+if [[ ${SKIP_STAGING} == "true" ]]; then
+  portal_upload_bundle "${OUTPUT_BUNDLE}" "${ARTIFACT_ID}-${VERSION}"
+else
+  upload_tree_to_staging "${BUNDLE_DIR}"
+  find_open_staging_repository
+  echo "Handing staging repository to the Publisher Portal"
+  staging_handoff_repository "${STAGING_REPOSITORY_KEY}"
+  wait_for_portal_handoff "${STAGING_REPOSITORY_KEY}"
+  STAGING_HANDED_OFF="true"
+fi
+
 if [[ -n ${GITHUB_OUTPUT:-} ]]; then
-  echo "STAGING_REPOSITORY_KEY=${STAGING_REPOSITORY_KEY}" >> "${GITHUB_OUTPUT}"
+  if [[ -n ${STAGING_REPOSITORY_KEY} ]]; then
+    echo "STAGING_REPOSITORY_KEY=${STAGING_REPOSITORY_KEY}" >> "${GITHUB_OUTPUT}"
+  fi
   echo "DEPLOYMENT_ID=${DEPLOYMENT_ID}" >> "${GITHUB_OUTPUT}"
 fi
 

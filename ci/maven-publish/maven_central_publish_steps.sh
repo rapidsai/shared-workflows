@@ -57,6 +57,31 @@ _sonatype_upload() {
   rm -f "${body_file}"
 }
 
+# portal_upload_bundle BUNDLE_ZIP NAME
+# Diagnostic path (--skip-staging). Sets DEPLOYMENT_ID on 2xx.
+portal_upload_bundle() {
+  local bundle_zip=$1 name=$2
+  local url="${CENTRAL_PORTAL_URL}/api/v1/publisher/upload?name=${name}&publishingType=USER_MANAGED"
+  local body_file status
+  body_file=$(mktemp)
+  status=$(curl -sS --retry 3 --retry-delay 2 \
+    -H "Authorization: Bearer $(_portal_auth)" \
+    -F "bundle=@${bundle_zip}" \
+    -o "${body_file}" -w '%{http_code}' "${url}") \
+    || status="transport-error"
+  if [[ ${status} != 2* ]]; then
+    _sonatype_error_log POST "${url}" "${status}" "${body_file}" >&2
+    rm -f "${body_file}"
+    return 1
+  fi
+  DEPLOYMENT_ID=$(cat "${body_file}")
+  rm -f "${body_file}"
+  if [[ ! ${DEPLOYMENT_ID} =~ ^[A-Za-z0-9-]+$ ]]; then
+    fatal "Portal returned an invalid deployment id: ${DEPLOYMENT_ID}"
+  fi
+  echo "  Portal deployment id: ${DEPLOYMENT_ID}"
+}
+
 staging_search_repositories() {
   local state=${1:-}
   local url
