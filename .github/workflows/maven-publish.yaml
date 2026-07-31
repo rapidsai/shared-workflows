@@ -114,6 +114,7 @@ jobs:
       - name: Upload to Maven Central (--skip-staging fallback)
         if: ${{ failure() && steps.publish.conclusion == 'failure' }}
         run: |
+          rm -f central-bundle.zip
           shared-workflows/ci/maven-publish/maven_central_publish.sh \
             --input signed-maven-repo \
             --group-id "${GROUP_ID}" \
