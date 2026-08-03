@@ -92,6 +92,7 @@ jobs:
               - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '13.0.3', LINUX_VER: 'rockylinux8', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '12.9.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'gb300',      DRIVER: 'latest',   DEPENDENCIES: 'latest' }
 
           conda-python-build:
             pull-request: &conda_python_build
@@ -142,6 +143,7 @@ jobs:
               - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.9.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '13.0.3', LINUX_VER: 'rockylinux8', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'gb300',      DRIVER: 'latest',   DEPENDENCIES: 'latest' }
 
           wheels-build:
             pull-request: &wheels_build
@@ -191,6 +193,7 @@ jobs:
               - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '13.0.3', LINUX_VER: 'ubuntu24.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+              - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'gb300',      DRIVER: 'latest',   DEPENDENCIES: 'latest' }
           "
           (echo -n 'matrix='; yq -n -o json 'env(MATRIX)' | jq -c .) >> "$GITHUB_OUTPUT"
       - name: Validate Inputs
