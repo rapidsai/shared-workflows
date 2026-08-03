@@ -1,0 +1,121 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Publishes a bundle of release-candidate Maven artifacts (jars, POMs,
+# sources, javadoc) to Maven Central via the Sonatype Central Publisher
+# Portal. Every file is GPG-signed before the repository is uploaded through
+# Sonatype's OSSRH staging compatibility API for validation and human-gated
+# publication.
+#
+# TODO: add nightly -> Sonatype snapshots
+name: Maven publish
+
+on:
+  workflow_call:
+    inputs:
+      publication-type:
+        description: |
+          Only "rc" (release candidate) is currently supported. Nightly is a
+          future addition. The input is kept single-valued so callers do not
+          have to change their `with:` block when nightly is introduced.
+        required: true
+        type: string
+      artifact-name:
+        description: |
+          Name of the GitHub Actions artifact (uploaded by the caller job via
+          actions/upload-artifact) to download and publish. Contents must be
+          a Maven repository directory.
+        required: true
+        type: string
+      stage-for-maven-central-publish:
+        description: |
+          When true, leave the bundle PENDING in the Sonatype Central
+          Publisher Portal for a human to release via the Portal UI
+          (https://central.sonatype.com). When false (default), validate then
+          drop the bundle.
+        required: false
+        type: boolean
+        default: false
+      source-git-sha:
+        description: |
+          Git SHA to include in the retained bundle name for provenance.
+        required: false
+        type: string
+        default: ''
+    secrets:
+      GPG_PRIVATE_KEY:
+        description: Armored GPG private key used to sign every artifact at upload.
+        required: true
+      GPG_PASSPHRASE:
+        description: Passphrase for GPG_PRIVATE_KEY.
+        required: true
+      MAVEN_DEPLOY_TOKEN:
+        description: Auth token paired with vars.MAVEN_DEPLOY_USERNAME.
+        required: true
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  maven-publish:
+    name: maven publish (${{ inputs.publication-type }})
+    runs-on: linux-amd64-cpu4
+    steps:
+      - name: Self-checkout shared-workflows
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: shared-workflows
+          persist-credentials: false
+
+      - name: Download Maven repository artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: maven-repo
+
+      - name: Prepare signed Maven bundle
+        id: prepare
+        run: |
+          shared-workflows/ci/maven-publish/prepare_maven_bundle.sh \
+            --input maven-repo \
+            --output signed-maven-repo \
+            --publication-type "${PUBLICATION_TYPE}"
+        env:
+          PUBLICATION_TYPE: ${{ inputs.publication-type }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Upload to Maven Central
+        id: publish
+        run: |
+          shared-workflows/ci/maven-publish/maven_central_publish.sh \
+            --input signed-maven-repo \
+            --group-id "${GROUP_ID}" \
+            --artifact-id "${ARTIFACT_ID}" \
+            --version "${VERSION}" \
+            --output-bundle central-bundle.zip \
+            --auto-drop "${AUTO_DROP}"
+        env:
+          GROUP_ID: ${{ steps.prepare.outputs.GROUP_ID }}
+          ARTIFACT_ID: ${{ steps.prepare.outputs.ARTIFACT_ID }}
+          VERSION: ${{ steps.prepare.outputs.VERSION }}
+          # Invert: stage-for-...=true means don't auto-drop.
+          AUTO_DROP: ${{ !inputs.stage-for-maven-central-publish }}
+          MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME }}
+          MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
+
+      - name: Retain signed Maven Central bundle
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: maven-central-bundle-${{ steps.prepare.outputs.ARTIFACT_ID }}-${{ steps.prepare.outputs.VERSION }}-${{ inputs.source-git-sha }}
+          path: central-bundle.zip
+          if-no-files-found: ignore
+          retention-days: 90
