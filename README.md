@@ -20,6 +20,67 @@ Reusable workflows must be placed in the `.github/workflows` directory as mentio
 
 ## Usage
 
+### release-build-output
+
+Release build-output companions are created inside the producer job by the
+[`release-build-output-dispatch`](https://github.com/rapidsai/shared-actions/tree/main/release-build-output-dispatch)
+shared action. Running beside the build keeps the producer's matrix,
+source-artifact name, and original files authoritative and avoids a second
+runner and artifact download.
+
+The standard wheel and Conda builders create a companion for every uploaded
+bundle. The release unit defaults to `wheel:<repository-name>` or
+`conda:<repository-name>` and can be overridden with `release-unit` when the
+release-platform catalog uses a different ID. The shared action reads exact
+package metadata from the built files and uploads
+`release-build-output-<artifact-name>`. No release-specific caller
+configuration is required for the standard builders.
+
+`custom-job.yaml` remains explicitly opt-in through `release-build-output` and
+also requires `release-unit`, `release-output-directory`, `release-artifacts`,
+and either `release-package` or
+`release-package-file`. Descriptors may name producer-supplied SBOM,
+provenance, and signature sidecars relative to the output directory. Each path
+or glob must resolve to exactly one file; the action never guesses a release
+artifact.
+
+```yaml
+cuvs-java-build:
+  uses: rapidsai/shared-workflows/.github/workflows/custom-job.yaml@main
+  with:
+    # existing build inputs omitted
+    artifact-name: cuvs-java-cuda12.9.1
+    file_to_upload: java/cuvs-java/target/
+    release-build-output: true
+    release-output-directory: java/cuvs-java/target
+    release-unit: maven:cuvs-java
+    release-package-file: cuvs-java.release-package.json
+    release-artifacts: '[{"path":"cuvs-java-*-x86_64-cuda*.jar"}]'
+```
+
+The release coordinator downloads both artifacts into the same directory, for
+example `release-build-outputs/cuvs-java/cuda12.9.1/`. The resulting tree has
+one `release-build-output.json` per producer job and is consumed directly by
+`rapids-release shadow file`. It does not require Artifactory.
+
+The companion artifact also carries `release-build-metadata.json`. It records
+the artifact identity, manifest filename, GitHub build identity, and one
+`metadata.artifacts` entry per primary artifact. Each entry explicitly sets
+`sbom_kind` to `producer-dependency` or `generated-identity`. SBOM and
+provenance paths remain authoritative in `release-build-output.json`; supplied
+sidecars are copied under `release-evidence/` so the companion is independently
+self-contained.
+
+When no SBOM is selected, the action generates an SPDX artifact-identity
+envelope containing package identity and the primary artifact SHA-256. It is
+classified as `generated-identity`, contains no dependency inventory, and must
+not be reported as a producer-supplied dependency SBOM. A descriptor-selected
+producer SBOM is instead classified as `producer-dependency`.
+
+The cross-repository enrollment inventory, blockers, and proposed PR sequence
+are maintained in
+[`rapidsai/build-infra#381`](https://github.com/rapidsai/build-infra/issues/381).
+
 ### matrix_filter
 
 Several of the workflows in this project have matrices (combinations of workflow inputs) expressed in inline YAML/JSON.

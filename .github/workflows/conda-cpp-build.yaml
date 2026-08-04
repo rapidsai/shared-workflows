@@ -44,6 +44,11 @@ on:
         default: true
         required: false
         description: "One of [true, false], true if artifacts should be uploaded to GitHub's artifact store"
+      release-unit:
+        type: string
+        default: ''
+        required: false
+        description: "Override the release-platform unit ID; defaults to conda:<repository-name>"
       matrix_filter:
         description: |
           jq expression which modifies the matrix.
@@ -226,6 +231,16 @@ jobs:
           if-no-files-found: 'error'
           name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
           path: ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
+
+      - name: Create Conda release build-output companion
+        if: ${{ inputs.upload-artifacts }}
+        uses: rapidsai/shared-actions/release-build-output-dispatch@main
+        with:
+          artifact-type: conda
+          output-directory: ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
+          release-unit: ${{ inputs.release-unit || format('conda:{0}', github.event.repository.name) }}
+          source-artifact-name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
+          source-sha: ${{ inputs.sha || github.sha }}
       - name: Upload additional artifacts
         if: "!cancelled()"
         run: rapids-upload-artifacts-dir "cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)"
