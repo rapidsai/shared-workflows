@@ -62,11 +62,12 @@ jobs:
           PYTHON_PACKAGE_MANAGER: "${{ inputs.python_package_manager }}"
           VERSIONS: '["latest", "${{ needs.build.outputs.version }}"]'
         run: |
-          declare -a TAGS="($(jq -cnr \
+          TAGS_JSON=$(jq -cnr \
             --argjson vers "${VERSIONS}" \
             --argjson cuda "${CUDA}" \
             --argjson pkgr "${PYTHON_PACKAGE_MANAGER}" \
-            '[[$vers, $cuda, $pkgr] | combinations | [.[0], "cuda" + .[1], .[2]] | join("-")] | join(" ")'))"
+            '[[$vers, $cuda, $pkgr] | combinations | [.[0], "cuda" + .[1], .[2]] | join("-")] | join(" ")')
+          declare -a TAGS="(${TAGS_JSON})"
 
           declare -a DIGESTS=()
           for TAG in "${TAGS[@]}"; do
@@ -75,7 +76,7 @@ jobs:
             )
           done
 
-          NAME="${NAME#${NAME_PREFIX}/}"
+          NAME="${NAME#"${NAME_PREFIX}"/}"
 
           # Set values to control ghcr.io cleanup below
           cat <<EOF >> "$GITHUB_OUTPUT"

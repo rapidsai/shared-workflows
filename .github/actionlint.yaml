@@ -8,6 +8,7 @@ self-hosted-runner:
 config-variables:
   - AWS_REGION
   - AWS_ROLE_ARN
+  - MAVEN_DEPLOY_USERNAME
   - TELEMETRY_ENABLED
 
 paths:
@@ -16,3 +17,10 @@ paths:
       # ${{ secrets.CODECOV_TOKEN }} is valid if a secret like that exists in the calling repo,
       # and we're confident that it's there in our repos, so this error can be silenced
       - 'property "codecov_token" is not defined in object type'
+  .github/workflows/maven-publish.yaml:
+    ignore:
+      # job.workflow_repository / job.workflow_sha are real GitHub Actions
+      # context properties (used to self-checkout a reusable workflow's own
+      # source). actionlint's type schema appears to be out of date.
+      - 'property "workflow_repository" is not defined in object type'
+      - 'property "workflow_sha" is not defined in object type'
