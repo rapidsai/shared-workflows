@@ -1,9 +1,9 @@
 on:
   workflow_call:
     outputs:
-      package-version-suffix:
-        description: "Suffix to be appended to conda/sdist/wheel version numbers."
-        value: ${{ jobs.build.outputs.version-suffix }}
+      build-datetime:
+        description: "integer-formatted 'UTC now' datetime"
+        value: ${{ jobs.build.outputs.build-datetime }}
 
 permissions: {}
 
@@ -11,9 +11,10 @@ jobs:
   build:
     runs-on: ubuntu-slim
     outputs:
-      version-suffix: ${{ steps.build-details.outputs.version-suffix }}
+      build-datetime: ${{ steps.build-details.outputs.build-datetime }}
     steps:
       - name: build
         id: build-details
         run: |
-          echo "version-suffix=.post$(date -u +'%y%m%d%H%M%S')" | tee -a "${GITHUB_OUTPUT}"
+          BUILD_DATETIME="$(date -u +'%y%m%d%H%M%S')"
+          echo "build-datetime=${BUILD_DATETIME}" | tee -a "${GITHUB_OUTPUT}"
