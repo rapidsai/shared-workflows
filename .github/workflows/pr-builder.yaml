@@ -17,7 +17,23 @@ jobs:
       - name: "Check all dependent jobs"
         env:
           NEEDS: ${{ inputs.needs }}
-        run: jq -en 'env.NEEDS | fromjson | all(.result as $result | ["success", "skipped"] | any($result == .))'
+        run: |
+          failed_jobs="$(jq -cn \
+            'env.NEEDS
+            | fromjson
+            | to_entries
+            | map(select(
+              .value.result as $result
+              | ["success", "skipped"]
+              | any($result == .)
+              | not)
+            | .key)'
+          )"
+          if jq -e 'length != 0' <(echo "$failed_jobs") > /dev/null; then
+            echo "The following required jobs failed:"
+            jq -r '.[] | "  " + .' <(echo "$failed_jobs")
+            exit 1
+          fi
       - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
