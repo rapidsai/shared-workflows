@@ -30,8 +30,8 @@ jobs:
             | .key)'
           )"
           if jq -e 'length != 0' <(echo "$failed_jobs") > /dev/null; then
-            echo "The following required jobs failed:"
-            jq -r '.[] | "  " + .' <(echo "$failed_jobs")
+            echo "::error::The following required jobs failed:"
+            jq -r '.[] | "::error::  " + .' <(echo "$failed_jobs")
             exit 1
           fi
       - name: Checkout code
