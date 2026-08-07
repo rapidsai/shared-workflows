@@ -245,8 +245,11 @@ jobs:
             MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | group_by(.CUDA_VER|split(\".\")|map(tonumber)|.[0]) | map(max_by([(.PY_VER|split(\".\")|map(tonumber)), (.CUDA_VER|split(\".\")|map(tonumber))]))"
           fi
 
-          MATRIX="$(
-            jq -n -c "\$ENV.MATRIX | fromjson | .[\$ENV.MATRIX_NAME].[\$ENV.MATRIX_TYPE] | ${MATRIX_FILTER} | if (. | length) > 0 then {include: .} else \"::error::Empty matrix\n\" | halt_error(1) end"
-          )"
+          if ! MATRIX="$(
+            jq -n -c "\$ENV.MATRIX | fromjson | .[\$ENV.MATRIX_NAME].[\$ENV.MATRIX_TYPE] | ${MATRIX_FILTER} | if (. | length) > 0 then {include: .} else \"\" | halt_error(1) end"
+          )"; then
+            echo "::error::Empty matrix"
+            exit 1
+          fi
 
           echo "matrix=${MATRIX}" | tee --append "${GITHUB_OUTPUT}"
