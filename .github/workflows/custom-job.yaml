@@ -260,7 +260,7 @@ jobs:
           if-no-files-found: ignore
       - name: Create release build-output companion
         if: ${{ inputs.release-build-output }}
-        uses: msarahan/shared-actions/release-build-output-dispatch@76acdd577825aefd04d8ea143449101b707acee6 # agent/release-build-output-container
+        uses: rapidsai/shared-actions/release-build-output-dispatch@3a9568fc2c9bc9fd05e4cf76a73d9ad481f93ac5 # agent/release-build-output-container
         with:
           artifact-type: custom
           output-directory: ${{ inputs.release-output-directory }}
