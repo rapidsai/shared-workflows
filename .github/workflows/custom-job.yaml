@@ -106,33 +106,12 @@ on:
         type: boolean
         required: false
       release-build-output:
-        description: "Generate a release-build-output companion for the uploaded artifact bundle"
-        default: false
-        type: boolean
-        required: false
-      release-unit:
-        description: "Stable release-platform unit ID; required when release-build-output is true"
+        description: >-
+          Optional JSON object describing a custom release package bundle. A non-empty value creates the companion;
+          leave empty for logs, documentation, tests, and other non-release artifacts. Requires artifact_type set to
+          custom, component_id, artifacts, and exactly one of package or package_file; output_directory defaults to
+          '.'. The shared action validates every field before inspecting build outputs.
         default: ''
-        type: string
-        required: false
-      release-package:
-        description: "JSON package identity shared by the bundle; mutually exclusive with release-package-file"
-        default: ''
-        type: string
-        required: false
-      release-package-file:
-        description: "Producer-created package JSON relative to release-output-directory"
-        default: ''
-        type: string
-        required: false
-      release-artifacts:
-        description: "JSON primary-artifact and evidence descriptors relative to release-output-directory"
-        default: ''
-        type: string
-        required: false
-      release-output-directory:
-        description: "Directory containing the primary artifact paths described by release-artifacts"
-        default: '.'
         type: string
         required: false
 
@@ -259,15 +238,10 @@ jobs:
           path: ${{ inputs.file_to_upload }}
           if-no-files-found: ignore
       - name: Create release build-output companion
-        if: ${{ inputs.release-build-output }}
-        uses: rapidsai/shared-actions/release-build-output-dispatch@3a9568fc2c9bc9fd05e4cf76a73d9ad481f93ac5 # agent/release-build-output-container
+        if: ${{ inputs.release-build-output != '' }}
+        uses: rapidsai/shared-actions/release-build-output-dispatch@a18a4a7ac572366c09c15641ec274cc6f15bfb5d # agent/release-build-output-container
         with:
-          artifact-type: custom
-          output-directory: ${{ inputs.release-output-directory }}
-          release-artifacts: ${{ inputs.release-artifacts }}
-          release-package: ${{ inputs.release-package }}
-          release-package-file: ${{ inputs.release-package-file }}
-          release-unit: ${{ inputs.release-unit }}
+          config: ${{ inputs.release-build-output }}
           source-artifact-name: ${{ inputs.artifact-name }}
           source-sha: ${{ inputs.sha || github.sha }}
       - name: Upload additional artifacts

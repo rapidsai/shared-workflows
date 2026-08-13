@@ -48,7 +48,10 @@ on:
         type: string
         default: ''
         required: false
-        description: "Override the release-platform unit ID; defaults to conda:<repository-name>"
+        description: >-
+          Release component ID: a string label, not a file or bundle. It is written to each manifest entry and groups
+          files and matrix variants for release assembly. Leave empty to use conda:<repository-name>; override only
+          when one repository's Conda producers must be tracked as distinct components.
       matrix_filter:
         description: |
           jq expression which modifies the matrix.
@@ -234,11 +237,14 @@ jobs:
 
       - name: Create Conda release build-output companion
         if: ${{ inputs.upload-artifacts }}
-        uses: rapidsai/shared-actions/release-build-output-dispatch@3a9568fc2c9bc9fd05e4cf76a73d9ad481f93ac5 # agent/release-build-output-container
+        uses: rapidsai/shared-actions/release-build-output-dispatch@a18a4a7ac572366c09c15641ec274cc6f15bfb5d # agent/release-build-output-container
         with:
-          artifact-type: conda
-          output-directory: ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
-          release-unit: ${{ inputs.release-unit || format('conda:{0}', github.event.repository.name) }}
+          config: >-
+            {
+              "artifact_type": "conda",
+              "component_id": ${{ toJSON(inputs.release-unit || format('conda:{0}', github.event.repository.name)) }},
+              "output_directory": ${{ toJSON(steps.package-name.outputs.CONDA_OUTPUT_DIR) }}
+            }
           source-artifact-name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
           source-sha: ${{ inputs.sha || github.sha }}
       - name: Upload additional artifacts

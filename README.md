@@ -29,20 +29,38 @@ source-artifact name, and original files authoritative and avoids a second
 runner and artifact download.
 
 The standard wheel and Conda builders create a companion for every uploaded
-bundle. The release unit defaults to `wheel:<repository-name>` or
+bundle. The release component ID defaults to `wheel:<repository-name>` or
 `conda:<repository-name>` and can be overridden with `release-unit` when the
-release-platform catalog uses a different ID. The shared action reads exact
-package metadata from the built files and uploads
+release catalog needs to track multiple producer families in one repository as
+distinct components. `release-unit` is the API's historical name for this ID.
+It is a string label, not a file, directory, artifact bundle, or list of files.
+The same ID is written on every primary file in the component and is reused
+across its matrix variants, such as CUDA version, Python version, and
+architecture, so release assembly can group those outputs together. Most
+standard Conda and wheel callers should leave `release-unit` unset. The shared
+action reads exact package metadata from the built files and uploads
 `release-build-output-<artifact-name>`. No release-specific caller
 configuration is required for the standard builders.
 
-`custom-job.yaml` remains explicitly opt-in through `release-build-output` and
-also requires `release-unit`, `release-output-directory`, `release-artifacts`,
-and either `release-package` or
-`release-package-file`. Descriptors may name producer-supplied SBOM,
-provenance, and signature sidecars relative to the output directory. Each path
-or glob must resolve to exactly one file; the action never guesses a release
-artifact.
+`custom-job.yaml` remains explicitly opt-in through one `release-build-output`
+JSON object. An empty string disables companion generation. A non-empty object
+requires `artifact_type: custom`, `component_id`, a non-empty `artifacts`
+array, and exactly one of `package` or `package_file`; `output_directory`
+defaults to the job's working directory. Descriptors may name
+producer-supplied SBOM, provenance, and
+signature sidecars relative to the output directory. Each path or glob must
+resolve to exactly one file; the action never guesses a release artifact.
+
+| Custom-job input | Why and when to use it |
+| --- | --- |
+| `release-build-output` | Supply one complete JSON configuration only when the upload is a release package bundle. Its presence enables companion generation; an empty value disables it. The shared action reports malformed JSON, unknown keys, missing fields, conflicting package sources, and invalid artifact descriptors before materialization. |
+
+The canonical schema is
+[`release-build-output/config.schema.json`](https://github.com/rapidsai/shared-actions/blob/a18a4a7ac572366c09c15641ec274cc6f15bfb5d/release-build-output/config.schema.json).
+Pre-commit exercises the schema validator against valid and invalid fixtures.
+The pipeline additionally checks properties that cannot be known before the
+build, including whether package files and artifact/evidence globs resolve to
+exactly one file.
 
 ```yaml
 cuvs-java-build:
@@ -51,11 +69,14 @@ cuvs-java-build:
     # existing build inputs omitted
     artifact-name: cuvs-java-cuda12.9.1
     file_to_upload: java/cuvs-java/target/
-    release-build-output: true
-    release-output-directory: java/cuvs-java/target
-    release-unit: maven:cuvs-java
-    release-package-file: cuvs-java.release-package.json
-    release-artifacts: '[{"path":"cuvs-java-*-x86_64-cuda*.jar"}]'
+    release-build-output: >-
+      {
+        "artifact_type": "custom",
+        "component_id": "maven:cuvs-java",
+        "output_directory": "java/cuvs-java/target",
+        "package_file": "cuvs-java.release-package.json",
+        "artifacts": [{"path": "cuvs-java-*-x86_64-cuda*.jar"}]
+      }
 ```
 
 The release coordinator downloads both artifacts into the same directory, for

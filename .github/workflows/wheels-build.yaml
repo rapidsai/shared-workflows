@@ -79,7 +79,10 @@ on:
         type: string
         default: ''
         required: false
-        description: "Override the release-platform unit ID; defaults to wheel:<repository-name>"
+        description: >-
+          Release component ID: a string label, not a file or bundle. It is written to each manifest entry and groups
+          files and matrix variants for release assembly. Leave empty to use wheel:<repository-name>; override only
+          when one repository's wheel producers must be tracked as distinct components.
       extra-repo:
         required: false
         type: string
@@ -305,11 +308,14 @@ jobs:
 
       - name: Create wheel release build-output companion
         if: ${{ inputs.upload-artifacts }}
-        uses: rapidsai/shared-actions/release-build-output-dispatch@3a9568fc2c9bc9fd05e4cf76a73d9ad481f93ac5 # agent/release-build-output-container
+        uses: rapidsai/shared-actions/release-build-output-dispatch@a18a4a7ac572366c09c15641ec274cc6f15bfb5d # agent/release-build-output-container
         with:
-          artifact-type: wheel
-          output-directory: ${{ steps.package-name.outputs.WHEEL_OUTPUT_DIR }}
-          release-unit: ${{ inputs.release-unit || format('wheel:{0}', github.event.repository.name) }}
+          config: >-
+            {
+              "artifact_type": "wheel",
+              "component_id": ${{ toJSON(inputs.release-unit || format('wheel:{0}', github.event.repository.name)) }},
+              "output_directory": ${{ toJSON(steps.package-name.outputs.WHEEL_OUTPUT_DIR) }}
+            }
           source-artifact-name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
           source-sha: ${{ inputs.sha || github.sha }}
 
