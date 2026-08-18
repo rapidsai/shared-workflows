@@ -308,7 +308,6 @@ jobs:
               "artifact_directory": ${{ toJSON(steps.package-name.outputs.WHEEL_OUTPUT_DIR) }}
             }
           source-artifact-name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
-          source-sha: ${{ env.RAPIDS_SHA }}
 
       - name: Upload additional artifacts
         if: "!cancelled()"

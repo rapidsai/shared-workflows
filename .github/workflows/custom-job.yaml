@@ -242,7 +242,6 @@ jobs:
         with:
           config: ${{ inputs.release-catalog-config }}
           source-artifact-name: ${{ inputs.artifact-name }}
-          source-sha: ${{ env.RAPIDS_SHA }}
       - name: Upload additional artifacts
         if: "!cancelled()"
         run: rapids-upload-artifacts-dir "custom-job-$(arch)"
