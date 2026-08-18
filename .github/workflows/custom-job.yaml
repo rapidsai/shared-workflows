@@ -107,9 +107,9 @@ on:
         required: false
       release-catalog-config:
         description: >-
-          Optional JSON configuration for the `shared-actions/release-build-output-dispatch` action. When non-empty,
-          this job uploads an additional `release-build-output-<artifact-name>` GitHub Actions artifact. See
-          https://github.com/rapidsai/shared-actions/tree/main/release-build-output for configuration details.
+          Optional JSON configuration for the shared-actions release catalog companion. When non-empty, this job
+          uploads an additional `release-catalog-<artifact-name>` GitHub Actions artifact. See
+          https://github.com/rapidsai/shared-actions/tree/main/release-catalog for configuration details.
         default: ''
         type: string
         required: false
@@ -236,9 +236,9 @@ jobs:
           name: ${{ inputs.artifact-name }}
           path: ${{ inputs.file_to_upload }}
           if-no-files-found: ignore
-      - name: Create release build-output companion
+      - name: Create release catalog companion
         if: ${{ inputs.release-catalog-config != '' }}
-        uses: rapidsai/shared-actions/release-build-output-dispatch@a18a4a7ac572366c09c15641ec274cc6f15bfb5d # agent/release-build-output-container
+        uses: rapidsai/shared-actions/release-catalog-dispatch@45e84f709fde5e3f1b5960ed0510599c5f388333 # shared-actions PR 136
         with:
           config: ${{ inputs.release-catalog-config }}
           source-artifact-name: ${{ inputs.artifact-name }}
