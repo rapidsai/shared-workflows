@@ -105,12 +105,9 @@ on:
         default: false
         type: boolean
         required: false
-      release-build-output:
+      release-build-config:
         description: >-
-          Optional JSON object describing a custom release package bundle. A non-empty value creates the companion;
-          leave empty for logs, documentation, tests, and other non-release artifacts. Requires artifact_type set to
-          custom, component_id, artifacts, and exactly one of package or package_file; output_directory defaults to
-          '.'. The shared action validates every field before inspecting build outputs.
+          Optional JSON string with additional configuration for the `shared-actions/release-build-output-dispatch` action. See https://github.com/rapidsai/shared-actions/tree/main/release-build-output for details. If non-empty, creates a release manifest for artifacts produced by this job.
         default: ''
         type: string
         required: false
