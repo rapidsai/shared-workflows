@@ -107,7 +107,9 @@ on:
         required: false
       release-build-config:
         description: >-
-          Optional JSON string with additional configuration for the `shared-actions/release-build-output-dispatch` action. See https://github.com/rapidsai/shared-actions/tree/main/release-build-output for details. If non-empty, creates a release manifest for artifacts produced by this job.
+          Optional JSON configuration for the `shared-actions/release-build-output-dispatch` action. When non-empty,
+          this job uploads an additional `release-build-output-<artifact-name>` GitHub Actions artifact. See
+          https://github.com/rapidsai/shared-actions/tree/main/release-build-output for configuration details.
         default: ''
         type: string
         required: false
@@ -235,12 +237,12 @@ jobs:
           path: ${{ inputs.file_to_upload }}
           if-no-files-found: ignore
       - name: Create release build-output companion
-        if: ${{ inputs.release-build-output != '' }}
+        if: ${{ inputs.release-build-config != '' }}
         uses: rapidsai/shared-actions/release-build-output-dispatch@a18a4a7ac572366c09c15641ec274cc6f15bfb5d # agent/release-build-output-container
         with:
-          config: ${{ inputs.release-build-output }}
+          config: ${{ inputs.release-build-config }}
           source-artifact-name: ${{ inputs.artifact-name }}
-          source-sha: ${{ inputs.sha || github.sha }}
+          source-sha: ${{ env.RAPIDS_SHA }}
       - name: Upload additional artifacts
         if: "!cancelled()"
         run: rapids-upload-artifacts-dir "custom-job-$(arch)"
