@@ -234,7 +234,7 @@ jobs:
 
       - name: Create Conda release catalog companion
         if: ${{ inputs.upload-artifacts }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@c4b135aba0b7c5e9fa97f384505efeb17b8c5aa9 # shared-actions PR 136
+        uses: rapidsai/shared-actions/release-catalog-dispatch@6cdff151c40c97551fdf2abd5d977580f94ed7e1 # shared-actions PR 136
         with:
           config: >-
             {
