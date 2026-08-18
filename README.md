@@ -108,7 +108,7 @@ bundle.
 
 `custom-job.yaml` can be used to produce artifacts, but the generation of extra
 metadata files are opt-in, not automatic. Supplying a non-empty
-`release-build-config` causes the job to upload the additional
+`release-catalog-config` causes the job to upload the additional
 release-build-output artifact; leaving it empty uploads only the original
 artifact.
 

@@ -305,7 +305,7 @@ jobs:
           config: >-
             {
               "artifact_type": "wheel",
-              "component_id": ${{ toJSON(format('wheel:{0}', github.event.repository.name)) }},
+              "release_catalog_key": ${{ toJSON(format('wheel:{0}', github.event.repository.name)) }},
               "output_directory": ${{ toJSON(steps.package-name.outputs.WHEEL_OUTPUT_DIR) }}
             }
           source-artifact-name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
