@@ -239,7 +239,7 @@ jobs:
           config: >-
             {
               "release_catalog_key": ${{ toJSON(format('conda:{0}', github.event.repository.name)) }},
-              "output_directory": ${{ toJSON(steps.package-name.outputs.CONDA_OUTPUT_DIR) }}
+              "artifact_directory": ${{ toJSON(steps.package-name.outputs.CONDA_OUTPUT_DIR) }}
             }
           source-artifact-name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
           source-sha: ${{ env.RAPIDS_SHA }}
