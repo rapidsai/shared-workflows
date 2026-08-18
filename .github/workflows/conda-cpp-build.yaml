@@ -233,7 +233,6 @@ jobs:
         with:
           config: >-
             {
-              "artifact_type": "conda",
               "release_catalog_key": ${{ toJSON(format('conda:{0}', github.event.repository.name)) }},
               "output_directory": ${{ toJSON(steps.package-name.outputs.CONDA_OUTPUT_DIR) }}
             }
