@@ -233,7 +233,7 @@ jobs:
 
       - name: Create Conda release catalog companion
         if: ${{ inputs.build_type == 'release-candidate' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@d2f44b9e8cd705357c8e12c0b07fea3dd9b893a0 # shared-actions PR 136 candidate-store head
+        uses: rapidsai/shared-actions/release-catalog-dispatch@d2f44b948645ee187102bf586d2ea44596a637c1 # shared-actions PR 136 candidate-store head
         with:
           config: >-
             {
