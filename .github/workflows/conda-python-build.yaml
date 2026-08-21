@@ -53,6 +53,10 @@ on:
         required: false
         type: string
         default: "auto"
+      release-candidate-tag:
+        description: "Final source tag created locally for a release-candidate build; it is never pushed."
+        type: string
+        default: ""
       matrix_filter:
         description: |
           jq expression which modifies the matrix.
@@ -178,6 +182,7 @@ jobs:
         # Candidate orchestration retains its own input mode, while RAPIDS
         # build helpers use the established nightly dependency behavior.
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type == 'release-candidate' && 'nightly' || inputs.build_type }}
+        RAPIDS_RELEASE_CANDIDATE: ${{ inputs.build_type == 'release-candidate' }}
         RAPIDS_DATETIME_STRING: ${{ inputs.build-datetime }}
     steps:
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
@@ -191,6 +196,15 @@ jobs:
           ref: ${{ inputs.sha }}
           fetch-depth: 0
           persist-credentials: true
+      - name: Create local release-candidate tag
+        if: ${{ inputs.build_type == 'release-candidate' }}
+        env:
+          RELEASE_CANDIDATE_TAG: ${{ inputs.release-candidate-tag }}
+          RELEASE_CANDIDATE_SHA: ${{ inputs.sha }}
+        run: |
+          test -n "${RELEASE_CANDIDATE_TAG}"
+          git tag --force "${RELEASE_CANDIDATE_TAG}" "${RELEASE_CANDIDATE_SHA}"
+          git show-ref --verify --quiet "refs/tags/${RELEASE_CANDIDATE_TAG}"
       - name: Setup caller cache
         if: inputs.cache-paths != '' || inputs.cache-key-prefix != '' || inputs.cache-key-files != '' || inputs.cache-environment != ''
         uses: rapidsai/shared-actions/setup-caller-cache@main
@@ -314,7 +328,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates
       - name: Create Conda release catalog companion
         if: ${{ inputs.build_type == 'release-candidate' }}
-        uses: rapidsai/shared-actions/release-catalog@4f580aef2a239f6c7b44f98ef526ae83b7543c78 # shared-actions PR 136 merged
+        uses: rapidsai/shared-actions/release-catalog-dispatch@079aafb321c9a87d5741a79234d65ad30f1e9bb0 # shared-actions PR 136 candidate-store head
         with:
           config: >-
             {
