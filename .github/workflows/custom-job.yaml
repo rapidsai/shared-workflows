@@ -105,6 +105,14 @@ on:
         default: false
         type: boolean
         required: false
+      release-catalog-config:
+        description: >-
+          Optional JSON configuration for the shared-actions release catalog companion. When non-empty, this job
+          uploads an additional `release-catalog-<artifact-name>` GitHub Actions artifact. See
+          https://github.com/rapidsai/shared-actions/tree/main/release-catalog for configuration details.
+        default: ''
+        type: string
+        required: false
 
 defaults:
   run:
@@ -228,6 +236,12 @@ jobs:
           name: ${{ inputs.artifact-name }}
           path: ${{ inputs.file_to_upload }}
           if-no-files-found: ignore
+      - name: Create release catalog companion
+        if: ${{ inputs.release-catalog-config != '' }}
+        uses: rapidsai/shared-actions/release-catalog-dispatch@32a308ab234f7381dd611056747b4c1ac30d2a34 # shared-actions PR 136 canary head
+        with:
+          config: ${{ inputs.release-catalog-config }}
+          source-artifact-name: ${{ inputs.artifact-name }}
       - name: Upload additional artifacts
         if: "!cancelled()"
         run: rapids-upload-artifacts-dir "custom-job-$(arch)"
