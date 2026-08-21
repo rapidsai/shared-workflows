@@ -2,7 +2,7 @@ on:
   workflow_call:
     inputs:
       build_type:
-        description: "One of: [branch, nightly, pull-request]"
+        description: "One of: [branch, nightly, pull-request, release-candidate]"
         required: true
         type: string
       branch:
@@ -44,6 +44,10 @@ on:
         default: true
         required: false
         description: "One of [true, false], true if artifacts should be uploaded to GitHub's artifact store"
+      candidate-train-sha256:
+        description: "Canonical SHA-256 of the release train; required for release-candidate builds."
+        type: string
+        default: ""
       matrix_filter:
         description: |
           jq expression which modifies the matrix.
@@ -200,7 +204,7 @@ jobs:
           MAMBA_USE_SHARDED_REPODATA: false
           RATTLER_SHARDED: false
       - name: Get Package Name and Location
-        if: ${{ inputs.upload-artifacts }}
+        if: ${{ inputs.upload-artifacts || inputs.build_type == 'release-candidate' }}
         env:
           # Pass RAPIDS_PACKAGE_NAME from cpp-build step if available
           RAPIDS_PACKAGE_NAME: ${{ steps.cpp-build.outputs.rapids-package-name }}
@@ -214,22 +218,22 @@ jobs:
           echo "CONDA_OUTPUT_DIR=${RAPIDS_CONDA_BLD_OUTPUT_DIR}" >> "${GITHUB_OUTPUT}"
         id: package-name
       - name: Show files to be uploaded
-        if: ${{ inputs.upload-artifacts }}
+        if: ${{ inputs.upload-artifacts || inputs.build_type == 'release-candidate' }}
         env:
           CONDA_OUTPUT_DIR: ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
         run: |
           echo "Contents of directory to be uploaded:"
           ls -R "${CONDA_OUTPUT_DIR}"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ inputs.upload-artifacts }}
+        if: ${{ inputs.upload-artifacts && inputs.build_type != 'release-candidate' }}
         with:
           if-no-files-found: 'error'
           name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
           path: ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
 
       - name: Create Conda release catalog companion
-        if: ${{ inputs.upload-artifacts }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@32a308ab234f7381dd611056747b4c1ac30d2a34 # shared-actions PR 136 canary head
+        if: ${{ inputs.build_type == 'release-candidate' }}
+        uses: rapidsai/shared-actions/release-catalog-dispatch@8fef990732014851c3d5afcf931c2506f7e175b0 # shared-actions PR 136 candidate-store head
         with:
           config: >-
             {
@@ -237,8 +241,10 @@ jobs:
               "artifact_directory": ${{ toJSON(steps.package-name.outputs.CONDA_OUTPUT_DIR) }}
             }
           source-artifact-name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
+          candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
+          upload-to-s3: 'true'
       - name: Upload additional artifacts
-        if: "!cancelled()"
+        if: ${{ !cancelled() && inputs.build_type != 'release-candidate' }}
         run: rapids-upload-artifacts-dir "cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)"
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main

@@ -2,7 +2,7 @@ on:
   workflow_call:
     inputs:
       build_type:
-        description: "One of: [branch, nightly, pull-request]"
+        description: "One of: [branch, nightly, pull-request, release-candidate]"
         required: true
         type: string
       branch:
@@ -107,12 +107,16 @@ on:
         required: false
       release-catalog-config:
         description: >-
-          Optional JSON configuration for the shared-actions release catalog companion. When non-empty, this job
-          uploads an additional `release-catalog-<artifact-name>` GitHub Actions artifact. See
+          Optional JSON configuration for the shared-actions release catalog action. In release-candidate mode,
+          it writes the declared files and evidence to the private candidate store. See
           https://github.com/rapidsai/shared-actions/tree/main/release-catalog for configuration details.
         default: ''
         type: string
         required: false
+      candidate-train-sha256:
+        description: "Canonical SHA-256 of the release train; required for release-candidate builds."
+        type: string
+        default: ""
 
 defaults:
   run:
@@ -231,19 +235,22 @@ jobs:
           MAMBA_USE_SHARDED_REPODATA: false
           RATTLER_SHARDED: false
       - name: Upload file to GitHub Artifact
+        if: ${{ inputs.build_type != 'release-candidate' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ inputs.artifact-name }}
           path: ${{ inputs.file_to_upload }}
           if-no-files-found: ignore
       - name: Create release catalog companion
-        if: ${{ inputs.release-catalog-config != '' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@32a308ab234f7381dd611056747b4c1ac30d2a34 # shared-actions PR 136 canary head
+        if: ${{ inputs.build_type == 'release-candidate' && inputs.release-catalog-config != '' }}
+        uses: rapidsai/shared-actions/release-catalog-dispatch@8fef990732014851c3d5afcf931c2506f7e175b0 # shared-actions PR 136 candidate-store head
         with:
           config: ${{ inputs.release-catalog-config }}
           source-artifact-name: ${{ inputs.artifact-name }}
+          candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
+          upload-to-s3: 'true'
       - name: Upload additional artifacts
-        if: "!cancelled()"
+        if: ${{ !cancelled() && inputs.build_type != 'release-candidate' }}
         run: rapids-upload-artifacts-dir "custom-job-$(arch)"
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
