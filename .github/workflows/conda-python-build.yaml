@@ -175,7 +175,9 @@ jobs:
     container:
       image: rapidsai/ci-conda:26.12-cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
       env:
-        RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
+        # Candidate orchestration retains its own input mode, while RAPIDS
+        # build helpers use the established nightly dependency behavior.
+        RAPIDS_BUILD_TYPE: ${{ inputs.build_type == 'release-candidate' && 'nightly' || inputs.build_type }}
         RAPIDS_DATETIME_STRING: ${{ inputs.build-datetime }}
     steps:
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
