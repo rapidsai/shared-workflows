@@ -238,7 +238,7 @@ jobs:
           if-no-files-found: ignore
       - name: Create release catalog companion
         if: ${{ inputs.release-catalog-config != '' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@6cdff151c40c97551fdf2abd5d977580f94ed7e1 # shared-actions PR 136
+        uses: rapidsai/shared-actions/release-catalog-dispatch@32a308ab234f7381dd611056747b4c1ac30d2a34 # shared-actions PR 136 canary head
         with:
           config: ${{ inputs.release-catalog-config }}
           source-artifact-name: ${{ inputs.artifact-name }}
