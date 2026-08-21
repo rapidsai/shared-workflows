@@ -243,7 +243,7 @@ jobs:
           if-no-files-found: ignore
       - name: Create release catalog companion
         if: ${{ inputs.build_type == 'release-candidate' && inputs.release-catalog-config != '' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@8fef990732014851c3d5afcf931c2506f7e175b0 # shared-actions PR 136 candidate-store head
+        uses: rapidsai/shared-actions/release-catalog-dispatch@d2f44b9e8cd705357c8e12c0b07fea3dd9b893a0 # shared-actions PR 136 candidate-store head
         with:
           config: ${{ inputs.release-catalog-config }}
           source-artifact-name: ${{ inputs.artifact-name }}
