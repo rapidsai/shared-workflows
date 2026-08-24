@@ -2,7 +2,7 @@ on:
   workflow_call:
     inputs:
       build_type:
-        description: "One of: [branch, nightly, pull-request]"
+        description: "One of: [branch, nightly, pull-request, release-candidate]"
         required: true
         type: string
       branch:
@@ -71,6 +71,9 @@ permissions:
 
 jobs:
   upload:
+    # Candidate artifacts are staged privately by the build workflow. They must
+    # not enter either public Anaconda.org channel before rollover approval.
+    if: ${{ inputs.build_type != 'release-candidate' }}
     runs-on: linux-amd64-cpu4
     container:
       image: "python:3.14-slim"
