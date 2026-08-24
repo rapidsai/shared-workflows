@@ -37,6 +37,14 @@ on:
           For example, 'map(select(.ARCH == "amd64"))' to achieve "only run amd64 jobs".
         type: string
         default: "."
+      continue-on-error:
+        description: |
+          If true, job failures do not result in workflow failures (useful for implementing
+          optional CI workflows).
+          See https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idcontinue-on-error
+        type: boolean
+        required: false
+        default: false
       container-options:
         description: |
           Command-line arguments passed to 'docker run' when starting the container this workflow runs in.
@@ -145,6 +153,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.matrix) }}
     runs-on: "linux-${{ matrix.ARCH }}-gpu-${{ matrix.GPU }}-${{ matrix.DRIVER }}-1"
+    continue-on-error: ${{ inputs.continue-on-error }}
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
       RAPIDS_COVERAGE_DIR: ${{ github.workspace }}/coverage-results
