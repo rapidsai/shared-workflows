@@ -281,7 +281,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates
       - name: Create Conda release catalog companion
         if: ${{ inputs.build_type == 'release-candidate' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@079aafb321c9a87d5741a79234d65ad30f1e9bb0 # shared-actions PR 136 candidate-store head
+        uses: rapidsai/shared-actions/release-catalog-dispatch@6426bfcb86bd9901838d4c6f07f8975458c06dc4 # release-candidate dependency selector
         with:
           config: >-
             {
