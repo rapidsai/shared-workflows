@@ -121,6 +121,18 @@ on:
         description: "Final source tag created locally for a release-candidate build; it is never pushed."
         type: string
         default: ""
+      candidate-docs:
+        description: "Prepare candidate dependencies and stage RAPIDS_DOCS_DIR privately instead of publishing docs."
+        type: boolean
+        default: false
+      candidate-cuda-version:
+        description: "CUDA version used to resolve candidate Conda dependencies for a documentation job."
+        type: string
+        default: ""
+      candidate-python-version:
+        description: "Python version used to resolve candidate Conda dependencies for a documentation job."
+        type: string
+        default: ""
 
 defaults:
   run:
@@ -244,6 +256,36 @@ jobs:
           path: "./tool/"
           fetch-depth: 0
           persist-credentials: false
+      - name: Configure candidate dependency store credentials
+        if: ${{ inputs.build_type == 'release-candidate' && inputs.candidate-docs }}
+        uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6.2.2
+        with:
+          aws-region: us-east-2
+          role-duration-seconds: 43200 # 12h
+          role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates
+      - name: Prepare candidate documentation dependencies
+        if: ${{ inputs.build_type == 'release-candidate' && inputs.candidate-docs }}
+        uses: rapidsai/shared-actions/release-candidate-dependencies@agent/release-build-output-container
+        with:
+          candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
+          prepare-conda-channel: true
+          artifact-family: conda
+          arch: ${{ inputs.arch }}
+          cuda-version: ${{ inputs.candidate-cuda-version }}
+          python-version: ${{ inputs.candidate-python-version }}
+      - name: Stage candidate documentation privately
+        if: ${{ inputs.build_type == 'release-candidate' && inputs.candidate-docs }}
+        uses: rapidsai/shared-actions/release-candidate-docs@agent/release-build-output-container
+        with:
+          candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
+      - name: Set candidate documentation matrix
+        if: ${{ inputs.build_type == 'release-candidate' && inputs.candidate-docs }}
+        run: |
+          echo "RAPIDS_CUDA_VERSION=${CANDIDATE_CUDA_VERSION}" >>"${GITHUB_ENV}"
+          echo "RAPIDS_PY_VERSION=${CANDIDATE_PYTHON_VERSION}" >>"${GITHUB_ENV}"
+        env:
+          CANDIDATE_CUDA_VERSION: ${{ inputs.candidate-cuda-version }}
+          CANDIDATE_PYTHON_VERSION: ${{ inputs.candidate-python-version }}
       - name: Run script
         run: |
           ulimit -n "$(ulimit -Hn)"
