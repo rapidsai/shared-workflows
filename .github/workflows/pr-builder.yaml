@@ -11,7 +11,7 @@ on:
 
 jobs:
   run:
-    runs-on: linux-amd64-cpu4
+    runs-on: ubuntu-slim
     steps:
       # This reusable workflow should depend on all other jobs in the calling workflow.
       - name: "Check all dependent jobs"
