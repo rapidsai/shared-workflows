@@ -36,7 +36,7 @@ on:
         type: string
       version-map:
         description: |
-          JSON map of RAPIDS version to tag, e.g. '{"26.08": "legacy", "26.10": "stable"}'
+          JSON map of tag to RAPIDS version, e.g. '{"stable": "26.08", "nightly": "26.10"}'
         required: true
         type: string
     secrets:
@@ -113,10 +113,11 @@ jobs:
       - name: Compute Akamai request name
         id: akamai
         env:
+          PROJECT: ${{ matrix.project }}
           REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
         run: |
-          name="$(echo "${REPO}" | tr '[:upper:]' '[:lower:]' | tr '/' '-')-${RUN_ID}"
+          name="$(echo "${REPO}" | tr '[:upper:]' '[:lower:]' | tr '/' '-')-${RUN_ID}-${PROJECT}"
           echo "request-name=${name}" >> "${GITHUB_OUTPUT}"
 
       - name: Configure AWS credentials
@@ -151,4 +152,63 @@ jobs:
           target-aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
           target-s3-bucket: ${{ secrets.target-s3-bucket }}
           target-s3-key-suffix: ${{ steps.version.outputs.rapids-version-major-minor }}
+          target-s3-key: ${{ matrix.project }}
+
+  publish-versions-json:
+    needs: compute-matrix
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.container-image }} # zizmor: ignore[unpinned-images]
+      options: ${{ inputs.container-options }}
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJSON(needs.compute-matrix.outputs.matrix) }}
+    steps:
+
+      - name: Generate versions.json
+        env:
+          PROJECT: ${{ matrix.project }}
+          VERSION_MAP: ${{ inputs.version-map }}
+        run: |
+          jq -n -S \
+            --arg project "${PROJECT}" \
+            --argjson map "${VERSION_MAP}" \
+            '
+              $map
+              | to_entries
+              | map({
+                  name: "\(.value) (\(.key))",
+                  url: "https://docs.nvidia.com/\($project)/\(.value)/",
+                  version: .value
+                } + (if .key == "stable" then {preferred: true} else {}end))
+              | sort_by(.version)
+              | reverse
+            ' > versions.json
+
+      - name: Compute Akamai request name
+        id: akamai
+        env:
+          PROJECT: ${{ matrix.project }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          name="$(echo "${REPO}" | tr '[:upper:]' '[:lower:]' | tr '/' '-')-${RUN_ID}-${PROJECT}-versions-json"
+          echo "request-name=${name}" >> "${GITHUB_OUTPUT}"
+
+      - name: Publish versions.json
+        uses: rapidsai/shared-actions/publish-one-doc@josephine/x-org-138-publish-one-doc
+        with:
+          akamai-access-token: ${{ secrets.akamai-access-token }}
+          akamai-client-secret: ${{ secrets.akamai-client-secret }}
+          akamai-client-token: ${{ secrets.akamai-client-token }}
+          akamai-emails-to-notify: ${{ secrets.akamai-emails-to-notify }}
+          akamai-host: ${{ secrets.akamai-host }}
+          akamai-request-name: ${{ steps.akamai.outputs.request-name }}-versions
+          dry-run: ${{ inputs.dry-run }}
+          file-path: ./versions.json
+          target-aws-access-key-id: ${{ secrets.target-aws-access-key-id }}
+          target-aws-region: ${{ secrets.target-aws-region }}
+          target-aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
+          target-s3-bucket: ${{ secrets.target-s3-bucket }}
           target-s3-key: ${{ matrix.project }}
