@@ -36,7 +36,7 @@ on:
         type: string
       version-map:
         description: |
-          JSON map of tag to RAPIDS version, e.g. '{"stable": "26.08", "nightly": "26.10"}'
+          JSON map of tag to library version, e.g. '{"stable": "26.08", "nightly": "26.10"}'
         required: true
         type: string
     secrets:
