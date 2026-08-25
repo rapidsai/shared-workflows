@@ -198,7 +198,7 @@ jobs:
           echo "request-name=${name}" >> "${GITHUB_OUTPUT}"
 
       - name: Publish versions.json
-        uses: rapidsai/shared-actions/publish-one-doc@josephine/x-org-138-publish-one-doc
+        uses: rapidsai/shared-actions/publish-one-doc@main
         with:
           akamai-access-token: ${{ secrets.akamai-access-token }}
           akamai-client-secret: ${{ secrets.akamai-client-secret }}
