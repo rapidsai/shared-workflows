@@ -185,6 +185,7 @@ jobs:
               | sort_by(.version)
               | reverse
             ' > versions.json
+          cat versions.json
 
       - name: Compute Akamai request name
         id: akamai
