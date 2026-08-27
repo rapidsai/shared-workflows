@@ -275,7 +275,7 @@ jobs:
           python-version: ${{ inputs.candidate-python-version }}
       - name: Stage candidate documentation privately
         if: ${{ inputs.build_type == 'release-candidate' && inputs.candidate-docs }}
-        uses: rapidsai/shared-actions/release-candidate-docs@5c642c636721e060cdb442854ac29a668b188f01
+        uses: rapidsai/shared-actions/release-candidate-docs@adea797cd29faec13f87dafacca6a2fd6989041b
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
       - name: Set candidate documentation matrix
@@ -316,7 +316,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates
       - name: Create release catalog companion
         if: ${{ inputs.build_type == 'release-candidate' && inputs.release-catalog-config != '' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@5c642c636721e060cdb442854ac29a668b188f01 # shared-actions candidate-store head
+        uses: rapidsai/shared-actions/release-catalog-dispatch@adea797cd29faec13f87dafacca6a2fd6989041b
         with:
           config: ${{ inputs.release-catalog-config }}
           source-artifact-name: ${{ inputs.artifact-name }}
