@@ -265,7 +265,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates
       - name: Prepare candidate documentation dependencies
         if: ${{ inputs.build_type == 'release-candidate' && inputs.candidate-docs }}
-        uses: rapidsai/shared-actions/release-candidate-dependencies@4fcd411e184134802dc64776478fc04a7f74e873
+        uses: rapidsai/shared-actions/release-candidate-dependencies@2dd1a5325ec5a713322077a678bd7d7be4550dcb
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
           prepare-conda-channel: true
