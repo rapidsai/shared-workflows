@@ -270,7 +270,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates
       - name: Prepare candidate dependencies
         if: ${{ inputs.build_type == 'release-candidate' }}
-        uses: rapidsai/shared-actions/release-candidate-dependencies@8022eb6a3c37e0b2b866d4dde75a447c92255b73
+        uses: rapidsai/shared-actions/release-candidate-dependencies@cd9ad27353c65a1d62e6aee7f6ed1981707907a9
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
           artifact-family: wheel
@@ -352,7 +352,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates
       - name: Create wheel release catalog companion
         if: ${{ inputs.build_type == 'release-candidate' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@8022eb6a3c37e0b2b866d4dde75a447c92255b73
+        uses: rapidsai/shared-actions/release-catalog-dispatch@cd9ad27353c65a1d62e6aee7f6ed1981707907a9
         with:
           config: >-
             {
