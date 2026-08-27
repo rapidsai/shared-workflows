@@ -214,7 +214,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates
       - name: Prepare candidate dependencies
         if: ${{ inputs.build_type == 'release-candidate' }}
-        uses: rapidsai/shared-actions/release-candidate-dependencies@cf7d7ce1658b3ef1b0bd771b318b8a6e50a37038
+        uses: rapidsai/shared-actions/release-candidate-dependencies@80f3f73fe4a7b4a2e7cc9998ad1b65dfa6c8b789
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
           prepare-conda-channel: 'true'
@@ -281,7 +281,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates
       - name: Create Conda release catalog companion
         if: ${{ inputs.build_type == 'release-candidate' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@cf7d7ce1658b3ef1b0bd771b318b8a6e50a37038
+        uses: rapidsai/shared-actions/release-catalog-dispatch@80f3f73fe4a7b4a2e7cc9998ad1b65dfa6c8b789
         with:
           config: >-
             {
