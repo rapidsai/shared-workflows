@@ -165,7 +165,12 @@ jobs:
           echo "RAPIDS_PACKAGE_VERSION=${RELEASE_CANDIDATE_TAG#v}" >> "${GITHUB_ENV}"
           mkdir -p "${RUNNER_TEMP}/release-candidate-tools"
           printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "${RUNNER_TEMP}/release-candidate-tools/rapids-is-release-build"
+          # Repository scripts commonly replace RAPIDS_PACKAGE_VERSION with
+          # rapids-generate-version. In candidate mode that helper must emit
+          # the frozen final version rather than the normal nightly rc value.
+          printf '%s\n' '#!/usr/bin/env bash' "printf '%s\\n' \"\${RAPIDS_PACKAGE_VERSION:?}\"" > "${RUNNER_TEMP}/release-candidate-tools/rapids-generate-version"
           chmod +x "${RUNNER_TEMP}/release-candidate-tools/rapids-is-release-build"
+          chmod +x "${RUNNER_TEMP}/release-candidate-tools/rapids-generate-version"
           echo "${RUNNER_TEMP}/release-candidate-tools" >> "${GITHUB_PATH}"
       - name: Standardize repository information
         env:
