@@ -159,6 +159,11 @@ jobs:
         env:
           # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
           GH_TOKEN: ${{ github.token }}
+      - name: Setup proxy cache
+        uses: nv-gha-runners/setup-proxy-cache@main
+        continue-on-error: true
+        with:
+          enable-apt: true
       - name: Get PR Info
         if: startsWith(github.ref_name, 'pull-request/')
         id: get-pr-info
