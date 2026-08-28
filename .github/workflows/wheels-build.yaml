@@ -188,7 +188,14 @@ jobs:
           git show-ref --verify --quiet "refs/tags/${RELEASE_CANDIDATE_TAG}"
       - name: Force local release-candidate build context
         if: ${{ inputs.build_type == 'release-candidate' }}
+        env:
+          RELEASE_CANDIDATE_TAG: ${{ inputs.release-candidate-tag }}
         run: |
+          # Package build scripts may derive their version from
+          # RAPIDS_PACKAGE_VERSION rather than the locally-created tag.
+          # Preserve the final candidate version while using nightly helpers.
+          test -n "${RELEASE_CANDIDATE_TAG}"
+          echo "RAPIDS_PACKAGE_VERSION=${RELEASE_CANDIDATE_TAG#v}" >> "${GITHUB_ENV}"
           mkdir -p "${RUNNER_TEMP}/release-candidate-tools"
           printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "${RUNNER_TEMP}/release-candidate-tools/rapids-is-release-build"
           chmod +x "${RUNNER_TEMP}/release-candidate-tools/rapids-is-release-build"
