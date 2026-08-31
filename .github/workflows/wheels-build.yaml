@@ -176,7 +176,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: rapidsai/gha-tools
-          ref: 1dd86ba7622dd6ab23fc805babd49ecb99a29767
+          ref: 4ad4c79d92c1a198efc5217e09af8ba203c2d502
           path: candidate-gha-tools
           persist-credentials: false
       - name: Select frozen release-candidate version
@@ -186,14 +186,18 @@ jobs:
             echo "release-candidate source checkout has no VERSION file" >&2
             exit 1
           fi
-          IFS= read -r version < VERSION
+          IFS= read -r source_version < VERSION
+          version="${source_version}"
           if [[ "${version}" =~ ^[0-9]+\.[0-9]+$ ]]; then
             version="${version}.00"
           elif [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "release-candidate VERSION must contain two or three numeric components: ${version}" >&2
             exit 1
           fi
-          echo "RAPIDS_RELEASE_CANDIDATE_VERSION=${version}" >> "${GITHUB_ENV}"
+          {
+            echo "RAPIDS_RELEASE_CANDIDATE_SOURCE_VERSION=${source_version}"
+            echo "RAPIDS_RELEASE_CANDIDATE_VERSION=${version}"
+          } >> "${GITHUB_ENV}"
       - name: Select frozen release-candidate version helper
         if: ${{ inputs.build_type == 'release-candidate' }}
         run: echo "${GITHUB_WORKSPACE}/candidate-gha-tools/tools" >> "${GITHUB_PATH}"
