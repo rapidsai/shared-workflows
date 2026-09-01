@@ -274,7 +274,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates
       - name: Prepare candidate documentation dependencies
         if: ${{ inputs.build_type == 'release-candidate' && inputs.candidate-docs }}
-        uses: rapidsai/shared-actions/release-candidate-dependencies@b4aae817ddf55559ab25ffa4b980e4337e5ffb1a
+        uses: rapidsai/shared-actions/release-candidate-dependencies@f3d7ffc6ace7e7610aa75cc39360dd2b3756e9bf
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
           prepare-conda-channel: true
@@ -284,7 +284,7 @@ jobs:
           python-version: ${{ inputs.candidate-python-version }}
       - name: Stage candidate documentation privately
         if: ${{ inputs.build_type == 'release-candidate' && inputs.candidate-docs }}
-        uses: rapidsai/shared-actions/release-candidate-docs@b4aae817ddf55559ab25ffa4b980e4337e5ffb1a
+        uses: rapidsai/shared-actions/release-candidate-docs@f3d7ffc6ace7e7610aa75cc39360dd2b3756e9bf
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
       - name: Set candidate documentation matrix
@@ -325,7 +325,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates
       - name: Create release catalog companion
         if: ${{ inputs.build_type == 'release-candidate' && inputs.release-catalog-config != '' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@b4aae817ddf55559ab25ffa4b980e4337e5ffb1a
+        uses: rapidsai/shared-actions/release-catalog-dispatch@f3d7ffc6ace7e7610aa75cc39360dd2b3756e9bf
         with:
           config: ${{ inputs.release-catalog-config }}
           source-artifact-name: ${{ inputs.artifact-name }}
