@@ -6,6 +6,14 @@
 # this workflow owns matrix selection, runner/image construction, and the
 # <prefix>_<arch>_cu<CUDA-major> artifact naming convention.
 #
+# One invocation represents one Maven coordinate and uploads one GitHub
+# Actions artifact per classifier. That artifact may contain multiple files or
+# paths (for example, the main, sources, and Javadoc JARs plus a POM). Repos
+# with multiple coordinates invoke this workflow once per coordinate and use
+# job dependencies for ordering. For example, cuVS builds cuvs-java first and
+# then invokes this workflow again for cuvs-lucene, whose repository-owned
+# script downloads the matching cuvs-java classifier artifact.
+#
 # A test script, when provided, runs once per classifier using the same matrix.
 # This supports projects such as cuOpt that must prove a self-contained JAR on
 # a GPU in an image that does not contain the library used to build it.
@@ -49,7 +57,10 @@ on:
         required: true
         type: string
       file-to-upload:
-        description: "Path containing the Maven build outputs"
+        description: |
+          One path or a newline-separated list of paths containing the files
+          for this Maven coordinate. All paths are uploaded together as the
+          classifier's single GitHub Actions artifact.
         required: true
         type: string
       artifact-name-prefix:
