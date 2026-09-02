@@ -115,18 +115,6 @@ jobs:
         run: |
           echo rapids-version-major-minor="$(rapids-version-major-minor)" >> "${GITHUB_OUTPUT}"
 
-      - name: Check for tag
-        id: check-tag
-        working-directory: repo
-        env:
-          VERSION: ${{ steps.version.outputs.rapids-version-major-minor }}
-        run: |
-          if git ls-remote --exit-code --tags origin "refs/tags/${VERSION}"; then
-            echo "tag-exists=true" >> "${GITHUB_OUTPUT}"
-          else
-            echo "tag-exists=false" >> "${GITHUB_OUTPUT}"
-          fi
-
       - name: Compute Akamai request name
         id: akamai
         env:
@@ -174,10 +162,10 @@ jobs:
           target-s3-key-suffix: latest
           target-s3-key: ${{ matrix.project }}
 
-      # if on release/<version> and tagged
+      # if on release/<version>
       # publish <project>/<version>
       - name: Publish calendar version to docs.nvidia.com/<project>/<version>
-        if: startsWith(github.ref_name, 'release/') && steps.check-tag.outputs.tag-exists == 'true'
+        if: startsWith(github.ref_name, 'release/')
         uses: rapidsai/shared-actions/publish-docs@main
         with:
           akamai-access-token: ${{ secrets.akamai-access-token }}
