@@ -336,7 +336,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates
       - name: Create wheel release catalog companion
         if: ${{ inputs.build_type == 'release-candidate' }}
-        uses: rapidsai/shared-actions/release-catalog@29f75dfc370ce05ecd5226538ca3fb47f263bc0c # shared-actions PR 136 candidate-store head
+        uses: rapidsai/shared-actions/release-catalog@5008d0689cd66ec2f4911b12cdb731ea54b8acec # shared-actions PR 136 candidate-store head
         with:
           config: >-
             {
