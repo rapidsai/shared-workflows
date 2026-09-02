@@ -156,9 +156,7 @@ jobs:
     container:
       image: "rapidsai/ci-wheel:26.10-cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}"
       env:
-        # Candidate orchestration retains its own input mode, while RAPIDS
-        # build helpers use the established nightly dependency behavior.
-        RAPIDS_BUILD_TYPE: ${{ inputs.build_type == 'release-candidate' && 'nightly' || inputs.build_type }}
+        RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         RAPIDS_RELEASE_CANDIDATE: ${{ inputs.build_type == 'release-candidate' }}
         RAPIDS_DATETIME_STRING: ${{ inputs.build-datetime }}
     steps:
@@ -186,14 +184,6 @@ jobs:
           git tag --force "${RELEASE_CANDIDATE_TAG}" "${RELEASE_CANDIDATE_SHA}"
           git remote set-url --push origin no_push
           git show-ref --verify --quiet "refs/tags/${RELEASE_CANDIDATE_TAG}"
-      - name: Force local release-candidate build context
-        if: ${{ inputs.build_type == 'release-candidate' }}
-        run: |
-          mkdir -p "${RUNNER_TEMP}/release-candidate-tools"
-          printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "${RUNNER_TEMP}/release-candidate-tools/rapids-is-release-build"
-          chmod +x "${RUNNER_TEMP}/release-candidate-tools/rapids-is-release-build"
-          echo "${RUNNER_TEMP}/release-candidate-tools" >> "${GITHUB_PATH}"
-
       - name: Standardize repository information
         uses: rapidsai/shared-actions/rapids-github-info@main
         with:

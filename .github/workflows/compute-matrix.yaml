@@ -10,7 +10,7 @@ on:
         required: true
         type: string
       matrix_type:
-        description: "One of: [auto, nightly, pull-request]. 'auto' means 'choose a value based on what's provided via build_type'."
+        description: "One of: [auto, nightly, pull-request, release-candidate]. 'auto' means 'choose a value based on what's provided via build_type'."
         required: false
         type: string
         default: "auto"
@@ -65,6 +65,7 @@ jobs:
               - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
               - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
             nightly: *conda_cpp_build
+            release-candidate: *conda_cpp_build
 
           conda-cpp-tests:
             pull-request:
@@ -115,6 +116,7 @@ jobs:
               - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
               - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
             nightly: *conda_python_build
+            release-candidate: *conda_python_build
 
           conda-python-tests:
             pull-request:
@@ -166,6 +168,7 @@ jobs:
               - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
               - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
             nightly: *wheels_build
+            release-candidate: *wheels_build
 
           wheels-test:
             pull-request:
@@ -204,8 +207,8 @@ jobs:
               echo "Invalid build_type! Must be one of 'branch', 'nightly', 'pull-request', or 'release-candidate'."
               exit 1
           fi
-          if [[ "$MATRIX_TYPE" != "auto" ]] && [[ "$MATRIX_TYPE" != "nightly" ]] && [[ "$MATRIX_TYPE" != "pull-request" ]]; then
-              echo "Invalid matrix_type! Must be one of 'auto', 'nightly', or 'pull-request'."
+          if [[ "$MATRIX_TYPE" != "auto" ]] && [[ "$MATRIX_TYPE" != "nightly" ]] && [[ "$MATRIX_TYPE" != "pull-request" ]] && [[ "$MATRIX_TYPE" != "release-candidate" ]]; then
+              echo "Invalid matrix_type! Must be one of 'auto', 'nightly', 'pull-request', or 'release-candidate'."
               exit 1
           fi
           if ! jq -n -e '$ENV.MATRIX | fromjson | has($ENV.MATRIX_NAME)'; then
@@ -224,7 +227,7 @@ jobs:
 
           # only overwrite MATRIX_TYPE if it was set to 'auto'
           if [[ "${MATRIX_TYPE}" == "auto" ]]; then
-            if [[ "${BUILD_TYPE}" == "branch" || "${BUILD_TYPE}" == "release-candidate" ]]; then
+            if [[ "${BUILD_TYPE}" == "branch" ]]; then
               # Use the nightly matrix for branch tests
               MATRIX_TYPE="nightly"
             else
