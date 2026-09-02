@@ -264,7 +264,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates
       - name: Create Conda release catalog companion
         if: ${{ inputs.build_type == 'release-candidate' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@079aafb321c9a87d5741a79234d65ad30f1e9bb0 # shared-actions PR 136 candidate-store head
+        uses: rapidsai/shared-actions/release-catalog@29f75dfc370ce05ecd5226538ca3fb47f263bc0c # shared-actions PR 136 candidate-store head
         with:
           config: >-
             {
@@ -272,6 +272,7 @@ jobs:
               "artifact_directory": ${{ toJSON(steps.package-name.outputs.CONDA_OUTPUT_DIR) }}
             }
           source-artifact-name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
+          source-sha: ${{ env.RAPIDS_SHA }}
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
           upload-to-s3: 'true'
       - name: Upload additional artifacts
