@@ -211,9 +211,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: main  # we need main to determine the YY.MM version corresponding to "latest"
           path: repo
           persist-credentials: false
           fetch-depth: 0
+
+      - name: Read VERSION file
+        id: version
+        working-directory: repo
+        run: |
+          echo rapids-version-major-minor="$(rapids-version-major-minor)" >> "${GITHUB_OUTPUT}"
 
       - name: List git tags
         id: tags
@@ -263,15 +270,18 @@ jobs:
           PROJECT: ${{ matrix.project }}
           S3_VERSIONS: ${{ steps.s3-versions.outputs.versions }}
           TAGS: ${{ steps.tags.outputs.tags }}
+          LATEST_VERSION: ${{ steps.version.outputs.rapids-version-major-minor }}
         run: |
           # Keep only S3 versions that also have a matching git tag (i.e. released versions),
           # build a versions.json entry for each with its docs URL, and sort them newest-first.
           # Mark the newest entry as "preferred", then prepend a "latest" entry pointing at the
-          # /latest/ alias.
+          # /latest/ alias, with its "version" set according to the VERSION file currently on
+          # "main", otherwise the switcher will just show "Choose version".
           jq -n -S \
             --arg project "${PROJECT}" \
             --argjson s3_versions "${S3_VERSIONS}" \
             --argjson tags "${TAGS}" \
+            --arg latest_version "${LATEST_VERSION}" \
             '
               ($tags | unique) as $t
               | [$s3_versions | unique | .[] | select(. as $v | $t | index($v))]
@@ -283,7 +293,7 @@ jobs:
               | sort_by(.version)
               | reverse
               | if length > 0 then .[0] += {preferred: "true"} else . end
-              | [{name: "latest", url: "https://docs.nvidia.com/\($project)/latest/"}] + .
+              | [{name: "latest", url: "https://docs.nvidia.com/\($project)/latest/", version: $latest_version}] + .
             ' > versions.json
           cat versions.json
 
