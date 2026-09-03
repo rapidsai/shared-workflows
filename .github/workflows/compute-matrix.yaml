@@ -145,6 +145,22 @@ jobs:
               - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
               - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'gb300',      DRIVER: 'latest',   DEPENDENCIES: 'latest' }
 
+          docs-build:
+            pull-request: &docs_build
+              # Docs builds just need "any GPU". Centrallizing the matrix reduces the effort to switch
+              # to different runner types (e.g. to those that are cheaper or have more spare capacity).
+              #
+              # To make this safe to update when projects might be in the middle of migrations
+              # to add new Python / CUDA / OS, choose:
+              #
+              #   - amd64-only
+              #   - oldest-supported Python, CUDA, and operating system
+              #   - some GPU with low queue
+              #   - "latest" driver
+              #
+              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8', GPU: 'rtxpro6000', DRIVER: 'latest'}
+            nightly: *docs_build
+
           wheels-build:
             pull-request: &wheels_build
               # amd64
