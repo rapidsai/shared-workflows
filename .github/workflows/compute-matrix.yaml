@@ -147,7 +147,7 @@ jobs:
 
           docs-build:
             pull-request: &docs_build
-              # Docs builds just need "any GPU". Centrallizing the matrix reduces the effort to switch
+              # Docs builds just need any GPU. Centrallizing the matrix reduces the effort to switch
               # to different runner types (e.g. to those that are cheaper or have more spare capacity).
               #
               # To make this safe to update when projects might be in the middle of migrations
@@ -156,7 +156,7 @@ jobs:
               #   - amd64-only
               #   - oldest-supported Python, CUDA, and operating system
               #   - some GPU with low queue
-              #   - "latest" driver
+              #   - latest driver
               #
               - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8', GPU: 'rtxpro6000', DRIVER: 'latest'}
             nightly: *docs_build
