@@ -79,7 +79,9 @@ on:
         required: false
         default: ""
         description: |
-          Newline-separated files or directories to persist with actions/cache.
+          Newline-separated workspace-relative files or directories to persist with actions/cache.
+          Workspace-relative paths are required so actions/cache can access paths created in the
+          job container during its host-side post-job save step.
           Must be provided together with cache-key-prefix.
       cache-key-prefix:
         type: string
