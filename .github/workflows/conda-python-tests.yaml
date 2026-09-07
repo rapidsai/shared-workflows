@@ -77,6 +77,14 @@ on:
           When this is non-empty, that secret's value is used in place of the default repo-level token
           anywhere that environment variable GH_TOKEN is set. This is especially useful for downloading
           artifacts from other private repos, which repo tokens do not have access to.
+      numba-cache-key-prefix:
+        type: string
+        required: false
+        default: ""
+        description: |
+          When non-empty, restore and save Numba's CUDA compilation cache under this key prefix.
+          The workflow adds the Python, CUDA, architecture, Linux, and GPU matrix values so cached
+          device code is only reused in a compatible test environment.
     secrets:
       script-env-secret-1-key:
         description: |
@@ -205,6 +213,19 @@ jobs:
         continue-on-error: true
         with:
           enable-apt: true
+
+      - name: Restore Numba CUDA cache
+        if: inputs.numba-cache-key-prefix != ''
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ github.workspace }}/.cache/numba
+          key: ${{ inputs.numba-cache-key-prefix }}-cuda${{ matrix.CUDA_VER }}-py${{ matrix.PY_VER }}-${{ matrix.ARCH }}-${{ matrix.LINUX_VER }}-${{ matrix.GPU }}-${{ hashFiles('**/*.py', 'dependencies.yaml') }}
+          restore-keys: |
+            ${{ inputs.numba-cache-key-prefix }}-cuda${{ matrix.CUDA_VER }}-py${{ matrix.PY_VER }}-${{ matrix.ARCH }}-${{ matrix.LINUX_VER }}-${{ matrix.GPU }}-
+
+      - name: Configure Numba CUDA cache
+        if: inputs.numba-cache-key-prefix != ''
+        run: echo "NUMBA_CACHE_DIR=${GITHUB_WORKSPACE}/.cache/numba" >> "${GITHUB_ENV}"
 
       # Install latest rapidsai/sccache client and configure sccache-dist
       - name: Setup sccache-dist
