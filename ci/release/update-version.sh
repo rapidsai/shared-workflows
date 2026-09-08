@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2019-2023, NVIDIA CORPORATION.
+# Copyright (c) 2019-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 ###########################################
 # shared-workflows Version Updater #
 ###########################################
@@ -70,9 +70,21 @@ if [[ -z "$NEXT_FULL_TAG" ]]; then
 fi
 
 #Get <major>.<minor> for next version
-NEXT_MAJOR=$(echo $NEXT_FULL_TAG | awk '{split($0, a, "."); print a[1]}')
-NEXT_MINOR=$(echo $NEXT_FULL_TAG | awk '{split($0, a, "."); print a[2]}')
+NEXT_MAJOR=$(echo "$NEXT_FULL_TAG" | awk '{split($0, a, "."); print a[1]}')
+NEXT_MINOR=$(echo "$NEXT_FULL_TAG" | awk '{split($0, a, "."); print a[2]}')
 NEXT_SHORT_TAG=${NEXT_MAJOR}.${NEXT_MINOR}
+
+# RAPIDS advances on a two-month cadence. Keep versioned workflow examples
+# current so the release tooling's stale-version check distinguishes examples
+# maintained by this script from references that require manual review.
+if ((10#${NEXT_MINOR} <= 2)); then
+    PREVIOUS_MAJOR=$((10#${NEXT_MAJOR} - 1))
+    PREVIOUS_MINOR=$((10#${NEXT_MINOR} + 10))
+else
+    PREVIOUS_MAJOR=$((10#${NEXT_MAJOR}))
+    PREVIOUS_MINOR=$((10#${NEXT_MINOR} - 2))
+fi
+printf -v PREVIOUS_SHORT_TAG '%02d.%02d' "${PREVIOUS_MAJOR}" "${PREVIOUS_MINOR}"
 
 # Set branch references based on RUN_CONTEXT
 if [[ "${RUN_CONTEXT}" == "main" ]]; then
@@ -85,7 +97,7 @@ fi
 
 # Inplace sed replace; workaround for Linux and Mac
 function sed_runner() {
-    sed -i.bak ''"$1"'' $2 && rm -f ${2}.bak
+    sed -i.bak ''"$1"'' "$2" && rm -f "${2}.bak"
 }
 
 for FILE in .github/workflows/*.yaml; do
@@ -96,6 +108,12 @@ for FILE in .github/workflows/*.yaml; do
   # Update CI image tags
   sed_runner "/rapidsai\/ci.*:[0-9\.]*-/ s/:[0-9\.]*-/:${NEXT_SHORT_TAG}-/g" "${FILE}"
 done
+
+# publish-api-docs contains illustrative release versions outside image tags.
+PUBLISH_API_DOCS_FILE=".github/workflows/publish-api-docs.yaml"
+sed_runner "/JSON map of tag to library version/ s|{\"stable\": \"[0-9][0-9]\.[0-9][0-9]\", \"nightly\": \"[0-9][0-9]\.[0-9][0-9]\"}|{\"stable\": \"${PREVIOUS_SHORT_TAG}\", \"nightly\": \"${NEXT_SHORT_TAG}\"}|g" "${PUBLISH_API_DOCS_FILE}"
+sed_runner "/Keep only tags matching/ s|v[0-9][0-9]\.[0-9][0-9]\.[0-9][0-9]|v${NEXT_FULL_TAG}|g" "${PUBLISH_API_DOCS_FILE}"
+sed_runner "/# (e.g. \"[0-9][0-9]\.[0-9][0-9]\"), and collect/ s|\"[0-9][0-9]\.[0-9][0-9]\"|\"${NEXT_SHORT_TAG}\"|g" "${PUBLISH_API_DOCS_FILE}"
 
 # README example
 sed_runner "/shared-workflows.*\.yaml@/ s|@release/[0-9]\+\.[0-9]\+|@${WORKFLOW_BRANCH_REF}|g" README.md
