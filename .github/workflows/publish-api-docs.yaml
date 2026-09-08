@@ -41,7 +41,7 @@ on:
         type: string
       version-map:
         description: |
-          JSON map of tag to library version, e.g. '{"stable": "26.10", "nightly": "26.12"}'
+          JSON map of tag to library version
         required: true
         type: string
     secrets:
@@ -214,7 +214,7 @@ jobs:
         id: tags
         working-directory: repo
         run: |
-          # Keep only tags matching "vYY.MM.PP" (e.g. "v26.12.00"), strip the leading "v" and
+          # Keep only tags matching "vYY.MM.PP", strip the leading "v" and
           # the trailing ".PP" patch component, and collect the results into a JSON array.
           tags="$(
             git tag -l \
@@ -240,8 +240,8 @@ jobs:
           S3_KEY_PREFIX: ${{ inputs.target-s3-key-prefix }}
         run: |
           # List the subdirectory names (versions) under the project's S3 prefix, strip the
-          # key prefix and trailing slash from each, keep only those matching "YY.MM"
-          # (e.g. "26.12"), and collect the results into a JSON array.
+          # key prefix and trailing slash from each, keep only those matching "YY.MM",
+          # and collect the results into a JSON array.
           prefix="${S3_KEY_PREFIX}/${PROJECT}/"
           versions="$(
             aws s3api list-objects-v2 --bucket "${BUCKET}" --prefix "${prefix}" --delimiter / --query 'CommonPrefixes[].Prefix' --output text \
