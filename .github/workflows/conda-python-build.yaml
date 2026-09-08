@@ -181,7 +181,8 @@ jobs:
       - name: Configure caller cache environment
         if: inputs.cache-environment != ''
         run: printf '%s\n' "$INPUTS_CACHE_ENVIRONMENT" >> "$GITHUB_ENV"
-        env: {INPUTS_CACHE_ENVIRONMENT: ${{ inputs.cache-environment }}}
+        env:
+          INPUTS_CACHE_ENVIRONMENT: ${{ inputs.cache-environment }}
       - name: Standardize repository information
         env:
           RAPIDS_REPOSITORY: ${{ inputs.repo || github.repository }}
