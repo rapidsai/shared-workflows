@@ -78,6 +78,10 @@ on:
           or CUDA version. 'cuda_major' if the package is not dependent on
           operating system, Python minor version, or CPU architecture, but is
           dependent on CUDA major version."
+      cache-paths: {type: string, required: false, default: "", description: "Newline-separated workspace-relative paths to cache."}
+      cache-key-prefix: {type: string, required: false, default: "", description: "Cache-key prefix; the workflow appends its matrix identity."}
+      cache-key-files: {type: string, required: false, default: "", description: "Newline-separated files or globs to hash into the cache key."}
+      cache-environment: {type: string, required: false, default: "", description: "Newline-separated NAME=VALUE pairs exported before the caller script runs."}
 
 defaults:
   run:
@@ -132,6 +136,21 @@ jobs:
           ref: ${{ inputs.sha }}
           fetch-depth: 0
           persist-credentials: true
+      - name: Validate caller cache configuration
+        if: inputs.cache-paths != '' || inputs.cache-key-prefix != '' || inputs.cache-key-files != '' || inputs.cache-environment != ''
+        run: test -n "$INPUTS_CACHE_PATHS" -a -n "$INPUTS_CACHE_KEY_PREFIX"
+        env: {INPUTS_CACHE_PATHS: ${{ inputs.cache-paths }}, INPUTS_CACHE_KEY_PREFIX: ${{ inputs.cache-key-prefix }}}
+      - name: Cache caller paths
+        if: inputs.cache-paths != ''
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ inputs.cache-paths }}
+          key: ${{ inputs.cache-key-prefix }}-${{ matrix.CUDA_VER }}-${{ matrix.PY_VER }}-${{ matrix.ARCH }}-${{ matrix.LINUX_VER }}-${{ hashFiles(inputs.cache-key-files) }}
+          restore-keys: ${{ inputs.cache-key-prefix }}-${{ matrix.CUDA_VER }}-${{ matrix.PY_VER }}-${{ matrix.ARCH }}-${{ matrix.LINUX_VER }}-
+      - name: Configure caller cache environment
+        if: inputs.cache-environment != ''
+        run: printf '%s\n' "$INPUTS_CACHE_ENVIRONMENT" >> "$GITHUB_ENV"
+        env: {INPUTS_CACHE_ENVIRONMENT: ${{ inputs.cache-environment }}}
       - name: Standardize repository information
         env:
           RAPIDS_REPOSITORY: ${{ inputs.repo || github.repository }}

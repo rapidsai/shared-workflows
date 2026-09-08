@@ -90,6 +90,20 @@ on:
         description: |
           Prefix for the actions/cache key for cache-paths. The workflow appends its test-matrix
           identity so caches are not shared across incompatible runners or environments.
+      cache-key-files:
+        type: string
+        required: false
+        default: ""
+        description: |
+          Newline-separated files or glob patterns to hash into the cache key. Use this for caches
+          that must be saved again when relevant source or dependency files change.
+      cache-environment:
+        type: string
+        required: false
+        default: ""
+        description: |
+          Newline-separated NAME=VALUE pairs exported before the caller script runs. This is useful
+          when a tool needs to be pointed at a workspace-relative cached directory.
     secrets:
       script-env-secret-1-key:
         description: |
@@ -181,7 +195,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
       - name: Validate caller cache configuration
-        if: inputs.cache-paths != '' || inputs.cache-key-prefix != ''
+        if: inputs.cache-paths != '' || inputs.cache-key-prefix != '' || inputs.cache-key-files != '' || inputs.cache-environment != ''
         run: |
           if test -z "${INPUTS_CACHE_PATHS}" || test -z "${INPUTS_CACHE_KEY_PREFIX}"; then
             echo "ERROR: cache-paths and cache-key-prefix must be provided together."
@@ -195,7 +209,14 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ inputs.cache-paths }}
-          key: ${{ inputs.cache-key-prefix }}-${{ matrix.CUDA_VER }}-${{ matrix.PY_VER }}-${{ matrix.ARCH }}-${{ matrix.LINUX_VER }}-${{ matrix.GPU }}-${{ matrix.DRIVER }}-${{ matrix.DEPENDENCIES }}
+          key: ${{ inputs.cache-key-prefix }}-${{ matrix.CUDA_VER }}-${{ matrix.PY_VER }}-${{ matrix.ARCH }}-${{ matrix.LINUX_VER }}-${{ matrix.GPU }}-${{ matrix.DRIVER }}-${{ matrix.DEPENDENCIES }}-${{ hashFiles(inputs.cache-key-files) }}
+          restore-keys: |
+            ${{ inputs.cache-key-prefix }}-${{ matrix.CUDA_VER }}-${{ matrix.PY_VER }}-${{ matrix.ARCH }}-${{ matrix.LINUX_VER }}-${{ matrix.GPU }}-${{ matrix.DRIVER }}-${{ matrix.DEPENDENCIES }}-
+      - name: Configure caller cache environment
+        if: inputs.cache-environment != ''
+        run: printf '%s\n' "$INPUTS_CACHE_ENVIRONMENT" >> "$GITHUB_ENV"
+        env:
+          INPUTS_CACHE_ENVIRONMENT: ${{ inputs.cache-environment }}
       # This has to be AFTER the checkout step. It creates a telemetry-artifacts directory,
       # and the checkout step would destroy it.
       - name: Telemetry setup
