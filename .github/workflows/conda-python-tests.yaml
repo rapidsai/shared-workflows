@@ -82,18 +82,23 @@ on:
         required: false
         default: ""
         description: |
-          Newline-separated workspace-relative paths to persist with actions/cache. Workspace-relative
-          paths are required for cache saves from job containers.
+          Newline-separated workspace-relative files or directories to persist with actions/cache.
+          Workspace-relative paths are required for cache saves from job containers. Must be provided
+          together with cache-key-prefix.
       cache-key-prefix:
         type: string
         required: false
         default: ""
-        description: "Cache-key prefix; the workflow appends its matrix identity."
+        description: |
+          Prefix for the actions/cache key for cache-paths. The workflow appends its matrix identity
+          so caches are not shared across incompatible runners or environments.
       cache-key-files:
         type: string
         required: false
         default: ""
-        description: "Newline-separated files or glob patterns to hash into the cache key."
+        description: |
+          Newline-separated files or glob patterns to hash into the cache key. Use this for caches
+          that must be saved again when relevant source or dependency files change.
       cache-environment:
         type: string
         required: false

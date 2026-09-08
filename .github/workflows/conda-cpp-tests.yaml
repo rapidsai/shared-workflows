@@ -80,15 +80,14 @@ on:
         default: ""
         description: |
           Newline-separated workspace-relative files or directories to persist with actions/cache.
-          Workspace-relative paths are required so actions/cache can access paths created in the
-          job container during its host-side post-job save step.
-          Must be provided together with cache-key-prefix.
+          Workspace-relative paths are required for cache saves from job containers. Must be provided
+          together with cache-key-prefix.
       cache-key-prefix:
         type: string
         required: false
         default: ""
         description: |
-          Prefix for the actions/cache key for cache-paths. The workflow appends its test-matrix
+          Prefix for the actions/cache key for cache-paths. The workflow appends its matrix
           identity so caches are not shared across incompatible runners or environments.
       cache-key-files:
         type: string
@@ -102,9 +101,8 @@ on:
         required: false
         default: ""
         description: |
-          Newline-separated literal NAME=VALUE pairs exported before the caller script runs. This is
-          useful when a tool needs to be pointed at a workspace-relative cached directory. Use
-          the github.workspace context, not $GITHUB_WORKSPACE, for workspace paths.
+          Newline-separated literal NAME=VALUE pairs exported before the caller script runs.
+          Use the github.workspace context, not $GITHUB_WORKSPACE, for workspace paths.
     secrets:
       script-env-secret-1-key:
         description: |
