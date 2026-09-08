@@ -93,7 +93,7 @@ on:
         default: ""
         description: |
           Newline-separated literal NAME=VALUE pairs exported before the caller script runs.
-          Use ${{ github.workspace }}, not $GITHUB_WORKSPACE, for workspace paths.
+          Use the github.workspace context, not $GITHUB_WORKSPACE, for workspace paths.
 
 defaults:
   run:
