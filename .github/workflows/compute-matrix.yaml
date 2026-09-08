@@ -154,11 +154,11 @@ jobs:
               # to add new Python / CUDA / OS, choose:
               #
               #   - amd64-only
-              #   - oldest-supported Python, CUDA, and operating system
+              #   - latest Python, operating system, and CUDA
               #   - some GPU with high capacity (low queue)
               #   - latest driver
               #
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8', GPU: 'rtxpro6000', DRIVER: 'latest'}
+              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'rtxpro6000', DRIVER: 'latest'}
             nightly: *docs_build
 
           wheels-build:
