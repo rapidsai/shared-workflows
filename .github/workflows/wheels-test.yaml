@@ -97,7 +97,9 @@ on:
         type: string
         required: false
         default: ""
-        description: "Newline-separated workspace-relative paths to persist with actions/cache."
+        description: |
+          Newline-separated workspace-relative paths to persist with actions/cache. Workspace-relative
+          paths are required for cache saves from job containers.
       cache-key-prefix:
         type: string
         required: false
@@ -112,7 +114,9 @@ on:
         type: string
         required: false
         default: ""
-        description: "Newline-separated NAME=VALUE pairs exported before the caller script runs."
+        description: |
+          Newline-separated literal NAME=VALUE pairs exported before the caller script runs. Use
+          ${{ github.workspace }}, not $GITHUB_WORKSPACE, for workspace paths.
     secrets:
       script-env-secret-1-key:
         description: |

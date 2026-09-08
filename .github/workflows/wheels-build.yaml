@@ -108,10 +108,22 @@ on:
           When this is non-empty, that secret's value is used in place of the default repo-level token
           anywhere that environment variable GH_TOKEN is set. This is especially useful for downloading
           artifacts from other private repos, which repo tokens do not have access to.
-      cache-paths: {type: string, required: false, default: "", description: "Newline-separated workspace-relative paths to cache."}
+      cache-paths:
+        type: string
+        required: false
+        default: ""
+        description: |
+          Newline-separated workspace-relative files or directories to persist with actions/cache.
+          Workspace-relative paths are required for cache saves from job containers.
       cache-key-prefix: {type: string, required: false, default: "", description: "Cache-key prefix; the workflow appends its matrix identity."}
       cache-key-files: {type: string, required: false, default: "", description: "Newline-separated files or globs to hash into the cache key."}
-      cache-environment: {type: string, required: false, default: "", description: "Newline-separated NAME=VALUE pairs exported before the caller script runs."}
+      cache-environment:
+        type: string
+        required: false
+        default: ""
+        description: |
+          Newline-separated literal NAME=VALUE pairs exported before the caller script runs.
+          Use ${{ github.workspace }}, not $GITHUB_WORKSPACE, for workspace paths.
 
 defaults:
   run:
