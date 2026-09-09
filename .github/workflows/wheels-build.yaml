@@ -128,7 +128,7 @@ on:
         required: false
         default: ""
         description: |
-          Newline-separated files or glob patterns to hash into the cache key. Use this for caches
+          Newline-separated tracked files or glob patterns to hash into the cache key. Use this for caches
           that must be saved again when relevant source or dependency files change.
       cache-environment:
         type: string
@@ -204,12 +204,34 @@ jobs:
         env:
           INPUTS_CACHE_PATHS: ${{ inputs.cache-paths }}
           INPUTS_CACHE_KEY_PREFIX: ${{ inputs.cache-key-prefix }}
+      - name: Hash caller cache key files
+        if: inputs.cache-paths != ''
+        id: caller-cache
+        run: |
+          if test -z "${INPUTS_CACHE_KEY_FILES}"; then
+            echo "key-files-hash=none" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          mapfile -t patterns < <(sed '/^[[:space:]]*$/d' <<< "${INPUTS_CACHE_KEY_FILES}")
+          key_files=$(mktemp)
+          trap 'rm -f "${key_files}"' EXIT
+          git ls-files -z -- "${patterns[@]}" | sort -z > "${key_files}"
+
+          if test -s "${key_files}"; then
+            key_files_hash=$(xargs -0 -r sha256sum < "${key_files}" | sha256sum | cut -d ' ' -f 1)
+          else
+            key_files_hash=none
+          fi
+          echo "key-files-hash=${key_files_hash}" >> "$GITHUB_OUTPUT"
+        env:
+          INPUTS_CACHE_KEY_FILES: ${{ inputs.cache-key-files }}
       - name: Cache caller paths
         if: inputs.cache-paths != ''
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ inputs.cache-paths }}
-          key: ${{ inputs.cache-key-prefix }}-${{ matrix.CUDA_VER }}-${{ matrix.PY_VER }}-${{ matrix.ARCH }}-${{ matrix.LINUX_VER }}-${{ hashFiles(inputs.cache-key-files) }}
+          key: ${{ inputs.cache-key-prefix }}-${{ matrix.CUDA_VER }}-${{ matrix.PY_VER }}-${{ matrix.ARCH }}-${{ matrix.LINUX_VER }}-${{ steps.caller-cache.outputs.key-files-hash }}
           restore-keys: ${{ inputs.cache-key-prefix }}-${{ matrix.CUDA_VER }}-${{ matrix.PY_VER }}-${{ matrix.ARCH }}-${{ matrix.LINUX_VER }}-
       - name: Configure caller cache environment
         if: inputs.cache-environment != ''
