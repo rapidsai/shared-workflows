@@ -6,6 +6,13 @@ on:
         default: "dependencies.yaml"
         required: false
         type: string
+      base-branch:
+        description: |
+          Base branch for checks that need one. When omitted, infer it from the pull request.
+          Set this for a non-PR invocation such as a push to the default branch.
+        default: ""
+        required: false
+        type: string
       enable_check_size:
         description: "Whether to enable the size checker"
         default: true
@@ -48,6 +55,7 @@ defaults:
 
 jobs:
   other-checks:
+    if: ${{ inputs.enable_check_size || inputs.enable_check_pr_job_dependencies || inputs.enable_check_version_files_changed || inputs.enable_check_version_against_tag }}
     runs-on: ubuntu-latest
     container:
       image: rapidsai/ci-conda:26.12-latest # zizmor: ignore[unpinned-images]
@@ -65,13 +73,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Get PR Info
+        if: ${{ inputs.base-branch == '' }}
         id: get-pr-info
         uses: nv-gha-runners/get-pr-info@main
       - name: Run rapids-size-checker
         if: ${{ inputs.enable_check_size }}
         run: rapids-size-checker
         env:
-          RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
+          RAPIDS_BASE_BRANCH: ${{ inputs.base-branch || fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
       - name: Check workflow file dependencies
         if: ${{ inputs.enable_check_pr_job_dependencies }}
         run: rapids-check-pr-job-dependencies "${IGNORED_JOBS}"
@@ -137,6 +146,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Get PR Info
+        if: ${{ inputs.base-branch == '' }}
         id: get-pr-info
         uses: nv-gha-runners/get-pr-info@main
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -147,7 +157,7 @@ jobs:
         run: ci/check_style.sh
         env:
           GH_TOKEN: ${{ github.token }}
-          RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
+          RAPIDS_BASE_BRANCH: ${{ inputs.base-branch || fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
       - name: Telemetry upload attributes
         uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
         continue-on-error: true
