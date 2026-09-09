@@ -96,6 +96,13 @@ on:
         description: |
           Newline-separated tracked files or glob patterns to hash into the cache key. Use this for caches
           that must be saved again when relevant source or dependency files change.
+      cache-read-only:
+        type: boolean
+        required: false
+        default: false
+        description: |
+          Restore caller cache paths without saving them at job completion. Use this for untrusted or
+          short-lived workflow refs that should consume caches maintained by a trusted workflow.
       cache-environment:
         type: string
         required: false
@@ -225,8 +232,16 @@ jobs:
           echo "key-files-hash=${key_files_hash}" >> "$GITHUB_OUTPUT"
         env:
           INPUTS_CACHE_KEY_FILES: ${{ inputs.cache-key-files }}
+      - name: Restore caller cache paths
+        if: inputs.cache-paths != '' && inputs.cache-read-only
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ inputs.cache-paths }}
+          key: ${{ inputs.cache-key-prefix }}-${{ matrix.CUDA_VER }}-${{ matrix.PY_VER }}-${{ matrix.ARCH }}-${{ matrix.LINUX_VER }}-${{ matrix.GPU }}-${{ matrix.DRIVER }}-${{ matrix.DEPENDENCIES }}-${{ steps.caller-cache.outputs.key-files-hash }}
+          restore-keys: |
+            ${{ inputs.cache-key-prefix }}-${{ matrix.CUDA_VER }}-${{ matrix.PY_VER }}-${{ matrix.ARCH }}-${{ matrix.LINUX_VER }}-${{ matrix.GPU }}-${{ matrix.DRIVER }}-${{ matrix.DEPENDENCIES }}-
       - name: Cache caller paths
-        if: inputs.cache-paths != ''
+        if: inputs.cache-paths != '' && inputs.cache-read-only == false
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ inputs.cache-paths }}
