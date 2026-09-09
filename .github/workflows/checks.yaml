@@ -13,6 +13,13 @@ on:
         default: ""
         required: false
         type: string
+      pre-commit-cache-read-only:
+        description: |
+          Restore the pre-commit cache without saving it at job completion. Use this on
+          short-lived workflow refs that should consume a cache maintained by a trusted ref.
+        default: false
+        required: false
+        type: boolean
       enable_check_size:
         description: "Whether to enable the size checker"
         default: true
@@ -149,7 +156,15 @@ jobs:
         if: ${{ inputs.base-branch == '' }}
         id: get-pr-info
         uses: nv-gha-runners/get-pr-info@main
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Restore pre-commit cache
+        if: ${{ inputs.pre-commit-cache-read-only }}
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-0|${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: Cache pre-commit
+        if: ${{ !inputs.pre-commit-cache-read-only }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-0|${{ hashFiles('.pre-commit-config.yaml') }}
