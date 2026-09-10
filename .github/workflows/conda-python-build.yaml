@@ -179,64 +179,17 @@ jobs:
           ref: ${{ inputs.sha }}
           fetch-depth: 0
           persist-credentials: true
-      - name: Validate caller cache configuration
+      - name: Setup caller cache
         if: inputs.cache-paths != '' || inputs.cache-key-prefix != '' || inputs.cache-key-files != '' || inputs.cache-environment != ''
-        run: |
-          if test -z "${INPUTS_CACHE_PATHS}" || test -z "${INPUTS_CACHE_KEY_PREFIX}"; then
-            echo "ERROR: cache-paths and cache-key-prefix must be provided together."
-            exit 1
-          fi
-        env:
-          INPUTS_CACHE_PATHS: ${{ inputs.cache-paths }}
-          INPUTS_CACHE_KEY_PREFIX: ${{ inputs.cache-key-prefix }}
-      - name: Compute caller cache key
-        if: inputs.cache-paths != ''
-        id: caller-cache
-        run: |
-          if test -z "${INPUTS_CACHE_KEY_FILES}"; then
-            key_files_hash=none
-          else
-            mapfile -t patterns < <(sed '/^[[:space:]]*$/d' <<< "${INPUTS_CACHE_KEY_FILES}")
-            key_files=$(mktemp)
-            trap 'rm -f "${key_files}"' EXIT
-            git ls-files -z -- "${patterns[@]}" | sort -z > "${key_files}"
-
-            if test -s "${key_files}"; then
-              key_files_hash=$(xargs -0 -r sha256sum < "${key_files}" | sha256sum | cut -d ' ' -f 1)
-            else
-              key_files_hash=none
-            fi
-          fi
-
-          matrix_key=$(jq -er --raw-output \
-            --arg fields "${INPUTS_CACHE_KEY_MATRIX_FIELDS}" \
-            '[($fields | split("\n")[] | select(length > 0)) as $field | .[$field]] | join("-")' \
-            <<< "${MATRIX}")
-          echo "key-files-hash=${key_files_hash}" >> "$GITHUB_OUTPUT"
-          echo "matrix-key=${matrix_key}" >> "$GITHUB_OUTPUT"
-        env:
-          INPUTS_CACHE_KEY_FILES: ${{ inputs.cache-key-files }}
-          INPUTS_CACHE_KEY_MATRIX_FIELDS: ${{ inputs.cache-key-matrix-fields }}
-          MATRIX: ${{ toJSON(matrix) }}
-      - name: Restore caller cache paths
-        if: inputs.cache-paths != '' && inputs.cache-read-only
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: rapidsai/shared-actions/setup-caller-cache@codex/caller-cache-setup
         with:
-          path: ${{ inputs.cache-paths }}
-          key: ${{ inputs.cache-key-prefix }}-${{ steps.caller-cache.outputs.matrix-key }}-${{ steps.caller-cache.outputs.key-files-hash }}
-          restore-keys: ${{ inputs.cache-key-prefix }}-${{ steps.caller-cache.outputs.matrix-key }}-
-      - name: Cache caller paths
-        if: inputs.cache-paths != '' && !inputs.cache-read-only
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ inputs.cache-paths }}
-          key: ${{ inputs.cache-key-prefix }}-${{ steps.caller-cache.outputs.matrix-key }}-${{ steps.caller-cache.outputs.key-files-hash }}
-          restore-keys: ${{ inputs.cache-key-prefix }}-${{ steps.caller-cache.outputs.matrix-key }}-
-      - name: Configure caller cache environment
-        if: inputs.cache-environment != ''
-        run: printf '%s\n' "$INPUTS_CACHE_ENVIRONMENT" >> "$GITHUB_ENV"
-        env:
-          INPUTS_CACHE_ENVIRONMENT: ${{ inputs.cache-environment }}
+          cache-paths: ${{ inputs.cache-paths }}
+          cache-key-prefix: ${{ inputs.cache-key-prefix }}
+          cache-key-files: ${{ inputs.cache-key-files }}
+          cache-key-matrix-fields: ${{ inputs.cache-key-matrix-fields }}
+          cache-environment: ${{ inputs.cache-environment }}
+          cache-read-only: ${{ inputs.cache-read-only }}
+          matrix: ${{ toJSON(matrix) }}
       - name: Standardize repository information
         env:
           RAPIDS_REPOSITORY: ${{ inputs.repo || github.repository }}
