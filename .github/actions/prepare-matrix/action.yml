@@ -11,5 +11,6 @@ runs:
   steps:
     - id: prepare-matrix
       name: Prepare Build Matrix
+      shell: bash
       run:
         (echo -n 'matrix='; yq -o json . ./shared-workflows/.github/actions/prepare-matrix/matrix.yaml | jq -c .) >> "$GITHUB_OUTPUT"
