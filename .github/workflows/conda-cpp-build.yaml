@@ -171,7 +171,7 @@ jobs:
           persist-credentials: true
       - name: Setup caller cache
         if: inputs.cache-paths != '' || inputs.cache-key-prefix != '' || inputs.cache-key-files != '' || inputs.cache-environment != ''
-        uses: rapidsai/shared-actions/setup-caller-cache@codex/caller-cache-setup
+        uses: rapidsai/shared-actions/setup-caller-cache@main
         with:
           cache-paths: ${{ inputs.cache-paths }}
           cache-key-prefix: ${{ inputs.cache-key-prefix }}
