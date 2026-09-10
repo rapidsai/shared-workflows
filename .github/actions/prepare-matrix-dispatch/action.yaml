@@ -2,8 +2,11 @@ name: Dispatch Prepare Build Matrix
 description: Check out the shared-workflows repository and run the prepare-matrix action.
 
 inputs:
-  workflow-ref:
-    description: Workflow ref.
+  action-repo:
+    description: Action repo.
+    required: true
+  action-ref:
+    description: Action ref.
     required: true
 
 outputs:
@@ -14,19 +17,11 @@ outputs:
 runs:
   using: composite
   steps:
-    - id: get-workflow-repo-and-ref
-      name: Get workflow repo and ref
-      shell: bash
-      env:
-        WORKFLOW_REF: ${{ inputs.workflow-ref }}
-      run: |
-        (echo -n 'workflow-repo='; (echo "$WORKFLOW_REF" | sed -E -e 's|([^/]+/[^/]+).*|\1|')) | tee "$GITHUB_OUTPUT"
-        (echo -n 'workflow-ref='; (echo "$WORKFLOW_REF" | cut -d@ -f2)) | tee "$GITHUB_OUTPUT"
     - name: Check out shared-workflows implementation
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
-        repository: ${{ steps.get-workflow-repo-and-ref.outputs.workflow-repo || 'rapidsai/shared-workflows' }}
-        ref: ${{ steps.get-workflow-repo-and-ref.outputs.workflow-ref || 'main' }}
+        repository: ${{ inputs.action-repo || 'rapidsai/shared-workflows' }}
+        ref: ${{ inputs.action-ref || 'main' }}
         path: ./shared-workflows
         persist-credentials: false
     - id: prepare-matrix
