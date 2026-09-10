@@ -1,0 +1,15 @@
+name: Prepare Build Matrix
+description: Output the raw build matrix with no filtering.
+
+outputs:
+  matrix:
+    description: Build matrix.
+    value: ${{ steps.prepare-matrix.outputs.matrix }}
+
+runs:
+  using: composite
+  steps:
+    - id: prepare-matrix
+      name: Prepare Build Matrix
+      run:
+        (echo -n 'matrix='; yq -o json . ./shared-workflows/.github/actions/prepare-matrix/matrix.yaml | jq -c .) >> "$GITHUB_OUTPUT"

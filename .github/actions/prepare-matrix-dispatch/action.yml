@@ -1,0 +1,21 @@
+name: Dispatch Prepare Build Matrix
+description: Check out the shared-workflows repository and run the prepare-matrix action.
+
+outputs:
+  matrix:
+    description: Build matrix.
+    value: ${{ steps.prepare-matrix.outputs.matrix }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check out shared-workflows implementation
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        repository: ${{ github.action_repository || 'rapidsai/shared-workflows' }}
+        ref: ${{ github.action_ref || 'main' }}
+        path: ./shared-workflows
+        persist-credentials: false
+    - id: prepare-matrix
+      name: Prepare Build Matrix
+      uses: ./shared-workflows/prepare-matrix
