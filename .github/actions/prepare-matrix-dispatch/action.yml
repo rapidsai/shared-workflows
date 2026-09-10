@@ -19,7 +19,7 @@ runs:
       shell: bash
       env:
         WORKFLOW_REF: ${{ inputs.workflow-ref }}
-      run:
+      run: |
         (echo -n 'workflow-repo='; (echo "$WORKFLOW_REF" | sed -E -e 's|([^/]+/[^/]+).*|\1|')) | tee "$GITHUB_OUTPUT"
         (echo -n 'workflow-ref='; (echo "$WORKFLOW_REF" | cut -d@ -f2)) | tee "$GITHUB_OUTPUT"
     - name: Check out shared-workflows implementation
