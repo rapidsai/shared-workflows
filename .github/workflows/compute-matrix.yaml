@@ -51,6 +51,8 @@ jobs:
       - name: Prepare Build Matrix
         id: prepare-matrix
         uses: $/.github/actions/prepare-matrix-dispatch
+        with:
+          workflow-ref: ${{ github.workflow_ref }}
       - name: Validate Inputs
         env:
           MATRIX: ${{ steps.prepare-matrix.outputs.matrix }}
