@@ -104,6 +104,24 @@ conda-python-tests:
     - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'gb300',      DRIVER: 'latest',   DEPENDENCIES: 'latest' }
     # yamllint enable rule:commas
 
+docs-build:
+  pull-request: &docs_build
+    # yamllint disable rule:commas
+    # Docs builds just need any GPU. Centralizing the matrix reduces the effort to switch
+    # to different runner types (e.g. to those that are cheaper or have more spare capacity).
+    #
+    # To make this safe to update when projects might be in the middle of migrations
+    # to add new Python / CUDA / OS, choose:
+    #
+    #   - amd64-only
+    #   - latest Python, operating system, and CUDA
+    #   - some GPU with high capacity (low queue)
+    #   - latest driver
+    #
+    - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'rtxpro6000', DRIVER: 'latest'}
+    # yamllint enable rule:commas
+  nightly: *docs_build
+
 wheels-build:
   pull-request: &wheels_build
     # yamllint disable rule:commas
