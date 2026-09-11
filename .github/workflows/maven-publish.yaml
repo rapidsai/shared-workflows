@@ -1,25 +1,18 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
-# Publishes a bundle of release-candidate Maven artifacts (jars, POMs,
-# sources, javadoc) to Maven Central via the Sonatype Central Publisher
-# Portal. Every file is GPG-signed before the repository is uploaded through
-# Sonatype's OSSRH staging compatibility API for validation and human-gated
-# publication.
-#
-# TODO: add nightly -> Sonatype snapshots
+# Publishes a bundle of Maven artifacts (jars, POMs, sources, javadoc). Every
+# file is GPG-signed. The destination is chosen inside this workflow with
+# `rapids-is-release-build`:
+#   - release build (vYY.MM.PP tag) -> Maven Central via the Sonatype Central
+#     Publisher Portal (OSSRH staging + validation, human-gated publish).
+#   - non-release build (nightly, branch push) -> Sonatype snapshot repository
+#     (direct HTTP PUT, immediately available, no staging or portal step).
 name: Maven publish
 
 on:
   workflow_call:
     inputs:
-      publication-type:
-        description: |
-          Only "rc" (release candidate) is currently supported. Nightly is a
-          future addition. The input is kept single-valued so callers do not
-          have to change their `with:` block when nightly is introduced.
-        required: true
-        type: string
       artifact-name:
         description: |
           Name of the GitHub Actions artifact (uploaded by the caller job via
@@ -32,7 +25,8 @@ on:
           When true, leave the bundle PENDING in the Sonatype Central
           Publisher Portal for a human to release via the Portal UI
           (https://central.sonatype.com). When false (default), validate then
-          drop the bundle.
+          drop the bundle. Only applies to the Maven Central path (release
+          builds). Ignored on the snapshot path.
         required: false
         type: boolean
         default: false
@@ -63,7 +57,7 @@ permissions:
 
 jobs:
   maven-publish:
-    name: maven publish (${{ inputs.publication-type }})
+    name: maven publish
     runs-on: linux-amd64-cpu4
     steps:
       - name: Self-checkout shared-workflows
@@ -73,6 +67,25 @@ jobs:
           ref: ${{ job.workflow_sha }}
           path: shared-workflows
           persist-credentials: false
+
+      - name: Install gha-tools
+        run: |
+          # rapids-is-release-build lives in rapidsai/gha-tools. Fetch the
+          # release tarball and add it to PATH so the release check below
+          # (and any downstream steps) can find it.
+          mkdir -p /tmp/gha-tools
+          wget -qO- https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz \
+            | tar -xz -C /tmp/gha-tools
+          echo "/tmp/gha-tools" >> "${GITHUB_PATH}"
+
+      - name: Determine publish destination
+        id: destination
+        run: |
+          if rapids-is-release-build; then
+            echo "is_release=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "is_release=false" >> "${GITHUB_OUTPUT}"
+          fi
 
       - name: Download Maven repository artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -85,15 +98,14 @@ jobs:
         run: |
           shared-workflows/ci/maven-publish/prepare_maven_bundle.sh \
             --input maven-repo \
-            --output signed-maven-repo \
-            --publication-type "${PUBLICATION_TYPE}"
+            --output signed-maven-repo
         env:
-          PUBLICATION_TYPE: ${{ inputs.publication-type }}
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
       - name: Upload to Maven Central
-        id: publish
+        id: publish-central
+        if: ${{ steps.destination.outputs.is_release == 'true' }}
         run: |
           shared-workflows/ci/maven-publish/maven_central_publish.sh \
             --input signed-maven-repo \
@@ -111,11 +123,37 @@ jobs:
           MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME }}
           MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
 
+      - name: Upload to Sonatype snapshots
+        id: publish-snapshot
+        if: ${{ steps.destination.outputs.is_release == 'false' }}
+        run: |
+          shared-workflows/ci/maven-publish/maven_snapshot_publish.sh \
+            --input signed-maven-repo \
+            --group-id "${GROUP_ID}" \
+            --artifact-id "${ARTIFACT_ID}" \
+            --version "${VERSION}" \
+            --output-bundle snapshot-bundle.zip
+        env:
+          GROUP_ID: ${{ steps.prepare.outputs.GROUP_ID }}
+          ARTIFACT_ID: ${{ steps.prepare.outputs.ARTIFACT_ID }}
+          VERSION: ${{ steps.prepare.outputs.VERSION }}
+          MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME }}
+          MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
+
       - name: Retain signed Maven Central bundle
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.destination.outputs.is_release == 'true' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: maven-central-bundle-${{ steps.prepare.outputs.ARTIFACT_ID }}-${{ steps.prepare.outputs.VERSION }}-${{ inputs.source-git-sha }}
           path: central-bundle.zip
+          if-no-files-found: ignore
+          retention-days: 90
+
+      - name: Retain signed Sonatype snapshot bundle
+        if: ${{ !cancelled() && steps.destination.outputs.is_release == 'false' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sonatype-snapshot-bundle-${{ steps.prepare.outputs.ARTIFACT_ID }}-${{ steps.prepare.outputs.VERSION }}-${{ inputs.source-git-sha }}
+          path: snapshot-bundle.zip
           if-no-files-found: ignore
           retention-days: 90
