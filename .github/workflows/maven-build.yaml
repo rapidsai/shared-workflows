@@ -1,0 +1,190 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Builds Maven classifier artifacts across the RAPIDS architecture and CUDA
+# matrix. The caller owns its build and optional packaged-JAR test scripts;
+# this workflow owns matrix selection, runner/image construction, and the
+# <prefix>_<arch>_cu<CUDA-major> artifact naming convention.
+#
+# One invocation represents one Maven coordinate and uploads one GitHub
+# Actions artifact per classifier. That artifact may contain multiple files or
+# paths (for example, the main, sources, and Javadoc JARs plus a POM). Repos
+# with multiple coordinates invoke this workflow once per coordinate and use
+# job dependencies for ordering. For example, cuVS builds cuvs-java first and
+# then invokes this workflow again for cuvs-lucene, whose repository-owned
+# script downloads the matching cuvs-java classifier artifact.
+#
+# A test script, when provided, runs once per classifier using the same matrix.
+# This supports projects such as cuOpt that must prove a self-contained JAR on
+# a GPU in an image that does not contain the library used to build it.
+#
+# Gathering and publication are separate by design. Small classifier sets may
+# be gathered into one Maven-repository-layout artifact, while large
+# self-contained JARs may need separate publisher bundles to stay below the
+# publisher's upload limit.
+
+name: Maven build
+
+on:
+  workflow_call:
+    inputs:
+      build_type:
+        description: "One of: [branch, nightly, pull-request]"
+        required: true
+        type: string
+      branch:
+        description: "Git branch the workflow run targets"
+        required: false
+        type: string
+      date:
+        description: "Date (YYYY-MM-DD) this run is for"
+        required: false
+        type: string
+      sha:
+        description: "Full git commit SHA to check out"
+        required: false
+        type: string
+      build-datetime:
+        description: "Date-time to use in build strings"
+        required: false
+        type: string
+      repo:
+        description: "Git repository to check out, in org/repo form"
+        required: false
+        type: string
+      script:
+        description: "Repository-owned script that builds the Maven artifacts"
+        required: true
+        type: string
+      file-to-upload:
+        description: |
+          One path or a newline-separated list of paths containing the files
+          for this Maven coordinate. All paths are uploaded together as the
+          classifier's single GitHub Actions artifact.
+        required: true
+        type: string
+      artifact-name-prefix:
+        description: |
+          Project-specific prefix for build artifacts. Each matrix entry is
+          uploaded as <prefix>_<arch>_cu<CUDA major version>.
+        required: true
+        type: string
+      container-image-repository:
+        description: |
+          CI image repository without its tag, for example rapidsai/ci-conda
+          or rapidsai/ci-wheel.
+        required: true
+        type: string
+      container-image-version:
+        description: "RAPIDS image version, for example 26.10"
+        required: true
+        type: string
+      matrix-build-type:
+        description: |
+          Matrix size to use. "auto" follows build_type; callers may select
+          "pull-request" to use the smaller matrix for branch builds.
+        required: false
+        type: string
+        default: "auto"
+      matrix-filter:
+        description: "jq expression used to filter the conda-cpp-build matrix"
+        required: false
+        type: string
+        default: "."
+      node-type:
+        description: "Runner type suffix, for example cpu16"
+        required: false
+        type: string
+        default: "cpu8"
+      test-script:
+        description: |
+          Optional repository-owned script that tests the packaged classifier.
+          When empty, the test job is skipped.
+        required: false
+        type: string
+        default: ""
+      test-file-to-upload:
+        description: "Optional test output, such as Surefire reports"
+        required: false
+        type: string
+        default: "gh-status.json"
+      test-artifact-name-prefix:
+        description: "Prefix for per-classifier test-result artifacts"
+        required: false
+        type: string
+        default: "maven-test"
+      test-container-image-repository:
+        description: "CI image repository used to test packaged classifiers"
+        required: false
+        type: string
+        default: "rapidsai/ci-wheel"
+      test-node-type:
+        description: "Runner type suffix used to test packaged classifiers"
+        required: false
+        type: string
+        default: "gpu-l4-latest-1"
+    outputs:
+      matrix:
+        description: "The computed Maven build matrix"
+        value: ${{ jobs.compute-matrix.outputs.matrix }}
+
+permissions:
+  actions: read
+  contents: read
+  id-token: write
+  packages: read
+  pull-requests: read
+
+jobs:
+  compute-matrix:
+    permissions:
+      contents: read
+    uses: rapidsai/shared-workflows/.github/workflows/compute-matrix.yaml@main
+    with:
+      build_type: ${{ inputs.build_type }}
+      matrix_type: ${{ inputs.matrix-build-type }}
+      matrix_name: conda-cpp-build
+      matrix_filter: 'map(. + {CUDA_MAJOR: (.CUDA_VER | split(".") | .[0])}) | unique_by([.ARCH, .CUDA_MAJOR]) | ${{ inputs.matrix-filter }}'
+
+  build:
+    needs: compute-matrix
+    secrets: inherit # zizmor: ignore[secrets-inherit]
+    uses: rapidsai/shared-workflows/.github/workflows/custom-job.yaml@main
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.compute-matrix.outputs.matrix) }}
+    with:
+      build_type: ${{ inputs.build_type }}
+      branch: ${{ inputs.branch }}
+      date: ${{ inputs.date }}
+      sha: ${{ inputs.sha }}
+      build-datetime: ${{ inputs.build-datetime }}
+      repo: ${{ inputs.repo }}
+      arch: ${{ matrix.ARCH }}
+      node_type: ${{ inputs.node-type }}
+      container_image: "${{ inputs.container-image-repository }}:${{ inputs.container-image-version }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}"
+      script: ${{ inputs.script }}
+      file_to_upload: ${{ inputs.file-to-upload }}
+      artifact-name: "${{ inputs.artifact-name-prefix }}_${{ matrix.ARCH }}_cu${{ matrix.CUDA_MAJOR }}"
+
+  test:
+    if: ${{ inputs.test-script != '' }}
+    needs: [compute-matrix, build]
+    secrets: inherit # zizmor: ignore[secrets-inherit]
+    uses: rapidsai/shared-workflows/.github/workflows/custom-job.yaml@main
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.compute-matrix.outputs.matrix) }}
+    with:
+      build_type: ${{ inputs.build_type }}
+      branch: ${{ inputs.branch }}
+      date: ${{ inputs.date }}
+      sha: ${{ inputs.sha }}
+      build-datetime: ${{ inputs.build-datetime }}
+      repo: ${{ inputs.repo }}
+      arch: ${{ matrix.ARCH }}
+      node_type: ${{ inputs.test-node-type }}
+      container_image: "${{ inputs.test-container-image-repository }}:${{ inputs.container-image-version }}-cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}"
+      script: ${{ inputs.test-script }}
+      file_to_upload: ${{ inputs.test-file-to-upload }}
+      artifact-name: "${{ inputs.test-artifact-name-prefix }}_${{ matrix.ARCH }}_cu${{ matrix.CUDA_MAJOR }}"
