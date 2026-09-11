@@ -10,7 +10,7 @@ on:
         required: true
         type: string
       matrix_type:
-        description: "One of: [auto, nightly, pull-request]. 'auto' means 'choose a value based on what's provided via build_type'."
+        description: "One or more comma-separated values from: [auto, nightly, pull-request]. 'auto' must be used alone and means 'choose a value based on what's provided via build_type'."
         required: false
         type: string
         default: "auto"
@@ -62,8 +62,8 @@ jobs:
               echo "::error::Invalid build_type! Must be one of 'branch', 'nightly', or 'pull-request'."
               exit 1
           fi
-          if [[ "$MATRIX_TYPE" != "auto" ]] && [[ "$MATRIX_TYPE" != "nightly" ]] && [[ "$MATRIX_TYPE" != "pull-request" ]]; then
-              echo "::error::Invalid matrix_type! Must be one of 'auto', 'nightly', or 'pull-request'."
+          if [[ ! "$MATRIX_TYPE" =~ ^(auto|nightly|pull-request)(,(auto|nightly|pull-request))*$ ]] || [[ "$MATRIX_TYPE" == *auto* && "$MATRIX_TYPE" != "auto" ]]; then
+              echo "::error::Invalid matrix_type! Must be 'auto' or a comma-separated list of 'nightly' and 'pull-request'."
               exit 1
           fi
           if ! jq -n -e '$ENV.MATRIX | fromjson | has($ENV.MATRIX_NAME)'; then
@@ -89,7 +89,8 @@ jobs:
               MATRIX_TYPE="${BUILD_TYPE}"
             fi
           fi
-          export MATRIX_TYPE
+          MATRIX_TYPES="$(jq -cn --arg matrix_types "${MATRIX_TYPE}" '$matrix_types | split(",")')"
+          export MATRIX_TYPES
 
           # When pure-wheel is true and matrix_filter is default, override to build one wheel per CUDA version with amd64 and the latest PY_VER
           if [ "${PURE_WHEEL}" = "true" ] && [ "${MATRIX_FILTER}" = "." ]; then
@@ -104,7 +105,7 @@ jobs:
           fi
 
           if ! MATRIX="$(
-            jq -n -c "\$ENV.MATRIX | fromjson | .[\$ENV.MATRIX_NAME].[\$ENV.MATRIX_TYPE] | ${MATRIX_FILTER} | if (. | length) > 0 then {include: .} else \"\" | halt_error(1) end"
+            jq -n -c "\$ENV.MATRIX | fromjson as \$matrix | [\$ENV.MATRIX_TYPES | fromjson | .[] as \$matrix_type | \$matrix[\$ENV.MATRIX_NAME][\$matrix_type][]] | unique | ${MATRIX_FILTER} | if (. | length) > 0 then {include: .} else \"\" | halt_error(1) end"
           )"; then
             echo "::error::Empty matrix"
             exit 1
