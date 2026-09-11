@@ -2,51 +2,156 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-# Sonatype snapshot upload helpers for maven_snapshot_publish.sh. Requires
-# _sonatype_upload from maven_central_publish_steps.sh (sourced by the caller).
+# Step functions used by maven_snapshot_publish_in_container.sh.
 
-# require_snapshot_artifact_names DIR VERSION
-# Fail if any file under DIR lacks "-SNAPSHOT" in its name.
-require_snapshot_artifact_names() {
-  local dir=$1 version=$2
-  if [[ ${version} != *-SNAPSHOT ]]; then
-    fatal "require_snapshot_artifact_names called with non-snapshot version '${version}'"
+# stage_snapshot_deploy_inputs INPUT_DIR DEPLOY_DIR
+# Copy INPUT_DIR into DEPLOY_DIR, stripping any sidecars that mvn regenerates.
+stage_snapshot_deploy_inputs() {
+  local input_dir=$1 deploy_dir=$2
+  cp -a "${input_dir}/." "${deploy_dir}/"
+  find "${deploy_dir}" -type f \( \
+    -name '*.asc' -o -name '*.md5' -o \
+    -name '*.sha1' -o -name '*.sha256' -o -name '*.sha512' -o \
+    -name 'maven-metadata.xml*' \
+  \) -delete
+}
+
+# write_maven_settings OUT_PATH
+# Wire the ossrh server-id to MAVEN_DEPLOY_USERNAME / MAVEN_DEPLOY_TOKEN.
+write_maven_settings() {
+  local out=$1
+  cat > "${out}" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
+  <servers>
+    <server>
+      <id>ossrh</id>
+      <username>${env.MAVEN_DEPLOY_USERNAME}</username>
+      <password>${env.MAVEN_DEPLOY_TOKEN}</password>
+    </server>
+  </servers>
+</settings>
+EOF
+}
+
+# deploy_snapshot_with_mvn ARTIFACT_DIR ARTIFACT_ID VERSION \
+#                          REPO_URL SETTINGS_FILE GPG_KEY_ID LOG_PATH
+# Signs and deploys every jar under ARTIFACT_DIR via mvn sign-and-deploy-file.
+# The main jar is <artifact_id>-<version>.jar; other jars become attached
+# artifacts keyed by filename suffix. mvn output goes to LOG_PATH so the
+# caller can enumerate Nexus-assigned URLs. Requires GPG_PASSPHRASE in env.
+deploy_snapshot_with_mvn() {
+  local artifact_dir=$1 artifact_id=$2 version=$3
+  local repo_url=$4 settings_file=$5 gpg_key_id=$6 log_path=$7
+
+  local main_jar="${artifact_dir}/${artifact_id}-${version}.jar"
+  local pom_file="${artifact_dir}/${artifact_id}-${version}.pom"
+  local sources_jar="${artifact_dir}/${artifact_id}-${version}-sources.jar"
+  local javadoc_jar="${artifact_dir}/${artifact_id}-${version}-javadoc.jar"
+
+  if [[ ! -f ${main_jar} ]]; then
+    fatal "missing primary jar: ${main_jar}"
+  fi
+  if [[ ! -f ${pom_file} ]]; then
+    fatal "missing POM: ${pom_file}"
   fi
 
-  local offenders
-  readarray -t offenders < <(
-    find "${dir}" -type f \
-      ! -name '*-SNAPSHOT*' \
-      ! -name 'maven-metadata.xml*'
+  # Any remaining jar becomes an attached classifier artifact.
+  local jar jar_name classifier
+  local -a files=() types=() classifiers=()
+  while IFS= read -r jar; do
+    jar_name=$(basename "${jar}")
+    case "${jar_name}" in
+      "${artifact_id}-${version}.jar" \
+      |"${artifact_id}-${version}-sources.jar" \
+      |"${artifact_id}-${version}-javadoc.jar")
+        continue
+        ;;
+    esac
+    classifier=${jar_name#"${artifact_id}-${version}-"}
+    classifier=${classifier%.jar}
+    files+=("${jar}")
+    types+=(jar)
+    classifiers+=("${classifier}")
+  done < <(find "${artifact_dir}" -maxdepth 1 -type f -name '*.jar' | sort)
+
+  local -a mvn_args=(
+    -B
+    -Dmaven.wagon.http.retryHandler.count=3
+    -DretryFailedDeploymentCount=3
+    -s "${settings_file}"
+    org.apache.maven.plugins:maven-gpg-plugin:3.1.0:sign-and-deploy-file
+    -Dgpg.executable=gpg
+    -Dgpg.passphrase="${GPG_PASSPHRASE}"
+    -Dgpg.keyname="${gpg_key_id}"
+    -Durl="${repo_url}"
+    -DrepositoryId=ossrh
+    -Dfile="${main_jar}"
+    -DpomFile="${pom_file}"
   )
+  [[ -f ${sources_jar} ]] && mvn_args+=(-Dsources="${sources_jar}")
+  [[ -f ${javadoc_jar} ]] && mvn_args+=(-Djavadoc="${javadoc_jar}")
+  if (( ${#files[@]} > 0 )); then
+    mvn_args+=(
+      -Dfiles="$(IFS=,; echo "${files[*]}")"
+      -Dtypes="$(IFS=,; echo "${types[*]}")"
+      -Dclassifiers="$(IFS=,; echo "${classifiers[*]}")"
+    )
+  fi
 
-  if (( ${#offenders[@]} > 0 )); then
-    echo "Error: snapshot bundle contains non-SNAPSHOT files:" >&2
-    printf '  %s\n' "${offenders[@]}" >&2
-    fatal "found ${#offenders[@]} file(s) missing '-SNAPSHOT' in their name under ${dir}"
+  set +e
+  mvn "${mvn_args[@]}" 2>&1 | tee "${log_path}"
+  local rc=${PIPESTATUS[0]}
+  set -e
+  if (( rc != 0 )); then
+    fatal "mvn sign-and-deploy-file failed (exit ${rc})"
   fi
 }
 
-# snapshot_upload_file LOCAL_PATH REPOSITORY_PATH
-# PUT LOCAL_PATH to the snapshot repository at REPOSITORY_PATH.
-snapshot_upload_file() {
-  local file_path=$1 repository_path=$2
-  # Maven coordinates use only [A-Za-z0-9._/-], so no URL encoding is needed.
-  _sonatype_upload "${file_path}" "${SNAPSHOT_REPOSITORY_URL}/${repository_path}"
+# parse_uploaded_urls LOG_PATH REPO_URL ARTIFACT_BASE_PATH
+# Print every URL Nexus acknowledged via 'Uploaded to ossrh: <URL>' whose path
+# starts with <REPO_URL>/<ARTIFACT_BASE_PATH>/. Deduplicated.
+parse_uploaded_urls() {
+  local log_path=$1 repo_url=$2 artifact_base_path=$3
+  local prefix="${repo_url}/${artifact_base_path}/"
+  awk -v p="${prefix}" '
+    /Uploaded to ossrh:/ {
+      for (i = 1; i <= NF; i++) if (index($i, p) == 1) print $i
+    }
+  ' "${log_path}" | sort -u
 }
 
-# upload_tree_to_snapshots ROOT
-# PUT every file under ROOT to the Sonatype snapshot repository.
-upload_tree_to_snapshots() {
-  local root=$1
-  echo "Uploading Maven repository files to the Sonatype snapshot repository"
+# download_deployed_tree LOG_PATH REPO_URL ARTIFACT_BASE_PATH BUNDLE_DIR
+download_deployed_tree() {
+  local log_path=$1 repo_url=$2 artifact_base_path=$3 bundle_dir=$4
+  local -a urls
+  mapfile -t urls < <(parse_uploaded_urls "${log_path}" "${repo_url}" "${artifact_base_path}")
+  if (( ${#urls[@]} == 0 )); then
+    fatal "mvn deploy log has no 'Uploaded to ossrh:' URLs under ${repo_url}/${artifact_base_path}/"
+  fi
 
-  local files
-  readarray -t files < <(find "${root}" -type f)
-
-  local file
-  for file in "${files[@]}"; do
-    snapshot_upload_file "${file}" "${file#"${root}/"}"
+  echo "Downloading deployed tree (${#urls[@]} file(s))"
+  local url rel dest
+  for url in "${urls[@]}"; do
+    rel="${url#"${repo_url}/"}"
+    dest="${bundle_dir}/${rel}"
+    mkdir -p "$(dirname "${dest}")"
+    _download_with_retry "${url}" "${dest}"
   done
-  echo "  uploaded files: ${#files[@]}"
+}
+
+# _download_with_retry URL DEST -- covers the brief PUT->GET propagation lag.
+_download_with_retry() {
+  local url=$1 dest=$2
+  local attempt status=""
+  for attempt in 1 2 3 4 5; do
+    status=$(curl -sSL -o "${dest}" -w '%{http_code}' "${url}") \
+      || status="transport-error"
+    if [[ ${status} == 2* ]]; then
+      return 0
+    fi
+    echo "  [attempt ${attempt}] ${url} -> ${status}, retrying" >&2
+    sleep $((attempt * 2))
+  done
+  fatal "failed to download ${url} after 5 attempts (last status: ${status})"
 }

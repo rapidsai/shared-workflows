@@ -2,8 +2,11 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-# Publishes a signed Maven repository tree to the Sonatype snapshot
-# repository (https://central.sonatype.com/repository/maven-snapshots/).
+# Signs and deploys the Maven repository tree under --input to the Sonatype
+# snapshot repository via 'mvn sign-and-deploy-file' inside a container, then
+# downloads what Nexus stored into a retained ZIP at --output-bundle. Any
+# pre-existing .asc/.md5/.sha* sidecars in the input are dropped -- mvn
+# regenerates them during deploy. VERSION must end with '-SNAPSHOT'.
 
 set -euo pipefail
 
@@ -13,20 +16,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "${SCRIPT_DIR}/argparse.sh"
 # shellcheck disable=SC1091
 . "${SCRIPT_DIR}/maven_utils.sh"
-# Reuse copy_bundle, require_bundle_contents, generate_bundle_checksums,
-# create_bundle_zip, and _sonatype_upload from the Central helper library.
-# shellcheck disable=SC1091
-. "${SCRIPT_DIR}/maven_central_publish_steps.sh"
-# shellcheck disable=SC1091
-. "${SCRIPT_DIR}/maven_snapshot_publish_steps.sh"
-
-SNAPSHOT_REPOSITORY_URL="https://central.sonatype.com/repository/maven-snapshots"
 
 INPUT_DIR=""
 GROUP_ID=""
 ARTIFACT_ID=""
 VERSION=""
 OUTPUT_BUNDLE=""
+IMAGE="maven:3-eclipse-temurin-17"
 
 print_help() {
   cat << EOF
@@ -35,12 +31,14 @@ Usage: maven_snapshot_publish.sh --input <path> --group-id <g> \\
                                  --artifact-id <a> --version <v> \\
                                  --output-bundle <path>
 
-Copies a signed Maven repository tree into scratch space, generates .md5 and
-.sha1 sidecars, creates a retained ZIP for provenance, and PUTs every file to
-the Sonatype snapshot repository. VERSION must end with '-SNAPSHOT'.
+Signs and deploys the Maven repository tree under --input to the Sonatype
+snapshot repository via 'mvn sign-and-deploy-file' inside a container, then
+downloads what Nexus stored into a retained ZIP at --output-bundle. Any
+pre-existing .asc/.md5/.sha* sidecars in the input are dropped -- mvn
+regenerates them during deploy. VERSION must end with '-SNAPSHOT'.
 
 REQUIRED:
-    -i, --input                    Signed Maven repository directory.
+    -i, --input                    Maven repository directory to deploy.
     -g, --group-id                 Maven groupId, e.g. ai.rapids.
     -a, --artifact-id              Maven artifactId, e.g. cudf.
     -v, --version                  Snapshot version, e.g. 26.12.0-SNAPSHOT.
@@ -50,6 +48,8 @@ OPTIONS:
     -h, --help                     Show this help message.
 
 ENVIRONMENT VARIABLES:
+    GPG_PRIVATE_KEY                Armored private key used for signing.
+    GPG_PASSPHRASE                 Passphrase for GPG_PRIVATE_KEY.
     MAVEN_DEPLOY_USERNAME          Publisher Portal user token username.
     MAVEN_DEPLOY_TOKEN             Publisher Portal user token password.
 
@@ -111,10 +111,12 @@ require_snapshot_version "${VERSION}"
 if [[ ! -d ${INPUT_DIR} ]]; then
   fatal "--input '${INPUT_DIR}' does not exist or is not a directory"
 fi
+: "${GPG_PRIVATE_KEY:?must be set}"
+: "${GPG_PASSPHRASE:?must be set}"
 : "${MAVEN_DEPLOY_USERNAME:?must be set}"
 : "${MAVEN_DEPLOY_TOKEN:?must be set}"
 
-require_cmds base64 curl jq zip md5sum sha1sum
+require_cmds docker
 
 INPUT_DIR="$(cd "${INPUT_DIR}" && pwd)"
 OUTPUT_BUNDLE_PARENT="$(dirname "${OUTPUT_BUNDLE}")"
@@ -125,32 +127,29 @@ if [[ -e ${OUTPUT_BUNDLE} ]]; then
   fatal "--output-bundle '${OUTPUT_BUNDLE}' already exists"
 fi
 
-echo "Sonatype snapshot upload"
-echo "  coordinates:   ${GROUP_ID}:${ARTIFACT_ID}:${VERSION}"
-echo "  input dir:     ${INPUT_DIR}"
-echo "  output bundle: ${OUTPUT_BUNDLE}"
-echo "  target repo:   ${SNAPSHOT_REPOSITORY_URL}"
+BUNDLE_SCRATCH="$(mktemp -d)"
+trap 'rm -rf "${BUNDLE_SCRATCH}"' EXIT
 
-WORK_DIR="$(mktemp -d)"
-trap 'rm -rf "${WORK_DIR}"' EXIT
+echo "Sonatype snapshot deploy: ${GROUP_ID}:${ARTIFACT_ID}:${VERSION}"
 
-BUNDLE_DIR="${WORK_DIR}/bundle"
-BUNDLE_ARTIFACT_DIR="${BUNDLE_DIR}/$(maven_group_path "${GROUP_ID}")/${ARTIFACT_ID}/${VERSION}"
-mkdir -p "${BUNDLE_DIR}"
+export GPG_PRIVATE_KEY GPG_PASSPHRASE MAVEN_DEPLOY_USERNAME MAVEN_DEPLOY_TOKEN \
+       GROUP_ID ARTIFACT_ID VERSION
 
-copy_bundle "${INPUT_DIR}" "${BUNDLE_DIR}"
-# Reject if any release shaped file is present in the snapshot bundle.
-require_snapshot_artifact_names "${BUNDLE_DIR}" "${VERSION}"
-# Require the POM, primary/sources/javadoc jars, and their signatures.
-require_bundle_contents "${BUNDLE_ARTIFACT_DIR}"
-generate_bundle_checksums "${BUNDLE_ARTIFACT_DIR}"
+docker run \
+  --rm \
+  --volume "${INPUT_DIR}:/input:ro" \
+  --volume "${BUNDLE_SCRATCH}:/bundle" \
+  --volume "${SCRIPT_DIR}:/scripts:ro" \
+  --workdir /bundle \
+  --env GPG_PRIVATE_KEY --env GPG_PASSPHRASE \
+  --env MAVEN_DEPLOY_USERNAME --env MAVEN_DEPLOY_TOKEN \
+  --env GROUP_ID --env ARTIFACT_ID --env VERSION \
+  --env HOST_UID="$(id -u)" --env HOST_GID="$(id -g)" \
+  "${IMAGE}" \
+  bash /scripts/maven_snapshot_publish_in_container.sh
 
-BUNDLE_ZIP="${WORK_DIR}/${ARTIFACT_ID}-${VERSION}.zip"
-create_bundle_zip "${BUNDLE_ZIP}" "${BUNDLE_DIR}"
-mv "${BUNDLE_ZIP}" "${OUTPUT_BUNDLE}"
-
-upload_tree_to_snapshots "${BUNDLE_DIR}"
-
-echo "Snapshot upload complete."
-echo "  SNAPSHOT is immediately available at:"
-echo "    ${SNAPSHOT_REPOSITORY_URL}/$(maven_group_path "${GROUP_ID}")/${ARTIFACT_ID}/${VERSION}/"
+BUNDLE_IN_SCRATCH="${BUNDLE_SCRATCH}/${ARTIFACT_ID}-${VERSION}.zip"
+if [[ ! -f ${BUNDLE_IN_SCRATCH} ]]; then
+  fatal "container did not produce ${BUNDLE_IN_SCRATCH}"
+fi
+mv "${BUNDLE_IN_SCRATCH}" "${OUTPUT_BUNDLE}"
