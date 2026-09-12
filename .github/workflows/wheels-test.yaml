@@ -22,7 +22,7 @@ on:
         required: true
         type: string
       matrix_type:
-        description: "One of: [auto, nightly, pull-request]. 'auto' means 'choose a value based on what's provided via build_type'."
+        description: "One or more comma-separated values from: [auto, nightly, pull-request]. 'auto' must be used alone and means 'choose a value based on what's provided via build_type'."
         required: false
         type: string
         default: "auto"
