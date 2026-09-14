@@ -40,9 +40,10 @@ on:
         required: false
         type: string
       version-map:
+        default: ''
         description: |
           JSON map of tag to library version
-        required: true
+        required: false
         type: string
     secrets:
       akamai-access-token:
