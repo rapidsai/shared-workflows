@@ -2,10 +2,10 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-# Signs and deploys the Maven repository tree under --input to the Sonatype
-# snapshot repository via 'mvn sign-and-deploy-file' inside a container, then
-# downloads what Nexus stored into a retained ZIP at --output-bundle. VERSION
-# must end with '-SNAPSHOT'.
+# Deploys the Maven repository tree under --input to the Sonatype snapshot
+# repository via 'mvn deploy-file' inside a container, then downloads what
+# Nexus stored into a retained ZIP at --output-bundle. VERSION must end with
+# '-SNAPSHOT'.
 
 set -euo pipefail
 
@@ -30,10 +30,10 @@ Usage: maven_snapshot_publish.sh --input <path> --group-id <g> \\
                                  --artifact-id <a> --version <v> \\
                                  --output-bundle <path>
 
-Signs and deploys the Maven repository tree under --input to the Sonatype
-snapshot repository via 'mvn sign-and-deploy-file' inside a container, then
-downloads what Nexus stored into a retained ZIP at --output-bundle. VERSION
-must end with '-SNAPSHOT'.
+Deploys the Maven repository tree under --input to the Sonatype snapshot
+repository via 'mvn deploy-file' inside a container, then downloads what
+Nexus stored into a retained ZIP at --output-bundle. VERSION must end with
+'-SNAPSHOT'.
 
 REQUIRED:
     -i, --input                    Maven repository directory to deploy.
@@ -46,8 +46,6 @@ OPTIONS:
     -h, --help                     Show this help message.
 
 ENVIRONMENT VARIABLES:
-    GPG_PRIVATE_KEY                Armored private key used for signing.
-    GPG_PASSPHRASE                 Passphrase for GPG_PRIVATE_KEY.
     MAVEN_DEPLOY_USERNAME          Publisher Portal user token username.
     MAVEN_DEPLOY_TOKEN             Publisher Portal user token password.
 
@@ -109,8 +107,6 @@ require_snapshot_version "${VERSION}"
 if [[ ! -d ${INPUT_DIR} ]]; then
   fatal "--input '${INPUT_DIR}' does not exist or is not a directory"
 fi
-: "${GPG_PRIVATE_KEY:?must be set}"
-: "${GPG_PASSPHRASE:?must be set}"
 : "${MAVEN_DEPLOY_USERNAME:?must be set}"
 : "${MAVEN_DEPLOY_TOKEN:?must be set}"
 
@@ -130,7 +126,7 @@ trap 'rm -rf "${BUNDLE_SCRATCH}"' EXIT
 
 echo "Sonatype snapshot deploy: ${GROUP_ID}:${ARTIFACT_ID}:${VERSION}"
 
-export GPG_PRIVATE_KEY GPG_PASSPHRASE MAVEN_DEPLOY_USERNAME MAVEN_DEPLOY_TOKEN \
+export MAVEN_DEPLOY_USERNAME MAVEN_DEPLOY_TOKEN \
        GROUP_ID ARTIFACT_ID VERSION
 
 docker run \
@@ -139,7 +135,6 @@ docker run \
   --volume "${BUNDLE_SCRATCH}:/bundle" \
   --volume "${SCRIPT_DIR}:/scripts:ro" \
   --workdir /bundle \
-  --env GPG_PRIVATE_KEY --env GPG_PASSPHRASE \
   --env MAVEN_DEPLOY_USERNAME --env MAVEN_DEPLOY_TOKEN \
   --env GROUP_ID --env ARTIFACT_ID --env VERSION \
   --env HOST_UID="$(id -u)" --env HOST_GID="$(id -g)" \

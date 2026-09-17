@@ -35,15 +35,15 @@ EOF
 }
 
 # deploy_snapshot_with_mvn ARTIFACT_DIR ARTIFACT_ID VERSION \
-#                          REPO_URL SETTINGS_FILE GPG_KEY_ID LOG_PATH
-# Signs and deploys every jar under ARTIFACT_DIR via mvn sign-and-deploy-file.
+#                          REPO_URL SETTINGS_FILE LOG_PATH
+# Deploys every jar under ARTIFACT_DIR via mvn deploy-file.
 # The main jar is <artifact_id>-<version>.jar. sources.jar and javadoc.jar
 # use mvn's -Dsources / -Djavadoc. Any other jar is attached with a
 # classifier taken from its filename. mvn output goes to LOG_PATH so the
-# caller can enumerate Nexus-assigned URLs. Requires GPG_PASSPHRASE in env.
+# caller can enumerate Nexus-assigned URLs.
 deploy_snapshot_with_mvn() {
   local artifact_dir=$1 artifact_id=$2 version=$3
-  local repo_url=$4 settings_file=$5 gpg_key_id=$6 log_path=$7
+  local repo_url=$4 settings_file=$5 log_path=$6
 
   local main_jar="${artifact_dir}/${artifact_id}-${version}.jar"
   local pom_file="${artifact_dir}/${artifact_id}-${version}.pom"
@@ -77,11 +77,7 @@ deploy_snapshot_with_mvn() {
     -Dmaven.wagon.http.retryHandler.count=3
     -DretryFailedDeploymentCount=3
     -s "${settings_file}"
-    org.apache.maven.plugins:maven-gpg-plugin:3.1.0:sign-and-deploy-file
-    -Dgpg.executable=gpg
-    -Dgpg.pinentryMode=loopback
-    -Dgpg.passphrase="${GPG_PASSPHRASE}"
-    -Dgpg.keyname="${gpg_key_id}"
+    org.apache.maven.plugins:maven-deploy-plugin:3.1.4:deploy-file
     -Durl="${repo_url}"
     -DrepositoryId=ossrh
     -Dfile="${main_jar}"
@@ -107,7 +103,7 @@ deploy_snapshot_with_mvn() {
   local rc=${PIPESTATUS[0]}
   set -e
   if (( rc != 0 )); then
-    fatal "mvn sign-and-deploy-file failed (exit ${rc})"
+    fatal "mvn deploy-file failed (exit ${rc})"
   fi
 }
 

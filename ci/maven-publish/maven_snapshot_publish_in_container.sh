@@ -15,8 +15,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 . "${SCRIPT_DIR}/maven_snapshot_publish_steps.sh"
 
-: "${GPG_PRIVATE_KEY:?must be set}"
-: "${GPG_PASSPHRASE:?must be set}"
 : "${MAVEN_DEPLOY_USERNAME:?must be set}"
 : "${MAVEN_DEPLOY_TOKEN:?must be set}"
 : "${GROUP_ID:?must be set}"
@@ -32,7 +30,7 @@ SNAPSHOT_REPOSITORY_URL="https://central.sonatype.com/repository/maven-snapshots
 trap 'chown -R "${HOST_UID}:${HOST_GID}" "${BUNDLE_DIR}" 2>/dev/null || true' EXIT
 
 install_container_deps
-require_cmds curl mvn zip gpg
+require_cmds curl mvn zip
 
 WORK_DIR="$(mktemp -d)"
 DEPLOY_DIR="${WORK_DIR}/deploy"
@@ -51,12 +49,9 @@ fi
 
 write_maven_settings "${SETTINGS_FILE}"
 
-GPG_KEY_ID=""
-import_gpg_signing_key GPG_KEY_ID
-
 deploy_snapshot_with_mvn \
   "${ARTIFACT_DIR}" "${ARTIFACT_ID}" "${VERSION}" \
-  "${SNAPSHOT_REPOSITORY_URL}" "${SETTINGS_FILE}" "${GPG_KEY_ID}" "${DEPLOY_LOG}"
+  "${SNAPSHOT_REPOSITORY_URL}" "${SETTINGS_FILE}" "${DEPLOY_LOG}"
 
 # Scope at the artifactId directory so the parent maven-metadata.xml is
 # fetched alongside everything under the SNAPSHOT version directory.
