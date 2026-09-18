@@ -44,7 +44,7 @@ conda-cpp-tests:
     - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '13.0.3', LINUX_VER: 'rockylinux8', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
     - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
     - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '12.9.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-    - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'gb300',      DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+    - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'gh200',      DRIVER: 'latest',   DEPENDENCIES: 'latest' }
     # yamllint enable rule:commas
 
 conda-python-build:
@@ -101,7 +101,7 @@ conda-python-tests:
     - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.9.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
     - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '13.0.3', LINUX_VER: 'rockylinux8', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
     - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-    - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'gb300',      DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+    - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'gh200',      DRIVER: 'latest',   DEPENDENCIES: 'latest' }
     # yamllint enable rule:commas
 
 docs-build:
@@ -175,5 +175,5 @@ wheels-test:
     - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
     - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '13.0.3', LINUX_VER: 'ubuntu24.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
     - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-    - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'gb300',      DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+    - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'gh200',      DRIVER: 'latest',   DEPENDENCIES: 'latest' }
     # yamllint enable rule:commas
