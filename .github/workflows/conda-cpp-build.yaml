@@ -143,6 +143,12 @@ jobs:
         uses: nv-gha-runners/setup-proxy-cache@main
         continue-on-error: true
 
+      - name: Configure RAPIDS nightly wheel index
+        run: |
+          echo "RAPIDS_PYPI_ANACONDA_INDEX_URL=${NV_GHA_RUNNERS_PYPI_ANACONDA_CACHE_URL:-https://pypi.anaconda.org/rapidsai-wheels-nightly/simple}" >> "${GITHUB_ENV}"
+          echo "PIP_EXTRA_INDEX_URL=${NV_GHA_RUNNERS_PYPI_ANACONDA_CACHE_URL:-https://pypi.anaconda.org/rapidsai-wheels-nightly/simple}" >> "${GITHUB_ENV}"
+        shell: bash
+
       # This has to be AFTER the checkout step. It creates a telemetry-artifacts directory,
       # and the checkout step would destroy it.
       - name: Telemetry setup

@@ -144,6 +144,12 @@ jobs:
         uses: nv-gha-runners/setup-proxy-cache@main
         continue-on-error: true
 
+      - name: Configure RAPIDS nightly wheel index
+        run: |
+          echo "RAPIDS_PYPI_ANACONDA_INDEX_URL=${NV_GHA_RUNNERS_PYPI_ANACONDA_CACHE_URL:-https://pypi.anaconda.org/rapidsai-wheels-nightly/simple}" >> "${GITHUB_ENV}"
+          echo "PIP_EXTRA_INDEX_URL=${NV_GHA_RUNNERS_PYPI_ANACONDA_CACHE_URL:-https://pypi.anaconda.org/rapidsai-wheels-nightly/simple}" >> "${GITHUB_ENV}"
+        shell: bash
+
       - if: ${{ env.HAS_DEVCONTAINER == 'true' }}
         name: Run build in devcontainer
         uses: devcontainers/ci@8bf61b26e9c3a98f69cb6ce2f88d24ff59b785c6 # v0.3.1900000417
@@ -159,6 +165,8 @@ jobs:
             AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
+            RAPIDS_PYPI_ANACONDA_INDEX_URL=${{ env.RAPIDS_PYPI_ANACONDA_INDEX_URL }}
+            PIP_EXTRA_INDEX_URL=${{ env.PIP_EXTRA_INDEX_URL }}
             RAPIDS_AUX_SECRET_1=${{ inputs.rapids-aux-secret-1 != '' && secrets[inputs.rapids-aux-secret-1] || '' }}
             TRACEPARENT=${{ env.TRACEPARENT }}
             OTEL_SERVICE_NAME=${{ env.OTEL_SERVICE_NAME }}
@@ -184,7 +192,7 @@ jobs:
             mkdir -p ~/.config/pip/;
             cat <<EOF >> ~/.config/pip/pip.conf
             [global]
-            extra-index-url = https://pypi.anaconda.org/rapidsai-wheels-nightly/simple
+            extra-index-url = ${RAPIDS_PYPI_ANACONDA_INDEX_URL}
             EOF
 
             rapids-make-${PYTHON_PACKAGE_MANAGER}-env;

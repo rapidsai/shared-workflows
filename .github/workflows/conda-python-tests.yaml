@@ -204,6 +204,12 @@ jobs:
         uses: nv-gha-runners/setup-proxy-cache@main
         continue-on-error: true
 
+      - name: Configure RAPIDS nightly wheel index
+        run: |
+          echo "RAPIDS_PYPI_ANACONDA_INDEX_URL=${NV_GHA_RUNNERS_PYPI_ANACONDA_CACHE_URL:-https://pypi.anaconda.org/rapidsai-wheels-nightly/simple}" >> "${GITHUB_ENV}"
+          echo "PIP_EXTRA_INDEX_URL=${NV_GHA_RUNNERS_PYPI_ANACONDA_CACHE_URL:-https://pypi.anaconda.org/rapidsai-wheels-nightly/simple}" >> "${GITHUB_ENV}"
+        shell: bash
+
       # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
       # checking '/rate_limit | jq .' should not itself count against any rate limits.
       #
