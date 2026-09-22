@@ -130,6 +130,7 @@ jobs:
           ARTIFACT_SLUG=${RUN_ID}-${RUN_ATTEMPT}-$RANDOM
           BUILD_SLUG=cuda${CUDA_VER}-${PACKAGER}-${ARCH}
           REPOSITORY=$(basename "$(pwd)")
+          SCCACHE_DIST_AUTH_TYPE=token
           SCCACHE_DIST_AUTH_TOKEN=$(
             curl -fsSL -H "Authorization: Bearer $(
               curl -fsSL -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
@@ -168,6 +169,7 @@ jobs:
           # We have to pass them in explicitly.
           env: |
             REPOSITORY=${{ env.REPOSITORY }}
+            SCCACHE_DIST_AUTH_TYPE=${{ env.SCCACHE_DIST_AUTH_TYPE }}
             SCCACHE_DIST_AUTH_TOKEN=${{ env.SCCACHE_DIST_AUTH_TOKEN }}
             SCCACHE_IDLE_TIMEOUT=0
             SCCACHE_REGION=${{ vars.AWS_REGION }}
