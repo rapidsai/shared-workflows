@@ -70,6 +70,9 @@ on:
       target-aws-secret-access-key:
         description: AWS secret access key
         required: true
+      target-archive-s3-bucket:
+        description: The S3 bucket to read archived doc versions from
+        required: true
       target-s3-bucket:
         description: The S3 bucket to upload files to
         required: true
@@ -254,21 +257,44 @@ jobs:
           echo "versions=${versions}" >> "${GITHUB_OUTPUT}"
           echo "${versions}"
 
+      - name: List archive S3 subdirectories
+        id: s3-archive-versions
+        env:
+          BUCKET: ${{ secrets.target-archive-s3-bucket }}
+          PROJECT: ${{ matrix.project }}
+        run: |
+          # List the subdirectory names (versions) under the project's S3 prefix, strip the
+          # key prefix and trailing slash from each, keep only those matching "YY.MM",
+          # and collect the results into a JSON array.
+          prefix="${PROJECT}/"
+          archived_versions="$(
+            aws s3api list-objects-v2 --bucket "${BUCKET}" --prefix "${prefix}" --delimiter / --query 'CommonPrefixes[].Prefix' --output text \
+              | tr '\t' '\n' \
+              | sed "s#^${prefix}##;s#/\$##" \
+              | { grep -E '^[0-9]{2}\.[0-9]{2}$' || true; } \
+              | jq -R -s -c 'split("\n") | map(select(length > 0))'
+          )"
+          echo "archived-versions=${archived_versions}" >> "${GITHUB_OUTPUT}"
+          echo "${archived_versions}"
+
       - name: Generate versions.json
         env:
           PROJECT: ${{ matrix.project }}
           S3_VERSIONS: ${{ steps.s3-versions.outputs.versions }}
+          ARCHIVED_VERSIONS: ${{ steps.s3-archive-versions.outputs.archived-versions }}
           TAGS: ${{ steps.tags.outputs.tags }}
           LATEST_VERSION: ${{ steps.version.outputs.rapids-version-major-minor }}
         run: |
           # Keep only S3 versions that also have a matching git tag (i.e. released versions),
-          # build a versions.json entry for each with its docs URL, and sort them newest-first.
-          # Mark the newest entry as "preferred", then prepend a "latest" entry pointing at the
-          # /latest/ alias, with its "version" set according to the VERSION file currently on
-          # "main", otherwise the switcher will just show "Choose version".
+          # build a versions.json entry for each with its docs URL, and add an entry for each
+          # archived version pointing at its archive.docs.nvidia.com URL. Sort the combined list
+          # newest-first, and mark the newest entry as "preferred", then prepend a "latest" entry
+          # pointing at the /latest/ alias, with its "version" set according to the VERSION file
+          # currently on "main", otherwise the switcher will just show "Choose version".
           jq -n -S \
             --arg project "${PROJECT}" \
             --argjson s3_versions "${S3_VERSIONS}" \
+            --argjson archived_versions "${ARCHIVED_VERSIONS}" \
             --argjson tags "${TAGS}" \
             --arg latest_version "${LATEST_VERSION}" \
             '
@@ -279,6 +305,11 @@ jobs:
                   url: "https://docs.nvidia.com/\($project)/\(.)/",
                   version: .
                 })
+              | . + ($archived_versions | unique | map({
+                  name: .,
+                  url: "https://archive.docs.nvidia.com/\($project)/\(.)/",
+                  version: .
+                }))
               | sort_by(.version)
               | reverse
               | if length > 0 then .[0] += {preferred: "true"} else . end
