@@ -23,7 +23,7 @@ repos:
       - id: codespell
         additional_dependencies: [tomli]
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.11.0.1
+    rev: v0.11.0.1-1
     hooks:
       - id: shellcheck
         files: ^ci/maven-publish/.*\.sh$
@@ -37,7 +37,7 @@ repos:
       - id: yamllint
         additional_dependencies: [pyyaml]
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: v1.29.0
+    rev: v1.30.0
     hooks:
       - id: zizmor
         exclude: |
