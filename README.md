@@ -96,3 +96,22 @@ wheel-tests:
 ```
 
 Values passed through `secrets:` are redacted everywhere in the GitHub UI, including in logs, and in most cases are replaced with `***`.
+
+### Release catalog
+
+We add additional metadata files to our builds to help track what dependencies
+were present at build time (a Software Bill of Materials, SBoM), as well as
+keeping track of artifacts as we prepare for releases. The standard Conda and
+wheel builders do this automatically and upload an additional
+`release-catalog-<artifact-name>` GitHub Actions artifact for every package
+bundle.
+
+`custom-job.yaml` can be used to produce artifacts, but the generation of extra
+metadata files are opt-in, not automatic. Supplying a non-empty
+`release-catalog-config` causes the job to upload the additional
+release catalog companion; leaving it empty uploads only the original artifact.
+
+See the
+[`shared-actions` release catalog documentation](https://github.com/rapidsai/shared-actions/tree/main/release-catalog)
+for the companion layout, configuration schema, examples, and evidence
+semantics.

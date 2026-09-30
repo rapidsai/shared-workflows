@@ -18,7 +18,7 @@ on:
         description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
         type: string
       build_type:
-        description: "One of: [branch, nightly, pull-request]"
+        description: "One of: [branch, nightly, pull-request, release-candidate]"
         required: true
         type: string
 
@@ -73,6 +73,9 @@ permissions:
 jobs:
   wheel-publish:
     name: wheels publish
+    # Candidate artifacts are staged privately by the build workflow. They must
+    # not enter public Anaconda.org or PyPI channels before rollover approval.
+    if: ${{ inputs.build_type != 'release-candidate' }}
     # Use a self-hosted runner to ensure we have sufficient disk space. Using
     # cpu8 since we shouldn't need much CPU horsepower.
     runs-on: "linux-amd64-cpu8"
