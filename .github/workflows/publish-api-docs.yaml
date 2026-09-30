@@ -72,7 +72,7 @@ on:
         required: true
       target-archive-s3-bucket:
         description: The S3 bucket to read archived doc versions from
-        required: true
+        required: false
       target-s3-bucket:
         description: The S3 bucket to upload files to
         required: true
@@ -263,17 +263,22 @@ jobs:
           BUCKET: ${{ secrets.target-archive-s3-bucket }}
           PROJECT: ${{ matrix.project }}
         run: |
-          # List the subdirectory names (versions) under the project's S3 prefix, strip the
-          # key prefix and trailing slash from each, keep only those matching "YY.MM",
-          # and collect the results into a JSON array.
-          prefix="${PROJECT}/"
-          archived_versions="$(
-            aws s3api list-objects-v2 --bucket "${BUCKET}" --prefix "${prefix}" --delimiter / --query 'CommonPrefixes[].Prefix' --output text \
-              | tr '\t' '\n' \
-              | sed "s#^${prefix}##;s#/\$##" \
-              | { grep -E '^[0-9]{2}\.[0-9]{2}$' || true; } \
-              | jq -R -s -c 'split("\n") | map(select(length > 0))'
-          )"
+          # If BUCKET is empty (the secret has no value), skip the S3 lookup and report no
+          # archived versions. Otherwise list the subdirectory names (versions) under the
+          # project's S3 prefix, strip the key prefix and trailing slash from each, keep only
+          # those matching "YY.MM", and collect the results into a JSON array.
+          if [ -z "${BUCKET}" ]; then
+            archived_versions="[]"
+          else
+            prefix="${PROJECT}/"
+            archived_versions="$(
+              aws s3api list-objects-v2 --bucket "${BUCKET}" --prefix "${prefix}" --delimiter / --query 'CommonPrefixes[].Prefix' --output text \
+                | tr '\t' '\n' \
+                | sed "s#^${prefix}##;s#/\$##" \
+                | { grep -E '^[0-9]{2}\.[0-9]{2}$' || true; } \
+                | jq -R -s -c 'split("\n") | map(select(length > 0))'
+            )"
+          fi
           echo "archived-versions=${archived_versions}" >> "${GITHUB_OUTPUT}"
           echo "${archived_versions}"
 
