@@ -6,7 +6,7 @@ on:
       container-image:
         description: Container image URI
         type: string
-        default: rapidsai/staging:ci-conda-468-26.12-latest
+        default: rapidsai/staging:ci-conda-468-26.12-cuda13.3.0-ubuntu24.04-py3.14
       container-options:
         description: |
           Command-line arguments passed to 'docker run' when starting the container this workflow runs in.
