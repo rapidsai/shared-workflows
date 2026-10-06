@@ -121,7 +121,7 @@ When a workflow is called with a comma-separated `matrix_type` such as `pull-req
 5. **Opt out each library**: Remove the `matrix_type` changes from each library's workflows.
 6. **Remove the migration matrix**: After no library references it any more, remove the migration matrix from `shared-workflows`.
 > [!WARNING]
-> Removing a migration matrix while a library still uses it in `matrix_type` will break that library's CI. Search the GitHub organization for the matrix name before removing it.
+> Removing a migration matrix while a library still uses it in `matrix_type` will break that library's CI. Search GitHub for the matrix name before removing it.
 
 All of this happens on `main`, so the migration never gets out of sync with other changes to `shared-workflows`.
 Several migrations can run at once, each with its own matrix (e.g. `matrix_type: pull-request,cuda-13.4,python-3.15`).
