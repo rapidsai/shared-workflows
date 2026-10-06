@@ -117,7 +117,7 @@ When a workflow is called with a comma-separated `matrix_type` such as `pull-req
    - Branch/nightly builds and nightly tests (`build.yaml`, `test.yaml`): `matrix_type: nightly,cuda-13.4`
 
    Downstream libraries get their dependencies from the branch and nightly builds, so those builds must produce the new packages too, not just PR CI.
-4. **Promote the new versions**: Once all libraries have opted in, merge a `shared-workflows` PR that adds the new versions to the `pull-request` and `nightly` matrices, rebalancing them according to the guidelines above. Libraries still using the migration matrix keep working; any jobs that appear in both matrices are deduplicated.
+4. **Promote the new versions**: Once all libraries have opted in, merge a `shared-workflows` PR that adds the new versions to the `pull-request` and `nightly` matrices, rebalancing them according to the guidelines above.
 5. **Opt out each library**: Remove the `matrix_type` changes from each library's workflows.
 6. **Remove the migration matrix**: After no library references it any more, remove the migration matrix from `shared-workflows`.
 > [!WARNING]
