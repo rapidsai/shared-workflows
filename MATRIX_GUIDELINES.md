@@ -103,25 +103,36 @@ Make sure to test on CUDA versions new enough to support that hardware.
 
 ### Adding new versions to the matrix
 
-When making matrix changes (new CUDA/Python/OS versions, runner type changes):
-1. **Create a long-lived branch**: Create a feature branch in `shared-workflows`. 1. **Create a long-lived branch**: Create a feature branch in `shared-workflows`.
-> [!IMPORTANT]
-> You must use the `rapidsai/shared-workflows` repo and not a fork.
-> Using a fork in downstream repositories will not allow actions to run, for security reasons.
-2. **Add the new versions**: Modify build/test matrices to use the new version in some jobs
-3. **Update RAPIDS repos**: Update projects one-by-one to use `@feature-branch` in their `.github/workflows/*.yaml` files.
-4. **Merge and switch back**: Merge feature branch, then update projects back to `@main`
+New versions (CUDA, Python, OS) add builds that don't exist yet. Those builds have to be created in library dependency order: a library can't build or test against a new CUDA version until its upstream dependencies publish packages for it.
+So each library opts into the new jobs on its own schedule, using a temporary *migration matrix* on `main`.
 
-This allows incremental matrix expansion across RAPIDS and provides rollback capability if issues arise.
+A migration matrix is an extra key in [`matrix.yaml`](.github/actions/prepare-matrix/matrix.yaml), next to `pull-request` and `nightly`, named after the migration (e.g. `cuda-13.4`).
+It contains **only the new jobs**.
+When a workflow is called with a comma-separated `matrix_type` such as `pull-request,cuda-13.4`, `compute-matrix` uses the union of those matrices, drops exact duplicates, and then applies the caller's `matrix_filter`.
 
-See examples in:
-- [PR #413 (Add CUDA 13.0)](https://github.com/rapidsai/shared-workflows/pull/413)
-- [PR #412 (Add conda CUDA 13 workflows)](https://github.com/rapidsai/shared-workflows/pull/412)
+1. **Open a tracking issue**: Track the migration in [build-planning](https://github.com/rapidsai/build-planning/issues), with a checklist of the libraries in dependency order.
+2. **Add the migration matrix**: Merge a `shared-workflows` PR to `main` that adds the migration matrix to every build and test matrix that needs new jobs. Libraries that haven't opted in see no change.
+3. **Opt in each library**: In dependency order, merge a PR to each library that adds the migration matrix to `matrix_type` for the affected build and test jobs:
+   - PR workflow (`pr.yaml`): `matrix_type: pull-request,cuda-13.4`
+   - Branch/nightly builds and nightly tests (`build.yaml`, `test.yaml`): `matrix_type: nightly,cuda-13.4`
+
+   Downstream libraries get their dependencies from the branch and nightly builds, so those builds must produce the new packages too, not just PR CI.
+
+   Only add the migration matrix to workflows whose matrix defines it. Requesting a matrix type that is not defined for that workflow is an error.
+4. **Promote the new versions**: Once all libraries have opted in, merge a `shared-workflows` PR that adds the new versions to the `pull-request` and `nightly` matrices, rebalancing them according to the guidelines above. Libraries still using the migration matrix keep working; any jobs that appear in both matrices are deduplicated.
+5. **Opt out each library**: Remove the `matrix_type` changes from each library's workflows.
+6. **Remove the migration matrix**: After no library references it any more, remove the migration matrix from `shared-workflows`.
+> [!WARNING]
+> Removing a migration matrix while a library still uses it in `matrix_type` will break that library's CI. Search the GitHub organization for the matrix name before removing it.
+
+All of this happens on `main`, so the migration never gets out of sync with other changes to `shared-workflows`.
+Several migrations can run at once, each with its own matrix (e.g. `matrix_type: pull-request,cuda-13.4,python-3.15`).
+If a release branch is cut during a migration, the migration matrix is included in that branch, so the migration can finish there during burndown.
 
 ### Modifying or removing versions from the matrix
 
 When modifying or removing matrix elements, it may not be necessary to do the full rollout procedure above.
-That process is really only needed for adding new builds that don't yet exist, and need to be created in RAPIDS dependency order.
+That process is really only needed for adding new builds that don't yet exist, and need to be created in library dependency order.
 
 1. **Announce deprecation**: Publish a RAPIDS Support Notice if needed (e.g., [RSN 54](https://docs.rapids.ai/notices/rsn0054/))
 2. **Update the matrix**: Modify/remove build and test matrices

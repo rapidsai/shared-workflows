@@ -64,6 +64,11 @@ on:
         default: "cpu16"
 
       # general settings
+      matrix_type:
+        description: "One or more comma-separated matrix types defined for this workflow's matrix in .github/actions/prepare-matrix/matrix.yaml, e.g. 'pull-request' or 'nightly'. Defaults to 'auto', which must be used alone and means 'choose a value based on what's provided via build_type'."
+        required: false
+        type: string
+        default: "auto"
       matrix_filter:
         description: |
           jq expression which modifies the matrix.
@@ -185,6 +190,7 @@ jobs:
     with:
       build_type: ${{ inputs.build_type }}
       matrix_name: wheels-build
+      matrix_type: ${{ inputs.matrix_type }}
       matrix_filter: ${{ inputs.matrix_filter }}
       pure_wheel: ${{ inputs.pure-wheel }}
   build:

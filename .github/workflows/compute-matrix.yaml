@@ -10,7 +10,7 @@ on:
         required: true
         type: string
       matrix_type:
-        description: "One or more comma-separated values from: [auto, nightly, pull-request]. 'auto' must be used alone and means 'choose a value based on what's provided via build_type'."
+        description: "One or more comma-separated matrix types defined for this workflow's matrix in .github/actions/prepare-matrix/matrix.yaml, e.g. 'pull-request' or 'nightly'. Defaults to 'auto', which must be used alone and means 'choose a value based on what's provided via build_type'."
         required: false
         type: string
         default: "auto"
@@ -62,12 +62,12 @@ jobs:
               echo "::error::Invalid build_type! Must be one of 'branch', 'nightly', 'pull-request', or 'release-candidate'."
               exit 1
           fi
-          if [[ ! "$MATRIX_TYPE" =~ ^(auto|nightly|pull-request)(,(auto|nightly|pull-request))*$ ]] || [[ "$MATRIX_TYPE" == *auto* && "$MATRIX_TYPE" != "auto" ]]; then
-              echo "::error::Invalid matrix_type! Must be 'auto' or a comma-separated list of 'nightly' and 'pull-request'."
-              exit 1
-          fi
           if ! jq -n -e '$ENV.MATRIX | fromjson | has($ENV.MATRIX_NAME)'; then
               echo "::error::Invalid matrix_name! Must be one of '$(jq -n -r "\$ENV.MATRIX | fromjson | keys | join(\"', '\")")'."
+              exit 1
+          fi
+          if [[ "$MATRIX_TYPE" != "auto" ]] && ! jq -n -e '($ENV.MATRIX | fromjson)[$ENV.MATRIX_NAME] as $matrix | $ENV.MATRIX_TYPE | split(",") | length > 0 and all(. as $matrix_type | $matrix | has($matrix_type))'; then
+              echo "::error::Invalid matrix_type! Must be 'auto' or a comma-separated list of matrix types defined for '${MATRIX_NAME}': $(jq -n -r '($ENV.MATRIX | fromjson)[$ENV.MATRIX_NAME] | keys | join(", ")')."
               exit 1
           fi
       - name: Compute Build Matrix
