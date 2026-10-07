@@ -112,8 +112,6 @@ jobs:
             --output-bundle central-bundle.zip
             --auto-drop "${AUTO_DROP}"
           )
-          # Let the script apply its own --group-id default when unset, instead of
-          # duplicating that fallback here.
           if [[ -n ${PROFILE_ID} ]]; then
             args+=(--profile-id "${PROFILE_ID}")
           fi
