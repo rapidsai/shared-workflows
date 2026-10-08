@@ -60,7 +60,7 @@ _sonatype_upload() {
 staging_search_repositories() {
   local state=${1:-}
   local url
-  url="${OSSRH_STAGING_API_URL}/manual/search/repositories?ip=client&profile_id=$(printf %s "${GROUP_ID}" | jq -sRr @uri)"
+  url="${OSSRH_STAGING_API_URL}/manual/search/repositories?ip=client&profile_id=$(printf %s "${PROFILE_ID}" | jq -sRr @uri)"
   if [[ -n ${state} ]]; then
     url+="&state=$(printf %s "${state}" | jq -sRr @uri)"
   fi
@@ -156,7 +156,7 @@ require_no_open_staging_repository() {
     || fatal "OSSRH staging search returned an invalid response"
   if (( count != 0 )); then
     jq . <<< "${response}" >&2 || true
-    fatal "found ${count} open OSSRH staging repository/repositories for ${GROUP_ID} from this IP; drop or hand them off before retrying"
+    fatal "found ${count} open OSSRH staging repository/repositories for ${PROFILE_ID} from this IP; drop or hand them off before retrying"
   fi
 }
 

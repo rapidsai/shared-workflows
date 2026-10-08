@@ -36,6 +36,15 @@ on:
         required: false
         type: string
         default: ''
+      profile-id:
+        description: |
+          Sonatype staging profile to search, if different from the Maven groupId read from
+          the POM (e.g. a verified parent namespace like com.nvidia for a com.nvidia.cuopt
+          groupId). Defaults to the groupId when not set. Only applies to the Maven Central
+          path (release builds); ignored on the snapshot path.
+        required: false
+        type: string
+        default: ''
     secrets:
       GPG_PRIVATE_KEY:
         description: Armored GPG private key used to sign every artifact at upload.
@@ -107,15 +116,21 @@ jobs:
         id: publish-central
         if: ${{ steps.destination.outputs.is_release == 'true' }}
         run: |
-          shared-workflows/ci/maven-publish/maven_central_publish.sh \
-            --input signed-maven-repo \
-            --group-id "${GROUP_ID}" \
-            --artifact-id "${ARTIFACT_ID}" \
-            --version "${VERSION}" \
-            --output-bundle central-bundle.zip \
+          args=(
+            --input signed-maven-repo
+            --group-id "${GROUP_ID}"
+            --artifact-id "${ARTIFACT_ID}"
+            --version "${VERSION}"
+            --output-bundle central-bundle.zip
             --auto-drop "${AUTO_DROP}"
+          )
+          if [[ -n ${PROFILE_ID} ]]; then
+            args+=(--profile-id "${PROFILE_ID}")
+          fi
+          shared-workflows/ci/maven-publish/maven_central_publish.sh "${args[@]}"
         env:
           GROUP_ID: ${{ steps.prepare.outputs.GROUP_ID }}
+          PROFILE_ID: ${{ inputs.profile-id }}
           ARTIFACT_ID: ${{ steps.prepare.outputs.ARTIFACT_ID }}
           VERSION: ${{ steps.prepare.outputs.VERSION }}
           # Invert: stage-for-...=true means don't auto-drop.

@@ -28,6 +28,7 @@ POLL_TIMEOUT_SEC=900
 
 INPUT_DIR=""
 GROUP_ID=""
+PROFILE_ID=""
 ARTIFACT_ID=""
 VERSION=""
 OUTPUT_BUNDLE=""
@@ -53,6 +54,10 @@ REQUIRED:
     -o, --output-bundle            Path for the retained deployment ZIP.
 
 OPTIONS:
+    --profile-id <p>                Sonatype staging profile to search, if different from
+                                    --group-id (e.g. a verified parent namespace like
+                                    com.nvidia for a com.nvidia.cuopt groupId). Defaults to
+                                    --group-id.
     --auto-drop <true|false>       Drop after VALIDATED (default: true).
     -h, --help                     Show this help message.
 
@@ -80,6 +85,11 @@ parse_args() {
       -g|--group-id)
         require_value "$1" "${2:-}"
         GROUP_ID=$2
+        shift 2
+        ;;
+      --profile-id)
+        require_value "$1" "${2:-}"
+        PROFILE_ID=$2
         shift 2
         ;;
       -a|--artifact-id)
@@ -124,6 +134,11 @@ if [[ ${AUTO_DROP} != "true" && ${AUTO_DROP} != "false" ]]; then
 fi
 require_maven_coordinates "${GROUP_ID}" "${ARTIFACT_ID}" "${VERSION}"
 require_release_version "${VERSION}"
+# A groupId nested under a verified parent namespace (e.g. com.nvidia.cuopt under the
+# verified com.nvidia) still searches/creates its OSSRH staging repo under the parent's
+# Sonatype profile, not the full groupId string -- so default to GROUP_ID, but let callers
+# override it.
+PROFILE_ID="${PROFILE_ID:-${GROUP_ID}}"
 if [[ ! -d ${INPUT_DIR} ]]; then
   fatal "--input '${INPUT_DIR}' does not exist or is not a directory"
 fi
@@ -142,6 +157,7 @@ if [[ -e ${OUTPUT_BUNDLE} ]]; then
 fi
 echo "Maven Central upload"
 echo "  coordinates:   ${GROUP_ID}:${ARTIFACT_ID}:${VERSION}"
+echo "  profile:       ${PROFILE_ID}"
 echo "  auto-drop:     ${AUTO_DROP}"
 echo "  input dir:     ${INPUT_DIR}"
 echo "  output bundle: ${OUTPUT_BUNDLE}"
