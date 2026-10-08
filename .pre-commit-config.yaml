@@ -6,6 +6,15 @@ ci:
   skip: [actionlint-docker]
 
 repos:
+  - repo: local
+    hooks:
+      - id: test-compute-matrix
+        name: Test shared matrix resolution
+        language: python
+        additional_dependencies: [PyYAML==6.0.3]
+        entry: python -m unittest discover -s ci -p test_compute_matrix.py
+        pass_filenames: false
+        files: ^(ci/test_compute_matrix\.py|\.github/actions/prepare-matrix/|\.github/workflows/(compute-matrix|resolve-python-test-matrices)\.yaml)
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -26,7 +35,7 @@ repos:
     rev: v0.11.0.1
     hooks:
       - id: shellcheck
-        files: ^ci/maven-publish/.*\.sh$
+        files: ^(ci/maven-publish/.*|\.github/actions/prepare-matrix/compute)\.sh$
   - repo: https://github.com/rapidsai/pre-commit-hooks
     rev: v1.6.1
     hooks:

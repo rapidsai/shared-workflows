@@ -6,45 +6,35 @@ on:
         required: true
         type: string
       matrix_name:
-        description: "One of: [conda-cpp-build, conda-cpp-tests, conda-python-build, conda-python-tests, wheels-build, wheels-test]"
+        description: Name of the workflow matrix in prepare-matrix/matrix.yaml.
         required: true
         type: string
       matrix_type:
-        description: "One or more comma-separated matrix types defined for this workflow's matrix in .github/actions/prepare-matrix/matrix.yaml, e.g. 'pull-request' or 'nightly'. Defaults to 'auto', which must be used alone and means 'choose a value based on what's provided via build_type'."
-        required: false
+        description: Comma-separated matrix types, or auto to select by build_type.
         type: string
-        default: "auto"
+        default: auto
       matrix_filter:
-        description: |
-          jq expression which modifies the matrix.
-          For example, 'map(select(.ARCH == "amd64"))' to achieve "only run amd64 jobs".
+        description: jq expression which modifies the matrix entry array.
         type: string
         default: "."
+      resolved-matrix:
+        description: Optional nonempty JSON include matrix. Reuses the caller's snapshot instead of resolving current definitions; matrix_filter still applies.
+        type: string
+        default: ''
       pure_wheel:
-        description: "One of [true, false], true if the wheel is not dependent on operating system, Python minor version, or CPU architecture"
-        required: false
+        description: Whether the wheel is independent of OS, Python, and architecture.
         type: boolean
         default: false
       pure-conda:
-        required: false
+        description: "One of: [true, false, cuda_major]"
         type: string
         default: "false"
-        description: |
-          One of [true, false, cuda_major]. 'true' if the conda package is not
-          dependent on operating system, Python minor version, CPU architecture,
-          or CUDA version. 'cuda_major' if the package is not dependent on
-          operating system, Python minor version, or CPU architecture, but is
-          dependent on CUDA major version.
     outputs:
       matrix:
         value: ${{ jobs.compute-matrix.outputs.matrix }}
 jobs:
   compute-matrix:
     runs-on: ubuntu-latest
-    env:
-      BUILD_TYPE: ${{ inputs.build_type }}
-      MATRIX_NAME: ${{ inputs.matrix_name }}
-      MATRIX_TYPE: ${{ inputs.matrix_type }}
     outputs:
       matrix: ${{ steps.compute-matrix.outputs.matrix }}
     steps:
@@ -54,74 +44,16 @@ jobs:
         with:
           action-repo: ${{ github.action_repository }}
           action-ref: ${{ github.action_ref }}
-      - name: Validate Inputs
-        env:
-          MATRIX: ${{ steps.prepare-matrix.outputs.matrix }}
-        run: |
-          if [[ "$BUILD_TYPE" != "branch" ]] && [[ "$BUILD_TYPE" != "nightly" ]] && [[ "$BUILD_TYPE" != "pull-request" ]] && [[ "$BUILD_TYPE" != "release-candidate" ]]; then
-              echo "::error::Invalid build_type! Must be one of 'branch', 'nightly', 'pull-request', or 'release-candidate'."
-              exit 1
-          fi
-          if ! jq -n -e '$ENV.MATRIX | fromjson | has($ENV.MATRIX_NAME)'; then
-              echo "::error::Invalid matrix_name! Must be one of '$(jq -n -r "\$ENV.MATRIX | fromjson | keys | join(\"', '\")")'."
-              exit 1
-          fi
-          if [[ "$MATRIX_TYPE" != "auto" ]] && ! jq -n -e '($ENV.MATRIX | fromjson)[$ENV.MATRIX_NAME] as $matrix | $ENV.MATRIX_TYPE | split(",") | length > 0 and all(. as $matrix_type | $matrix | has($matrix_type))'; then
-              echo "::error::Invalid matrix_type! Must be 'auto' or a comma-separated list of matrix types defined for '${MATRIX_NAME}': $(jq -n -r '($ENV.MATRIX | fromjson)[$ENV.MATRIX_NAME] | keys | join(", ")')."
-              exit 1
-          fi
+          resolved-matrix: ${{ inputs.resolved-matrix }}
       - name: Compute Build Matrix
         id: compute-matrix
         env:
+          BUILD_TYPE: ${{ inputs.build_type }}
+          MATRIX_NAME: ${{ inputs.matrix_name }}
+          MATRIX_TYPE: ${{ inputs.matrix_type }}
           MATRIX: ${{ steps.prepare-matrix.outputs.matrix }}
+          RESOLVED_MATRIX: ${{ inputs.resolved-matrix }}
           MATRIX_FILTER: ${{ inputs.matrix_filter }}
           PURE_WHEEL: ${{ inputs.pure_wheel }}
           PURE_CONDA: ${{ inputs.pure-conda }}
-        run: |
-          set -eo pipefail
-
-          # only overwrite MATRIX_TYPE if it was set to 'auto'
-          if [[ "${MATRIX_TYPE}" == "auto" ]]; then
-            if [[ "${BUILD_TYPE}" == "branch" || "${BUILD_TYPE}" == "release-candidate" ]]; then
-              # Use the nightly matrix for branch tests
-              MATRIX_TYPE="nightly"
-            else
-              MATRIX_TYPE="${BUILD_TYPE}"
-            fi
-          fi
-          MATRIX_TYPES="$(jq -cn --arg matrix_types "${MATRIX_TYPE}" '$matrix_types | split(",")')"
-          export MATRIX_TYPES
-
-          # When pure-wheel is true and matrix_filter is default, override to build one wheel per CUDA version with amd64 and the latest PY_VER
-          if [ "${PURE_WHEEL}" = "true" ] && [ "${MATRIX_FILTER}" = "." ]; then
-            MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | group_by(.CUDA_VER) | map(max_by(.PY_VER | split(\".\") | map(tonumber)))"
-          fi
-
-          # When pure-conda is true and matrix_filter is default, override to build one conda package with amd64, latest CUDA_VER, and the latest PY_VER
-          if [ "${PURE_CONDA}" = "true" ] && [ "${MATRIX_FILTER}" = "." ]; then
-            MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | sort_by(.CUDA_VER, .PY_VER) | [last]"
-          elif [ "${PURE_CONDA}" = "cuda_major" ] && [ "${MATRIX_FILTER}" = "." ]; then
-            MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | group_by(.CUDA_VER|split(\".\")|map(tonumber)|.[0]) | map(max_by([(.PY_VER|split(\".\")|map(tonumber)), (.CUDA_VER|split(\".\")|map(tonumber))]))"
-          fi
-
-          if ! MATRIX="$(
-            jq -n -c "
-              \$ENV.MATRIX | fromjson as \$matrix
-              | [
-                  \$ENV.MATRIX_TYPES | fromjson
-                  | .[] as \$matrix_type
-                  | \$matrix[\$ENV.MATRIX_NAME][\$matrix_type][]
-                ]
-              | reduce .[] as \$entry (
-                  [];
-                  if index(\$entry) == null then . + [\$entry] else . end
-                )
-              | ${MATRIX_FILTER}
-              | if (. | length) > 0 then {include: .} else \"\" | halt_error(1) end
-            "
-          )"; then
-            echo "::error::Empty matrix"
-            exit 1
-          fi
-
-          echo "matrix=${MATRIX}" | tee --append "${GITHUB_OUTPUT}"
+        run: bash shared-workflows/.github/actions/prepare-matrix/compute.sh

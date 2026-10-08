@@ -70,6 +70,21 @@ MATRIX="$(
 echo "${MATRIX}" | jq
 ```
 
+### Resolved Python test matrices
+
+`resolve-python-test-matrices.yaml` prepares the matrix definitions once and
+returns `wheels-test` and `conda-python-tests` outputs, each a JSON
+`{"include": [...]}` matrix. It accepts `build_type` and optional `matrix_type`,
+using the same selection and validation as `compute-matrix.yaml`.
+
+Callers can partition that snapshot between related test suites and pass each
+partition through the optional `resolved-matrix` input of `wheels-test.yaml` or
+`conda-python-tests.yaml`. The supplied snapshot is validated and the existing
+`matrix_filter` still applies; matrix definitions are not read again. Omitting
+the input retains the existing matrix resolution behavior.
+
+The resolver and consumers should use the same shared-workflows revision.
+
 ### Secrets
 
 Some workflows support passing in arbitrary secrets and making them available as environment variables for the `script:` input.

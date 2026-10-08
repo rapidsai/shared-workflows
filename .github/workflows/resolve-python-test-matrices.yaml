@@ -1,0 +1,46 @@
+name: Resolve Python test matrix snapshot
+on:
+  workflow_call:
+    inputs:
+      build_type:
+        type: string
+        required: true
+      matrix_type:
+        type: string
+        default: auto
+    outputs:
+      wheels-test:
+        value: ${{ jobs.resolve.outputs.wheels-test }}
+      conda-python-tests:
+        value: ${{ jobs.resolve.outputs.conda-python-tests }}
+permissions:
+  contents: read
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      wheels-test: ${{ steps.wheels.outputs.matrix }}
+      conda-python-tests: ${{ steps.conda.outputs.matrix }}
+    steps:
+      - name: Prepare matrix definitions once
+        id: prepare
+        uses: $/.github/actions/prepare-matrix-dispatch
+        with:
+          action-repo: ${{ github.action_repository }}
+          action-ref: ${{ github.action_ref }}
+      - name: Resolve wheel test matrix
+        id: wheels
+        env:
+          BUILD_TYPE: ${{ inputs.build_type }}
+          MATRIX_TYPE: ${{ inputs.matrix_type }}
+          MATRIX_NAME: wheels-test
+          MATRIX: ${{ steps.prepare.outputs.matrix }}
+        run: bash shared-workflows/.github/actions/prepare-matrix/compute.sh
+      - name: Resolve Conda Python test matrix
+        id: conda
+        env:
+          BUILD_TYPE: ${{ inputs.build_type }}
+          MATRIX_TYPE: ${{ inputs.matrix_type }}
+          MATRIX_NAME: conda-python-tests
+          MATRIX: ${{ steps.prepare.outputs.matrix }}
+        run: bash shared-workflows/.github/actions/prepare-matrix/compute.sh

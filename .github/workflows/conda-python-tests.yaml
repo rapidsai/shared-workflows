@@ -37,6 +37,10 @@ on:
           For example, 'map(select(.ARCH == "amd64"))' to achieve "only run amd64 jobs".
         type: string
         default: "."
+      resolved-matrix:
+        description: Optional JSON include matrix from a previously resolved snapshot. matrix_filter still applies.
+        type: string
+        default: ''
       continue-on-error:
         description: |
           If true, job failures do not result in workflow failures (useful for implementing
@@ -196,6 +200,7 @@ jobs:
       matrix_name: conda-python-tests
       matrix_type: ${{ inputs.matrix_type }}
       matrix_filter: ${{ inputs.matrix_filter }}
+      resolved-matrix: ${{ inputs.resolved-matrix }}
   tests:
     name: ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}, ${{ matrix.GPU }}, ${{ matrix.DRIVER }}-driver, ${{ matrix.DEPENDENCIES }}-deps
     needs: compute-matrix
@@ -263,7 +268,7 @@ jobs:
           extra_attributes: "rapids.PACKAGER=conda,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }},rapids.GPU=${{ matrix.GPU }},rapids.DRIVER=${{ matrix.DRIVER }},rapids.DEPENDENCIES=${{ matrix.DEPENDENCIES }}"
 
       - name: Setup proxy cache
-        uses: nv-gha-runners/setup-proxy-cache@main
+        uses: nv-gha-runners/setup-proxy-cache@eadc57871cde0c92a223d0f486ab669a2360f978 # main
         continue-on-error: true
         with:
           enable-apt: true

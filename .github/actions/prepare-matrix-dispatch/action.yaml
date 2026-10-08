@@ -8,6 +8,10 @@ inputs:
   action-ref:
     description: Action ref.
     required: true
+  resolved-matrix:
+    description: When supplied, only check out the implementation; the caller already resolved its matrix snapshot.
+    required: false
+    default: ''
 
 outputs:
   matrix:
@@ -26,4 +30,5 @@ runs:
         persist-credentials: false
     - id: prepare-matrix
       name: Prepare Build Matrix
+      if: inputs.resolved-matrix == ''
       uses: ./shared-workflows/.github/actions/prepare-matrix
