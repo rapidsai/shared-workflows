@@ -3,7 +3,8 @@
 
 ci:
   autoupdate_schedule: 'monthly'
-  skip: [actionlint-docker]
+  # pre-commit.ci lacks Docker and jq; matrix tests run in the Ubuntu Actions job.
+  skip: [actionlint-docker, test-compute-matrix]
 
 repos:
   - repo: local

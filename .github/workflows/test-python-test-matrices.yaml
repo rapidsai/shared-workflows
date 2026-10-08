@@ -1,0 +1,40 @@
+name: Python test matrix resolution
+on:
+  pull_request:
+    paths:
+      - .github/actions/prepare-matrix/**
+      - .github/actions/prepare-matrix-dispatch/**
+      - .github/workflows/compute-matrix.yaml
+      - .github/workflows/resolve-python-test-matrices.yaml
+      - .github/workflows/test-python-test-matrices.yaml
+      - .github/workflows/wheels-test.yaml
+      - .github/workflows/conda-python-tests.yaml
+      - .pre-commit-config.yaml
+      - ci/test_compute_matrix.py
+  push:
+    branches: [main]
+    paths:
+      - .github/actions/prepare-matrix/**
+      - .github/actions/prepare-matrix-dispatch/**
+      - .github/workflows/compute-matrix.yaml
+      - .github/workflows/resolve-python-test-matrices.yaml
+      - .github/workflows/test-python-test-matrices.yaml
+      - .github/workflows/wheels-test.yaml
+      - .github/workflows/conda-python-tests.yaml
+      - .pre-commit-config.yaml
+      - ci/test_compute_matrix.py
+permissions:
+  contents: read
+jobs:
+  matrix-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Test matrix resolution and snapshot reuse
+        run: |
+          python3 -m venv .matrix-test-env
+          .matrix-test-env/bin/python -m pip install PyYAML==6.0.3
+          .matrix-test-env/bin/python -m unittest discover -s ci -p test_compute_matrix.py
