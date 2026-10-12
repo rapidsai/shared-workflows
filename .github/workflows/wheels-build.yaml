@@ -80,6 +80,10 @@ on:
         default: true
         required: false
         description: "One of [true, false], true if artifacts should be uploaded to GitHub's artifact store"
+      candidate-container-images:
+        description: "Reviewed JSON map of image names to immutable registry digests; required for candidates."
+        type: string
+        default: '{}'
       candidate-train-sha256:
         description: "Canonical SHA-256 of the release train; required for release-candidate builds."
         type: string
@@ -185,6 +189,44 @@ permissions:
   statuses: none
 
 jobs:
+  candidate-inputs:
+    needs: compute-matrix
+    runs-on: ubuntu-latest
+    outputs:
+      images: ${{ steps.validate.outputs.images }}
+    steps:
+      - name: Authenticate candidate input reader
+        if: ${{ inputs.build_type == 'release-candidate' }}
+        uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6.2.2
+        with:
+          aws-region: us-east-2
+          role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}
+      - name: Resolve controller-bound candidate metadata
+        id: candidate-context
+        if: ${{ inputs.build_type == 'release-candidate' && inputs.candidate-train-sha256 == '' }}
+        uses: rapidsai/shared-actions/release-candidate-context@9eb9c4a9d2d3de8152f36ad62a1f190672120b13
+        with:
+          source-sha: ${{ inputs.sha || github.sha }}
+      - name: Validate train-owned immutable candidate image inputs
+        id: validate
+        if: ${{ inputs.build_type == 'release-candidate' }}
+        uses: rapidsai/shared-actions/release-candidate-images@9eb9c4a9d2d3de8152f36ad62a1f190672120b13
+        with:
+          train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
+          caller-images: ${{ inputs.candidate-container-images }}
+          matrix: ${{ needs.compute-matrix.outputs.matrix }}
+          image-family: ci-wheel
+
+      - name: Require clean candidate cache policy
+        if: ${{ inputs.build_type == 'release-candidate' }}
+        env:
+          TRAIN_FILE: ${{ runner.temp }}/candidate-image-train.json
+        run: |
+          if ! jq -e '.candidate_build_policy.sccache == false' "${TRAIN_FILE}" >/dev/null; then
+            echo "candidate builds require sccache=false until a dedicated cache identity is reviewed" >&2
+            exit 1
+          fi
+
   compute-matrix:
     uses: ./.github/workflows/compute-matrix.yaml
     with:
@@ -195,15 +237,17 @@ jobs:
       pure_wheel: ${{ inputs.pure-wheel }}
   build:
     name: ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}
-    needs: [compute-matrix]
+    needs: [compute-matrix, candidate-inputs]
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.compute-matrix.outputs.matrix) }}
     runs-on: "linux-${{ matrix.ARCH }}-${{ inputs.node_type }}"
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
+      RELEASE_CANDIDATE_CONTAINER_IMAGES: ${{ needs.candidate-inputs.outputs.images }}
     container:
-      image: "rapidsai/ci-wheel:26.12-cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}"
+      # Candidate digests are validated in candidate-inputs; ordinary CI keeps tags.
+      image: ${{ inputs.build_type != 'release-candidate' && format('rapidsai/ci-wheel:26.12-cuda{0}-{1}-py{2}', matrix.CUDA_VER, matrix.LINUX_VER, matrix.PY_VER) || fromJSON(needs.candidate-inputs.outputs.images)[format('rapidsai/ci-wheel:26.12-cuda{0}-{1}-py{2}', matrix.CUDA_VER, matrix.LINUX_VER, matrix.PY_VER)] }} # zizmor: ignore[unpinned-images]
       env:
         # Candidate orchestration retains its own input mode, while RAPIDS
         # build helpers use the established nightly dependency behavior.
@@ -211,7 +255,8 @@ jobs:
         RAPIDS_RELEASE_CANDIDATE: ${{ inputs.build_type == 'release-candidate' }}
         RAPIDS_DATETIME_STRING: ${{ inputs.build-datetime }}
     steps:
-      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+      - if: ${{ inputs.build_type != 'release-candidate' }}
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -268,7 +313,7 @@ jobs:
           cache-read-only: ${{ inputs.cache-read-only }}
           matrix: ${{ toJSON(matrix) }}
       - name: Standardize repository information
-        uses: rapidsai/shared-actions/rapids-github-info@main
+        uses: rapidsai/shared-actions/rapids-github-info@2ba102119789b4622bb14dbe9b30b098ae5e5dd5
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
@@ -295,7 +340,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup proxy cache
-        uses: nv-gha-runners/setup-proxy-cache@main
+        uses: nv-gha-runners/setup-proxy-cache@eadc57871cde0c92a223d0f486ab669a2360f978
         continue-on-error: true
         with:
           enable-apt: true
@@ -304,7 +349,7 @@ jobs:
           enable-pypi-anaconda: true
 
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@2ba102119789b4622bb14dbe9b30b098ae5e5dd5
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
@@ -319,28 +364,28 @@ jobs:
         with:
           aws-region: us-east-2
           role-duration-seconds: 43200 # 12h
-          role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates
+          role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}
+      # Prototype action must be published and pinned before live execution.
+      - name: Resolve controller-bound candidate metadata
+        id: candidate-context
+        if: ${{ inputs.build_type == 'release-candidate' && inputs.candidate-train-sha256 == '' }}
+        uses: rapidsai/shared-actions/release-candidate-context@9eb9c4a9d2d3de8152f36ad62a1f190672120b13
+        with:
+          source-sha: ${{ env.RAPIDS_SHA }}
       - name: Prepare candidate dependencies and build policy
         if: ${{ inputs.build_type == 'release-candidate' }}
-        uses: rapidsai/shared-actions/release-candidate-dependencies@fb7aab688b3b3616ecdc33ef6ee1e15fe6c9a086
+        uses: rapidsai/shared-actions/release-candidate-dependencies@9eb9c4a9d2d3de8152f36ad62a1f190672120b13
         with:
-          candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
+          candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
           artifact-family: wheel
           arch: ${{ matrix.ARCH }}
           cuda-version: ${{ matrix.CUDA_VER }}
           python-version: ${{ matrix.PY_VER }}
-      - name: Restore build credentials for sccache
-        if: ${{ inputs.build_type == 'release-candidate' && env.RAPIDS_RELEASE_CANDIDATE_SCCACHE == 'true' }}
-        uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6.2.2
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-          role-duration-seconds: 43200 # 12h
-      # Candidate trains decide whether distributed compiler caching is an
-      # allowed build input. Other build types keep their existing behavior.
+      # Candidate cache identities require a separate trust review.
+      # Ordinary builds retain their established cache integration.
       - name: Setup sccache-dist
-        if: ${{ inputs.build_type != 'release-candidate' || env.RAPIDS_RELEASE_CANDIDATE_SCCACHE == 'true' }}
-        uses: rapidsai/shared-actions/setup-sccache-dist@main
+        if: ${{ inputs.build_type != 'release-candidate' }}
+        uses: rapidsai/shared-actions/setup-sccache-dist@2ba102119789b4622bb14dbe9b30b098ae5e5dd5
         env:
           AWS_REGION: "${{env.AWS_REGION}}"
           AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
@@ -348,13 +393,6 @@ jobs:
         with:
           log-file: "${{ env.RAPIDS_ARTIFACTS_DIR }}/sccache.log"
           request-timeout: ${{ inputs.sccache-dist-request-timeout }}
-      - name: Restore candidate store credentials after sccache
-        if: ${{ inputs.build_type == 'release-candidate' && env.RAPIDS_RELEASE_CANDIDATE_SCCACHE == 'true' }}
-        uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6.2.2
-        with:
-          aws-region: us-east-2
-          role-duration-seconds: 43200 # 12h
-          role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates
       # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
       # checking '/rate_limit | jq .' should not itself count against any rate limits.
       #
@@ -441,10 +479,10 @@ jobs:
         with:
           aws-region: us-east-2
           role-duration-seconds: 43200 # 12h
-          role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates
+          role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}
       - name: Create wheel release catalog companion
         if: ${{ inputs.build_type == 'release-candidate' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@fb7aab688b3b3616ecdc33ef6ee1e15fe6c9a086
+        uses: rapidsai/shared-actions/release-catalog-dispatch@9eb9c4a9d2d3de8152f36ad62a1f190672120b13
         with:
           config: >-
             {
@@ -453,7 +491,7 @@ jobs:
             }
           source-artifact-name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
           source-sha: ${{ env.RAPIDS_SHA }}
-          candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
+          candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
           upload-to-s3: 'true'
           candidate-matrix-arch: ${{ matrix.ARCH }}
           candidate-matrix-cuda-version: ${{ matrix.CUDA_VER }}
@@ -467,5 +505,5 @@ jobs:
         env:
           # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
           GH_TOKEN: ${{ github.token }}
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@2ba102119789b4622bb14dbe9b30b098ae5e5dd5
         continue-on-error: true

@@ -26,7 +26,7 @@ repos:
     rev: v0.11.0.1
     hooks:
       - id: shellcheck
-        files: ^ci/maven-publish/.*\.sh$
+        files: ^ci/(maven-publish/.*|test_candidate_inputs)\.sh$
   - repo: https://github.com/rapidsai/pre-commit-hooks
     rev: v1.6.1
     hooks:
@@ -44,3 +44,12 @@ repos:
           (?x)^(
             .github/workflows/build-in-devcontainer.yaml
           )$
+
+  - repo: local
+    hooks:
+      - id: candidate-input-contract
+        name: test candidate image admission and scoped producer wiring
+        entry: bash ci/test_candidate_inputs.sh
+        language: system
+        pass_filenames: false
+        files: ^(ci/test_candidate_inputs\.sh|\.github/workflows/(conda-cpp-build|conda-python-build|wheels-build|custom-job)\.yaml)$

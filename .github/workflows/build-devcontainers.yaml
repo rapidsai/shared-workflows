@@ -27,6 +27,7 @@ on:
 
 jobs:
   build:
+    if: ${{ github.event.inputs.build_type != 'release-candidate' }}
     uses: ./.github/workflows/build-devcontainer.yaml
     permissions:
       packages: write
@@ -44,7 +45,7 @@ jobs:
       devcontainer-json: ".devcontainer/cuda${{ matrix.cuda }}-${{ matrix.python_package_manager }}/devcontainer.json"
 
   cleanup:
-    if: inputs.push
+    if: inputs.push && github.event.inputs.build_type != 'release-candidate'
     needs: [build]
     name: Clean up untagged images
     runs-on: ubuntu-latest

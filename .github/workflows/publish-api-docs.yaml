@@ -96,6 +96,7 @@ jobs:
           echo "matrix=${matrix}" >> "${GITHUB_OUTPUT}"
 
   publish-api-docs:
+    if: ${{ github.event.inputs.build_type != 'release-candidate' }}
     needs: compute-matrix
     runs-on: ubuntu-latest
     container:
