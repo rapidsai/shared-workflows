@@ -25,10 +25,10 @@ Caller workflows may optionally supply `candidate-container-images`, but it must
 equal the map in the immutable train. Existing callers that use a controller run
 binding need no new image input. Ordinary CI retains its existing tagged images.
 
-Before publication, integrate the prepared shared-actions changes, replace the
-explicit zero-SHA context placeholders and all candidate action references with
-that reviewed commit, and enroll the same commit in the train's implementation
-revisions. Publish those action revisions before publishing workflows that use
+Candidate action references are pinned to the integrated shared-actions commit;
+enroll that same commit in the train's implementation revisions. If rebasing
+changes the action commit, update all candidate action references and regenerate
+the train. Publish those action revisions before publishing workflows that use
 them. The pinned telemetry, cache setup, proxy, and information actions use
 verified remote commit IDs; their references are captured by the frozen workflow
 revision. Review their transitive executable dependencies when admitting new
@@ -37,10 +37,14 @@ inside that action, remote cache services, or build scripts that fetch tools.
 
 Candidate trains must use `--no-sccache`. The runner preflight rejects enabled or
 missing cache policies before starting build containers. Candidate jobs skip the
-general build role and distributed cache setup entirely. Ordinary CI retains its
+general build role, distributed cache setup, and caller caches entirely. Ordinary CI retains its
 existing credentials and cache integration. Enabling candidate compiler caching
 requires a separately reviewed cache-purpose identity and explicit admission
 policy; restoring ordinary build credentials is prohibited.
+
+The rebased workflows retain upstream's 26.12 tagged images for ordinary builds.
+New candidate trains must provide reviewed digest mappings for those current
+26.12 image names; an older 26.10 map cannot satisfy the current matrix.
 
 Validation before live enrollment:
 

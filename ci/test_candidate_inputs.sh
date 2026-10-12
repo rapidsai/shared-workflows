@@ -13,10 +13,21 @@ for workflow in conda-cpp-build conda-python-build wheels-build custom-job; do
   fi
   rg -q 'role/gha-oidc-rc-producer-\$\{\{ github.repository_id \}\}' "${file}"
   rg -q 'uses: rapidsai/shared-actions/release-candidate-images@[0-9a-f]{40}' "${file}"
+  rg -q 'uses: nv-gha-runners/setup-proxy-cache@[0-9a-f]{40}' "${file}"
   rg -q 'fromJSON\(needs.candidate-inputs.outputs.images\)' "${file}"
+  if [[ "${workflow}" != custom-job ]]; then
+    rg -q "image-series: '26.12'" "${file}"
+    if rg -q 'rapidsai/ci-(conda|wheel):26.10-' "${file}"; then
+      echo "candidate image lookup must match current upstream series: ${file}" >&2
+      exit 1
+    fi
+  fi
   # Check every general-role and cache-action step, including their actual
   # guards. Retain exactly one ordinary-build occurrence of each integration.
-  awk -v guard="inputs.build_type != 'release-candidate'" '
+  expected_callers=1
+  if [[ "${workflow}" == custom-job ]]; then expected_callers=0; fi
+  awk -v expected_callers="${expected_callers}" -v guard="inputs.build_type != 'release-candidate'" \
+    -v caller_guard="        if: inputs.build_type != 'release-candidate' && (inputs.cache-paths != '' || inputs.cache-key-prefix != '' || inputs.cache-key-files != '' || inputs.cache-environment != '')" '
     /^      - / {condition=""}
     /if:/ {condition=$0}
     /role-to-assume:.*vars.AWS_ROLE_ARN/ {
@@ -27,7 +38,11 @@ for workflow in conda-cpp-build conda-python-build wheels-build custom-job; do
       caches++
       if (!index(condition, guard) || index(condition, "||") || index(condition, "&&")) exit 1
     }
-    END {if (roles != 1 || caches != 1) exit 1}
+    /uses: rapidsai\/shared-actions\/setup-caller-cache@/ {
+      callers++
+      if (condition != caller_guard) exit 1
+    }
+    END {if (roles != 1 || caches != 1 || callers != expected_callers) exit 1}
   ' "${file}"
   if rg -q 'name: Restore build credentials for sccache' "${file}"; then
     echo "candidate cannot restore general cache credentials: ${file}" >&2
@@ -51,6 +66,9 @@ for workflow in conda-cpp-build conda-python-build wheels-build custom-job; do
     fi
   done
 done
+# Reusable workflow callers supply inputs rather than workflow_dispatch event data.
+rg -Fq "    if: \${{ inputs.build_type != 'release-candidate' || inputs.script != 'ci/build_docs.sh' || inputs.candidate-docs }}" \
+  "${root}/.github/workflows/custom-job.yaml"
 if [[ -z "${CANDIDATE_TEST_ROOT:-}" ]]; then
   # A negative check must fail the whole test program, not merely return false
   # inside a shell expression that errexit can ignore.
@@ -67,6 +85,20 @@ if [[ -z "${CANDIDATE_TEST_ROOT:-}" ]]; then
   mv "${workspace}/unguarded.yaml" "${mutant}"
   if CANDIDATE_TEST_ROOT="${workspace}/mutant" bash "${BASH_SOURCE[0]}" >/dev/null 2>&1; then
     echo "tests failed to reject an unguarded general producer role" >&2
+    exit 1
+  fi
+  cp "${root}/.github/workflows/conda-cpp-build.yaml" "${mutant}"
+  awk '
+    /name: Setup caller cache/ {caller=1}
+    caller && /if:/ {
+      sub(/inputs.build_type != '\''release-candidate'\'' && /, "")
+      caller=0
+    }
+    {print}
+  ' "${mutant}" >"${workspace}/unguarded-caller.yaml"
+  mv "${workspace}/unguarded-caller.yaml" "${mutant}"
+  if CANDIDATE_TEST_ROOT="${workspace}/mutant" bash "${BASH_SOURCE[0]}" >/dev/null 2>&1; then
+    echo "tests failed to reject an unguarded caller cache" >&2
     exit 1
   fi
 fi
