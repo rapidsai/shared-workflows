@@ -184,6 +184,7 @@ jobs:
       matrix_type: ${{ inputs.matrix_type }}
       matrix_filter: ${{ inputs.matrix_filter }}
   tests:
+    if: ${{ inputs.build_type != 'release-candidate' && github.event.inputs.build_type != 'release-candidate' }}
     name: ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}, ${{ matrix.GPU }}, ${{ matrix.DRIVER }}-driver, ${{ matrix.DEPENDENCIES }}-deps
     needs: compute-matrix
     strategy:
@@ -203,6 +204,7 @@ jobs:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
     steps:
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        if: ${{ !(github.ref_type == 'branch' && startsWith(github.ref_name, 'release-test-')) && !startsWith(github.head_ref, 'release-test-') }}
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -257,6 +259,7 @@ jobs:
 
       # Install latest rapidsai/sccache client and configure sccache-dist
       - name: Setup sccache-dist
+        if: ${{ !(github.ref_type == 'branch' && startsWith(github.ref_name, 'release-test-')) && !startsWith(github.head_ref, 'release-test-') }}
         uses: rapidsai/shared-actions/setup-sccache-dist@main
         env:
           AWS_REGION: "${{env.AWS_REGION}}"

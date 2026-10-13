@@ -34,7 +34,7 @@ on:
         default: python
         type: string
       publish_to_pypi:
-        description: "If true, the wheel will be published to pypi.org"
+        description: "Deprecated compatibility input; PyPI publishing is handled by Kitmaker. true is rejected."
         type: boolean
         default: false
       build_workflow_name:
@@ -47,21 +47,13 @@ on:
         description: "Search key to use to override constructed search path in `rapids-wheels-anaconda-github`"
         type: string
         required: false
-    secrets:
-      CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN:
-        description: "Anaconda token for RAPIDS wheel nightly uploads"
-        required: false
-      RAPIDSAI_PYPI_TOKEN:
-        description: "Anaconda token for RAPIDS wheel release uploads"
-        required: false
-
 permissions:
   actions: read
   checks: none
   contents: read
   deployments: none
   discussions: none
-  id-token: write
+  id-token: none
   issues: none
   packages: read
   pages: none
@@ -74,8 +66,9 @@ jobs:
   wheel-publish:
     name: wheels publish
     # Candidate artifacts are staged privately by the build workflow. They must
-    # not enter public Anaconda.org or PyPI channels before rollover approval.
-    if: ${{ inputs.build_type != 'release-candidate' }}
+    # not enter public Anaconda.org before rollover approval.
+    if: ${{ inputs.build_type != 'release-candidate' && github.event.inputs.build_type != 'release-candidate' && !(github.ref_type == 'branch' && startsWith(github.ref_name, 'release-test-')) && !startsWith(github.head_ref, 'release-test-') && !startsWith(inputs.branch, 'release-test-') && !startsWith(inputs.branch, 'refs/heads/release-test-') && github.ref != 'agent/release-catalog-canary' && github.ref != 'refs/heads/agent/release-catalog-canary' && github.head_ref != 'agent/release-catalog-canary' && github.head_ref != 'refs/heads/agent/release-catalog-canary' && inputs.branch != 'agent/release-catalog-canary' && inputs.branch != 'refs/heads/agent/release-catalog-canary' }}
+    environment: public-publication
     # Use a self-hosted runner to ensure we have sufficient disk space. Using
     # cpu8 since we shouldn't need much CPU horsepower.
     runs-on: "linux-amd64-cpu8"
@@ -86,6 +79,12 @@ jobs:
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
+
+      - name: Reject retired direct PyPI publishing
+        if: ${{ inputs.publish_to_pypi }}
+        run: |
+          echo "::error::Direct PyPI publishing is retired; publish PyPI packages through Kitmaker."
+          exit 1
 
       - name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
@@ -161,23 +160,3 @@ jobs:
           INPUTS_PACKAGE_TYPE: ${{ inputs.package-type }}
           # Used to override search key construction as needed
           WHEEL_SEARCH_KEY: ${{ inputs.publish-wheel-search-key }}
-
-      - name: Check if build is release
-        id: check_if_release
-        shell: bash
-        if: ${{ inputs.publish_to_pypi }}
-        run: |
-          if rapids-is-release-build; then
-            echo "is_release_build=true" | tee -a "${GITHUB_OUTPUT}"
-          else
-            echo "is_release_build=false" | tee -a "${GITHUB_OUTPUT}"
-          fi
-
-      - name: Publish the downloaded wheels to PyPI
-        if: ${{ inputs.publish_to_pypi && steps.check_if_release.outputs.is_release_build == 'true' }}
-        run: |
-          python3 -m pip install 'twine>=6.2.0'
-          python3 -m twine upload -u __token__ "${UPLOAD_DIR}"/*
-        env:
-          UPLOAD_DIR: ${{ steps.download_wheels.outputs.package_upload_dir }}
-          TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_TOKEN }}

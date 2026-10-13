@@ -3,6 +3,11 @@ name: Publish API docs
 on:
   workflow_call:
     inputs:
+      build_type:
+        description: Build type; release candidates must not publish documentation.
+        required: false
+        type: string
+        default: ''
       container-image:
         description: Container image URI
         type: string
@@ -18,6 +23,10 @@ on:
       docs-projects:
         description: Comma-delimited list of project names, e.g. "cudf,libcudf"
         required: true
+        type: string
+      branch:
+        description: Git branch the workflow run targets.
+        required: false
         type: string
       dry-run:
         default: false
@@ -45,41 +54,13 @@ on:
           JSON map of tag to library version
         required: false
         type: string
-    secrets:
-      akamai-access-token:
-        description: Akamai EdgeGrid access token
-        required: true
-      akamai-client-token:
-        description: Akamai EdgeGrid client token
-        required: true
-      akamai-client-secret:
-        description: Akamai EdgeGrid client secret
-        required: true
-      akamai-emails-to-notify:
-        description: Comma-delimited list of email addresses to notify
-        required: false
-      akamai-host:
-        description: Akamai API hostname
-        required: true
-      target-aws-access-key-id:
-        description: AWS access key ID
-        required: true
-      target-aws-region:
-        description: AWS region
-        required: true
-      target-aws-secret-access-key:
-        description: AWS secret access key
-        required: true
-      target-archive-s3-bucket:
-        description: The S3 bucket to read archived doc versions from
-        required: false
-      target-s3-bucket:
-        description: The S3 bucket to upload files to
-        required: true
-
 defaults:
   run:
     shell: bash
+
+permissions:
+  contents: read
+  id-token: none
 
 jobs:
   compute-matrix:
@@ -96,6 +77,11 @@ jobs:
           echo "matrix=${matrix}" >> "${GITHUB_OUTPUT}"
 
   publish-api-docs:
+    if: ${{ inputs.build_type != 'release-candidate' && github.event.inputs.build_type != 'release-candidate' && !(github.ref_type == 'branch' && startsWith(github.ref_name, 'release-test-')) && !startsWith(github.head_ref, 'release-test-') && !startsWith(inputs.branch, 'release-test-') && !startsWith(inputs.branch, 'refs/heads/release-test-') && github.ref != 'agent/release-catalog-canary' && github.ref != 'refs/heads/agent/release-catalog-canary' && github.head_ref != 'agent/release-catalog-canary' && github.head_ref != 'refs/heads/agent/release-catalog-canary' && inputs.branch != 'agent/release-catalog-canary' && inputs.branch != 'refs/heads/agent/release-catalog-canary' }}
+    environment: public-publication
+    permissions:
+      contents: read
+      id-token: write
     needs: compute-matrix
     runs-on: ubuntu-latest
     container:
@@ -133,7 +119,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           aws-region: ${{ vars.AWS_REGION }}
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          role-to-assume: ${{ vars.PUBLICATION_AWS_ROLE_ARN }}
 
       - name: Download docs
         env:
@@ -150,18 +136,18 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: rapidsai/shared-actions/publish-docs@main
         with:
-          akamai-access-token: ${{ secrets.akamai-access-token }}
-          akamai-client-secret: ${{ secrets.akamai-client-secret }}
-          akamai-client-token: ${{ secrets.akamai-client-token }}
-          akamai-emails-to-notify: ${{ secrets.akamai-emails-to-notify }}
-          akamai-host: ${{ secrets.akamai-host }}
+          akamai-access-token: ${{ secrets.NVIDIA_DOCS_AKAMAI_ACCESS_TOKEN }}
+          akamai-client-secret: ${{ secrets.NVIDIA_DOCS_AKAMAI_CLIENT_SECRET }}
+          akamai-client-token: ${{ secrets.NVIDIA_DOCS_AKAMAI_CLIENT_TOKEN }}
+          akamai-emails-to-notify: ${{ secrets.NVIDIA_DOCS_AKAMAI_EMAILS_TO_NOTIFY }}
+          akamai-host: ${{ secrets.NVIDIA_DOCS_AKAMAI_HOST }}
           akamai-request-name: ${{ steps.akamai.outputs.request-name }}-latest
           dry-run: ${{ inputs.dry-run }}
           source-path: ${{ inputs.source-path }}
-          target-aws-access-key-id: ${{ secrets.target-aws-access-key-id }}
-          target-aws-region: ${{ secrets.target-aws-region }}
-          target-aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
-          target-s3-bucket: ${{ secrets.target-s3-bucket }}
+          target-aws-access-key-id: ${{ secrets.NVIDIA_DOCS_AWS_ACCESS_KEY_ID }}
+          target-aws-region: ${{ secrets.NVIDIA_DOCS_AWS_REGION }}
+          target-aws-secret-access-key: ${{ secrets.NVIDIA_DOCS_AWS_SECRET_ACCESS_KEY }}
+          target-s3-bucket: ${{ secrets.NVIDIA_DOCS_S3_BUCKET }}
           target-s3-key-prefix: ${{ inputs.target-s3-key-prefix }}
           target-s3-key-suffix: latest
           target-s3-key: ${{ matrix.project }}
@@ -172,23 +158,25 @@ jobs:
         if: startsWith(github.ref_name, 'release/')
         uses: rapidsai/shared-actions/publish-docs@main
         with:
-          akamai-access-token: ${{ secrets.akamai-access-token }}
-          akamai-client-secret: ${{ secrets.akamai-client-secret }}
-          akamai-client-token: ${{ secrets.akamai-client-token }}
-          akamai-emails-to-notify: ${{ secrets.akamai-emails-to-notify }}
-          akamai-host: ${{ secrets.akamai-host }}
+          akamai-access-token: ${{ secrets.NVIDIA_DOCS_AKAMAI_ACCESS_TOKEN }}
+          akamai-client-secret: ${{ secrets.NVIDIA_DOCS_AKAMAI_CLIENT_SECRET }}
+          akamai-client-token: ${{ secrets.NVIDIA_DOCS_AKAMAI_CLIENT_TOKEN }}
+          akamai-emails-to-notify: ${{ secrets.NVIDIA_DOCS_AKAMAI_EMAILS_TO_NOTIFY }}
+          akamai-host: ${{ secrets.NVIDIA_DOCS_AKAMAI_HOST }}
           akamai-request-name: ${{ steps.akamai.outputs.request-name }}-${{ steps.version.outputs.rapids-version-major-minor }}
           dry-run: ${{ inputs.dry-run }}
           source-path: ${{ inputs.source-path }}
-          target-aws-access-key-id: ${{ secrets.target-aws-access-key-id }}
-          target-aws-region: ${{ secrets.target-aws-region }}
-          target-aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
-          target-s3-bucket: ${{ secrets.target-s3-bucket }}
+          target-aws-access-key-id: ${{ secrets.NVIDIA_DOCS_AWS_ACCESS_KEY_ID }}
+          target-aws-region: ${{ secrets.NVIDIA_DOCS_AWS_REGION }}
+          target-aws-secret-access-key: ${{ secrets.NVIDIA_DOCS_AWS_SECRET_ACCESS_KEY }}
+          target-s3-bucket: ${{ secrets.NVIDIA_DOCS_S3_BUCKET }}
           target-s3-key-prefix: ${{ inputs.target-s3-key-prefix }}
           target-s3-key-suffix: ${{ steps.version.outputs.rapids-version-major-minor }}
           target-s3-key: ${{ matrix.project }}
 
   publish-versions-json:
+    if: ${{ inputs.build_type != 'release-candidate' && github.event.inputs.build_type != 'release-candidate' && !(github.ref_type == 'branch' && startsWith(github.ref_name, 'release-test-')) && !startsWith(github.head_ref, 'release-test-') && !startsWith(inputs.branch, 'release-test-') && !startsWith(inputs.branch, 'refs/heads/release-test-') && github.ref != 'agent/release-catalog-canary' && github.ref != 'refs/heads/agent/release-catalog-canary' && github.head_ref != 'agent/release-catalog-canary' && github.head_ref != 'refs/heads/agent/release-catalog-canary' && inputs.branch != 'agent/release-catalog-canary' && inputs.branch != 'refs/heads/agent/release-catalog-canary' }}
+    environment: public-publication
     needs: compute-matrix
     runs-on: ubuntu-latest
     container:
@@ -232,14 +220,14 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
-          aws-access-key-id: ${{ secrets.target-aws-access-key-id }}
-          aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
-          aws-region: ${{ secrets.target-aws-region }}
+          aws-access-key-id: ${{ secrets.NVIDIA_DOCS_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.NVIDIA_DOCS_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.NVIDIA_DOCS_AWS_REGION }}
 
       - name: List S3 subdirectories
         id: s3-versions
         env:
-          BUCKET: ${{ secrets.target-s3-bucket }}
+          BUCKET: ${{ secrets.NVIDIA_DOCS_S3_BUCKET }}
           PROJECT: ${{ matrix.project }}
           S3_KEY_PREFIX: ${{ inputs.target-s3-key-prefix }}
         run: |
@@ -260,7 +248,7 @@ jobs:
       - name: List archive S3 subdirectories
         id: s3-archive-versions
         env:
-          BUCKET: ${{ secrets.target-archive-s3-bucket }}
+          BUCKET: ${{ secrets.NVIDIA_DOCS_ARCHIVE_S3_BUCKET }}
           PROJECT: ${{ matrix.project }}
         run: |
           # If BUCKET is empty (the secret has no value), skip the S3 lookup and report no
@@ -335,16 +323,16 @@ jobs:
       - name: Publish versions.json
         uses: rapidsai/shared-actions/publish-one-doc@main
         with:
-          akamai-access-token: ${{ secrets.akamai-access-token }}
-          akamai-client-secret: ${{ secrets.akamai-client-secret }}
-          akamai-client-token: ${{ secrets.akamai-client-token }}
-          akamai-emails-to-notify: ${{ secrets.akamai-emails-to-notify }}
-          akamai-host: ${{ secrets.akamai-host }}
+          akamai-access-token: ${{ secrets.NVIDIA_DOCS_AKAMAI_ACCESS_TOKEN }}
+          akamai-client-secret: ${{ secrets.NVIDIA_DOCS_AKAMAI_CLIENT_SECRET }}
+          akamai-client-token: ${{ secrets.NVIDIA_DOCS_AKAMAI_CLIENT_TOKEN }}
+          akamai-emails-to-notify: ${{ secrets.NVIDIA_DOCS_AKAMAI_EMAILS_TO_NOTIFY }}
+          akamai-host: ${{ secrets.NVIDIA_DOCS_AKAMAI_HOST }}
           akamai-request-name: ${{ steps.akamai.outputs.request-name }}-versions
           dry-run: ${{ inputs.dry-run }}
           file-path: ./versions.json
-          target-aws-access-key-id: ${{ secrets.target-aws-access-key-id }}
-          target-aws-region: ${{ secrets.target-aws-region }}
-          target-aws-secret-access-key: ${{ secrets.target-aws-secret-access-key }}
-          target-s3-bucket: ${{ secrets.target-s3-bucket }}
+          target-aws-access-key-id: ${{ secrets.NVIDIA_DOCS_AWS_ACCESS_KEY_ID }}
+          target-aws-region: ${{ secrets.NVIDIA_DOCS_AWS_REGION }}
+          target-aws-secret-access-key: ${{ secrets.NVIDIA_DOCS_AWS_SECRET_ACCESS_KEY }}
+          target-s3-bucket: ${{ secrets.NVIDIA_DOCS_S3_BUCKET }}
           target-s3-key: ${{ matrix.project }}

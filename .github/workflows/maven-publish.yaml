@@ -20,6 +20,16 @@ on:
           a Maven repository directory.
         required: true
         type: string
+      build_type:
+        description: Build type; release candidates must not publish Maven artifacts.
+        required: false
+        type: string
+        default: ''
+      branch:
+        description: Git branch the workflow run targets.
+        required: false
+        type: string
+        default: ''
       stage-for-maven-central-publish:
         description: |
           When true, leave the bundle PENDING in the Sonatype Central
@@ -45,17 +55,6 @@ on:
         required: false
         type: string
         default: ''
-    secrets:
-      GPG_PRIVATE_KEY:
-        description: Armored GPG private key used to sign every artifact at upload.
-        required: true
-      GPG_PASSPHRASE:
-        description: Passphrase for GPG_PRIVATE_KEY.
-        required: true
-      MAVEN_DEPLOY_TOKEN:
-        description: Auth token paired with vars.MAVEN_DEPLOY_USERNAME.
-        required: true
-
 defaults:
   run:
     shell: bash
@@ -67,6 +66,8 @@ permissions:
 jobs:
   maven-publish:
     name: maven publish
+    if: ${{ inputs.build_type != 'release-candidate' && github.event.inputs.build_type != 'release-candidate' && !(github.ref_type == 'branch' && startsWith(github.ref_name, 'release-test-')) && !startsWith(github.head_ref, 'release-test-') && !startsWith(inputs.branch, 'release-test-') && !startsWith(inputs.branch, 'refs/heads/release-test-') && github.ref != 'agent/release-catalog-canary' && github.ref != 'refs/heads/agent/release-catalog-canary' && github.head_ref != 'agent/release-catalog-canary' && github.head_ref != 'refs/heads/agent/release-catalog-canary' && inputs.branch != 'agent/release-catalog-canary' && inputs.branch != 'refs/heads/agent/release-catalog-canary' }}
+    environment: public-publication
     runs-on: linux-amd64-cpu4
     steps:
       - name: Self-checkout shared-workflows
@@ -135,7 +136,7 @@ jobs:
           VERSION: ${{ steps.prepare.outputs.VERSION }}
           # Invert: stage-for-...=true means don't auto-drop.
           AUTO_DROP: ${{ !inputs.stage-for-maven-central-publish }}
-          MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME }}
+          MAVEN_DEPLOY_USERNAME: ${{ secrets.MAVEN_DEPLOY_USERNAME }}
           MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
 
       - name: Upload to Sonatype snapshots
@@ -152,7 +153,7 @@ jobs:
           GROUP_ID: ${{ steps.prepare.outputs.GROUP_ID }}
           ARTIFACT_ID: ${{ steps.prepare.outputs.ARTIFACT_ID }}
           VERSION: ${{ steps.prepare.outputs.VERSION }}
-          MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME }}
+          MAVEN_DEPLOY_USERNAME: ${{ secrets.MAVEN_DEPLOY_USERNAME }}
           MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
 
       - name: Retain signed Maven Central bundle

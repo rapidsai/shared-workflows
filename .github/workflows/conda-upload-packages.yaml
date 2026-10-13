@@ -41,15 +41,6 @@ on:
           channels. Channel is determined by which token is used.
         type: boolean
         default: false
-    secrets:
-      CONDA_RAPIDSAI_TOKEN:
-        description: "Anaconda token for RAPIDS conda release uploads"
-        required: false
-      CONDA_RAPIDSAI_NIGHTLY_TOKEN:
-        description: "Anaconda token for RAPIDS conda nightly uploads"
-        required: false
-
-
 defaults:
   run:
     shell: bash
@@ -60,7 +51,7 @@ permissions:
   contents: read
   deployments: none
   discussions: none
-  id-token: write
+  id-token: none
   issues: none
   packages: read
   pages: none
@@ -73,7 +64,8 @@ jobs:
   upload:
     # Candidate artifacts are staged privately by the build workflow. They must
     # not enter either public Anaconda.org channel before rollover approval.
-    if: ${{ inputs.build_type != 'release-candidate' }}
+    if: ${{ inputs.build_type != 'release-candidate' && github.event.inputs.build_type != 'release-candidate' && !(github.ref_type == 'branch' && startsWith(github.ref_name, 'release-test-')) && !startsWith(github.head_ref, 'release-test-') && !startsWith(inputs.branch, 'release-test-') && !startsWith(inputs.branch, 'refs/heads/release-test-') && github.ref != 'agent/release-catalog-canary' && github.ref != 'refs/heads/agent/release-catalog-canary' && github.head_ref != 'agent/release-catalog-canary' && github.head_ref != 'refs/heads/agent/release-catalog-canary' && inputs.branch != 'agent/release-catalog-canary' && inputs.branch != 'refs/heads/agent/release-catalog-canary' }}
+    environment: public-publication
     runs-on: linux-amd64-cpu4
     container:
       image: "python:3.14-slim"

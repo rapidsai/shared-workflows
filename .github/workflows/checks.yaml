@@ -168,6 +168,8 @@ jobs:
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-0|${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: Check candidate workflow contracts
+        run: bash tests/candidate-workflow-contracts.sh
       - name: Run ci/check_style.sh
         run: ci/check_style.sh
         env:
