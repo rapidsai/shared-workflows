@@ -68,6 +68,10 @@ on:
           See 'name' input at https://github.com/actions/upload-artifact?tab=readme-ov-file#inputs
         type: string
         default: "result"
+      candidate-artifact-name:
+        description: "Safe, matrix-unique source name for this job's private candidate catalog entry."
+        type: string
+        default: ''
       continue-on-error:
         description: |
           If false (the default), treat job failures as workflow failures.
@@ -373,7 +377,7 @@ jobs:
         if: ${{ !inputs.candidate-skip-github-artifact-upload && (inputs.build_type != 'release-candidate' || steps.candidate-context.outputs.custom-mode == 'artifact') }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ${{ inputs.artifact-name }}
+          name: ${{ inputs.candidate-artifact-name || inputs.artifact-name }}
           path: ${{ inputs.file_to_upload }}
           if-no-files-found: ignore
       - name: Configure release-candidate store credentials
@@ -388,7 +392,7 @@ jobs:
         uses: rapidsai/shared-actions/release-catalog-dispatch@2dc94c3d1bffd05616e1aad673c8a69add31014d
         with:
           config: ${{ inputs.release-catalog-config }}
-          source-artifact-name: ${{ inputs.artifact-name }}
+          source-artifact-name: ${{ inputs.candidate-artifact-name || inputs.artifact-name }}
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
           upload-to-s3: 'true'
           candidate-matrix-arch: ${{ inputs.arch }}

@@ -83,6 +83,8 @@ rg -Fq "inputs.build_type == 'release-candidate' && inputs.release-catalog-confi
 rg -Fq 'candidate-dependency-family:' "${custom}"
 rg -Fq 'candidate-skip-github-artifact-upload:' "${custom}"
 rg -Fq 'inputs.candidate-skip-github-artifact-upload &&' "${custom}"
+rg -Fq 'candidate-artifact-name:' "${custom}"
+rg -Fq 'source-artifact-name: ${{ inputs.candidate-artifact-name || inputs.artifact-name }}' "${custom}"
 rg -Fq 'candidate-docs-directory:' "${custom}"
 rg -Fq 'candidate-matrix-arch: ${{ inputs.arch }}' "${custom}"
 rg -Fq 'candidate-matrix-cuda-version: ${{ inputs.candidate-cuda-version }}' "${custom}"
