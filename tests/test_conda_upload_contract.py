@@ -183,12 +183,14 @@ def _package(tmp_path, extension=".conda", content=b"immutable fixture"):
     return tmp_path / name
 
 
-def _run(package, url, *, expected=None, proxy=None):
+def _run(package, url, *, expected=None, proxy=None, netrc=None):
     digest = expected or hashlib.sha256(package.read_bytes()).hexdigest()
     environment = {"PATH": os.environ["PATH"]}
     if proxy:
         environment["HTTP_PROXY"] = proxy
         environment["ALL_PROXY"] = proxy
+    if netrc:
+        environment["NETRC"] = str(netrc)
     result = subprocess.run(  # nosec B603 -- fixed local script, clean environment, synthetic auth only.
         [
             sys.executable,
@@ -290,6 +292,21 @@ def test_fixture_transport_does_not_use_environment_proxy(tmp_path):
     assert result.returncode == 0, result.stderr
     assert state["storage_posts"] == 1
     assert proxy_state["requests"] == []
+
+
+def test_fixture_transport_never_loads_implicit_netrc_authentication(tmp_path):
+    package = _package(tmp_path)
+    netrc = tmp_path / "fixture.netrc"
+    netrc.write_text(
+        "default login synthetic-netrc-user password synthetic-netrc-value\n"
+    )
+    netrc.chmod(0o600)
+    with _service() as (url, state):
+        result = _run(package, url, netrc=netrc)
+    assert result.returncode == 0, result.stderr
+    assert state["storage_posts"] == 1
+    for _method, path, auth in state["requests"]:
+        assert auth == (None if path == "/storage" else "token fixture-value")
 
 
 @pytest.mark.parametrize(

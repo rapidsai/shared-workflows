@@ -50,7 +50,14 @@ def main():
     if importlib.metadata.version("anaconda-client") != "1.15.0":
         raise ValueError("local contracts require anaconda-client==1.15.0")
 
+    original_prepare = requests.Session.prepare_request
     original_send = requests.Session.send
+
+    def origin_bound_prepare(session, request):
+        # Requests consults netrc while preparing headers, before Session.send.
+        # Disable implicit operator authentication before that lookup can occur.
+        session.trust_env = False
+        return original_prepare(session, request)
 
     def origin_bound_send(session, request, **kwargs):
         target = urlsplit(request.url)
@@ -70,6 +77,7 @@ def main():
             raise ValueError("fixture transport rejected HTTP redirect")
         return response
 
+    requests.Session.prepare_request = origin_bound_prepare
     requests.Session.send = origin_bound_send
     try:
         with tempfile.TemporaryDirectory(prefix="conda-local-contract-") as directory:
@@ -126,6 +134,7 @@ def main():
                 )
             )
     finally:
+        requests.Session.prepare_request = original_prepare
         requests.Session.send = original_send
 
 
