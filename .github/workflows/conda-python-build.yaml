@@ -44,10 +44,6 @@ on:
         default: true
         required: false
         description: "One of [true, false], true if artifacts should be uploaded to GitHub's artifact store"
-      artifact-compression-level:
-        description: "Zlib compression level (0-9) for uploaded Conda artifacts; use 0 for already-compressed packages."
-        type: number
-        default: 6
       candidate-train-sha256:
         description: "Canonical SHA-256 of the release train; required for release-candidate builds."
         type: string
@@ -306,7 +302,7 @@ jobs:
           if-no-files-found: 'error'
           name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
           path: ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
-          compression-level: ${{ inputs.artifact-compression-level }}
+          compression-level: 0
 
       - name: Configure release-candidate store credentials
         if: ${{ inputs.build_type == 'release-candidate' }}

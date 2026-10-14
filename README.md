@@ -70,13 +70,11 @@ MATRIX="$(
 echo "${MATRIX}" | jq
 ```
 
-### Conda artifact compression
+### Conda artifacts
 
-The `conda-cpp-build` and `conda-python-build` workflows accept
-`artifact-compression-level` to control Zlib compression during GitHub artifact
-upload. The default is `6`, matching `actions/upload-artifact`. Set it to `0`
-when uploading already-compressed Conda packages to avoid compressing them again.
-This setting does not change the compression of the Conda packages themselves.
+Conda C++ and Python build artifacts are uploaded without additional Zlib
+compression because the Conda packages are already compressed. Compression of
+the packages themselves is controlled by each project's build scripts.
 
 ### Secrets
 
