@@ -17,6 +17,15 @@ paths:
     ignore:
       # https://github.com/rhysd/actionlint/issues/711
       - 'specifying action "\$/.github/actions/prepare-matrix-dispatch" in invalid format because ref is missing. available formats are "{owner}/{repo}@{ref}" or "{owner}/{repo}/{path}@{ref}"'
+  .github/workflows/conda-cpp-build.yaml:
+    ignore:
+      - 'specifying action "\$/.github/actions/select-candidate-version" in invalid format because ref is missing. available formats are "{owner}/{repo}@{ref}" or "{owner}/{repo}/{path}@{ref}"'
+  .github/workflows/conda-python-build.yaml:
+    ignore:
+      - 'specifying action "\$/.github/actions/select-candidate-version" in invalid format because ref is missing. available formats are "{owner}/{repo}@{ref}" or "{owner}/{repo}/{path}@{ref}"'
+  .github/workflows/wheels-build.yaml:
+    ignore:
+      - 'specifying action "\$/.github/actions/select-candidate-version" in invalid format because ref is missing. available formats are "{owner}/{repo}@{ref}" or "{owner}/{repo}/{path}@{ref}"'
   .github/workflows/conda-python-tests.yaml:
     ignore:
       # ${{ secrets.CODECOV_TOKEN }} is valid if a secret like that exists in the calling repo,

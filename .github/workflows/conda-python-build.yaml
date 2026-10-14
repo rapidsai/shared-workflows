@@ -204,25 +204,6 @@ jobs:
           cache-environment: ${{ inputs.cache-environment }}
           cache-read-only: ${{ inputs.cache-read-only }}
           matrix: ${{ toJSON(matrix) }}
-      - name: Select frozen release-candidate source version
-        if: ${{ inputs.build_type == 'release-candidate' }}
-        run: |
-          if [[ ! -f VERSION ]]; then
-            echo "release-candidate source checkout has no VERSION file" >&2
-            exit 1
-          fi
-          IFS= read -r source_version < VERSION
-          version="${source_version}"
-          if [[ "${version}" =~ ^[0-9]+\.[0-9]+$ ]]; then
-            version="${version}.00"
-          elif [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "release-candidate VERSION must contain two or three numeric components: ${version}" >&2
-            exit 1
-          fi
-          {
-            echo "RAPIDS_RELEASE_CANDIDATE_SOURCE_VERSION=${source_version}"
-            echo "RAPIDS_RELEASE_CANDIDATE_VERSION=${version}"
-          } >> "${GITHUB_ENV}"
       - name: Standardize repository information
         env:
           RAPIDS_REPOSITORY: ${{ inputs.repo || github.repository }}
@@ -267,6 +248,14 @@ jobs:
         uses: rapidsai/shared-actions/release-candidate-context@39fc31647bd5514c99fca7b0463d45c2446148b7
         with:
           source-sha: ${{ env.RAPIDS_SHA }}
+      - name: Select frozen release-candidate unit version
+        if: ${{ inputs.build_type == 'release-candidate' }}
+        uses: $/.github/actions/select-candidate-version
+        with:
+          candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
+          artifact-family: conda
+          repository: ${{ inputs.repo || github.repository }}
+          source-sha: ${{ env.RAPIDS_SHA }}
       - name: Prepare candidate dependencies and build policy
         if: ${{ inputs.build_type == 'release-candidate' }}
         uses: rapidsai/shared-actions/release-candidate-dependencies@39fc31647bd5514c99fca7b0463d45c2446148b7
@@ -307,6 +296,10 @@ jobs:
         id: python-build
         run: |
           ulimit -n "$(ulimit -Hn)"
+          if [[ "${BUILD_TYPE}" == "release-candidate" ]]; then
+            : "${RAPIDS_RELEASE_CANDIDATE_VERSION:?candidate version was not selected}"
+            export SETUPTOOLS_SCM_PRETEND_VERSION="${RAPIDS_RELEASE_CANDIDATE_VERSION}"
+          fi
           # shellcheck disable=SC1090
           source "${INPUTS_SCRIPT}"
 
@@ -318,6 +311,7 @@ jobs:
           # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
           INPUTS_SCRIPT: ${{ inputs.script }}
+          BUILD_TYPE: ${{ inputs.build_type }}
           # opt out of conda sharded repodata
           #
           # TODO: remove these when this is resolved: https://github.com/conda/infrastructure/issues/1286#issuecomment-4628580232

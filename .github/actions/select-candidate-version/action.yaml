@@ -1,0 +1,29 @@
+name: Select frozen release-candidate version
+description: Select the exact release-unit version from a digest-verified train.
+
+inputs:
+  candidate-train-sha256:
+    description: SHA-256 digest of the controller-bound release train.
+    required: true
+  artifact-family:
+    description: Expected release-unit artifact family.
+    required: true
+  repository:
+    description: Full owner/repository of the checked-out producer source.
+    required: true
+  source-sha:
+    description: Full SHA of the checked-out producer source.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Select version from the frozen release unit
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        RELEASE_CANDIDATE_TRAIN_SHA256: ${{ inputs.candidate-train-sha256 }}
+        RELEASE_CANDIDATE_ARTIFACT_FAMILY: ${{ inputs.artifact-family }}
+        RELEASE_CANDIDATE_REPOSITORY: ${{ inputs.repository }}
+        RELEASE_CANDIDATE_SOURCE_SHA: ${{ inputs.source-sha }}
+      run: bash "${ACTION_PATH}/select.sh"
