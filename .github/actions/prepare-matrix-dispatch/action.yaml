@@ -17,6 +17,13 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Validate shared-workflows implementation source
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        ACTION_REPOSITORY: ${{ inputs.action-repo }}
+        ACTION_REF: ${{ inputs.action-ref }}
+      run: bash "${ACTION_PATH}/validate-inputs.sh"
     - name: Check out shared-workflows implementation
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:

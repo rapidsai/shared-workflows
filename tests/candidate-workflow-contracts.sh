@@ -50,10 +50,13 @@ matrix_workflow="${root}/.github/workflows/compute-matrix.yaml"
 matrix_dispatch_action="${root}/.github/actions/prepare-matrix-dispatch/action.yaml"
 if ! rg -Fq 'action-repo: ${{ job.workflow_repository }}' "${matrix_workflow}" ||
   ! rg -Fq 'action-ref: ${{ job.workflow_sha }}' "${matrix_workflow}" ||
-  rg -Fq "|| 'main'" "${matrix_dispatch_action}"; then
+  rg -Fq "|| 'main'" "${matrix_dispatch_action}" ||
+  ! rg -Fq 'name: Validate shared-workflows implementation source' "${matrix_dispatch_action}" ||
+  ! rg -Fq 'ACTION_PATH: ${{ github.action_path }}' "${matrix_dispatch_action}"; then
   echo "candidate matrix checkout must use the exact reusable-workflow repository and SHA" >&2
   exit 1
 fi
+bash "${root}/tests/prepare-matrix-dispatch-pins.sh"
 
 pins="$(rg -o 'uses: rapidsai/shared-actions/(release-candidate-[^@[:space:]]+|release-catalog-dispatch)@[[:alnum:]]+' "${root}/.github/workflows" \
   | sed 's/.*@//' | sort -u)"

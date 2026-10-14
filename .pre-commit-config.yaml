@@ -52,3 +52,9 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      - id: prepare-matrix-dispatch-pins
+        name: prepare matrix dispatch pin validation
+        entry: bash tests/prepare-matrix-dispatch-pins.sh
+        language: system
+        pass_filenames: false
+        always_run: true
