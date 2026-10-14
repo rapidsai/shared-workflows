@@ -6,6 +6,28 @@ ci:
   skip: [actionlint-docker]
 
 repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.10
+    hooks:
+      - id: ruff-check
+        files: ^tests/test_maven_http_contract\.py$
+        args: ['--select=E,F,B', '--ignore=E501']
+      - id: ruff-format
+        files: ^tests/test_maven_http_contract\.py$
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.9.2
+    hooks:
+      - id: bandit
+        files: ^tests/test_maven_http_contract\.py$
+        args: [--skip, B101]
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.3.0
+    hooks:
+      - id: flake8
+        name: Maven fixture bugbear checks without Ruff equivalents
+        files: ^tests/test_maven_http_contract\.py$
+        additional_dependencies: [flake8-bugbear==25.10.21]
+        args: ['--select=B001,B036,B040,B042']
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -46,6 +68,13 @@ repos:
           )$
   - repo: local
     hooks:
+      - id: maven-http-contract
+        name: real Maven HTTP client loopback contract
+        entry: python -m pytest -q tests/test_maven_http_contract.py
+        language: python
+        additional_dependencies: [pytest==8.4.2]
+        pass_filenames: false
+        always_run: true
       - id: candidate-workflow-contracts
         name: candidate workflow contracts
         entry: bash tests/candidate-workflow-contracts.sh

@@ -33,6 +33,8 @@ ARTIFACT_ID=""
 VERSION=""
 OUTPUT_BUNDLE=""
 AUTO_DROP="true"
+LOCAL_CONTRACT_BASE_URL=""
+LOCAL_CONTRACT_POLL_TIMEOUT="3"
 
 print_help() {
   cat << EOF
@@ -59,6 +61,8 @@ OPTIONS:
                                     com.nvidia for a com.nvidia.cuopt groupId). Defaults to
                                     --group-id.
     --auto-drop <true|false>       Drop after VALIDATED (default: true).
+    --local-contract-base-url <url>  Test both APIs at http://127.0.0.1:<port> only.
+    --local-contract-poll-timeout <seconds>  Loopback-only polling deadline (default: 3).
     -h, --help                     Show this help message.
 
 ENVIRONMENT VARIABLES:
@@ -112,6 +116,16 @@ parse_args() {
         AUTO_DROP=$2
         shift 2
         ;;
+      --local-contract-base-url)
+        require_value "$1" "${2:-}"
+        LOCAL_CONTRACT_BASE_URL=$2
+        shift 2
+        ;;
+      --local-contract-poll-timeout)
+        require_value "$1" "${2:-}"
+        LOCAL_CONTRACT_POLL_TIMEOUT=$2
+        shift 2
+        ;;
       *)
         echo "Error: Unknown argument $1"
         print_help
@@ -122,6 +136,28 @@ parse_args() {
 }
 
 parse_args "$@"
+
+if [[ -n ${LOCAL_CONTRACT_BASE_URL} ]]; then
+  if [[ ! ${LOCAL_CONTRACT_BASE_URL} =~ ^http://127\.0\.0\.1:([1-9][0-9]{0,4})$ ]] \
+    || (( 10#${BASH_REMATCH[1]} > 65535 )); then
+    fatal "--local-contract-base-url must be http://127.0.0.1:<port> without a path"
+  fi
+  if [[ ! ${LOCAL_CONTRACT_POLL_TIMEOUT} =~ ^[1-9][0-9]{0,2}$ ]]; then
+    fatal "--local-contract-poll-timeout must be 1..999 seconds"
+  fi
+  if [[ ${MAVEN_DEPLOY_USERNAME:-} != fixture-user || ${MAVEN_DEPLOY_TOKEN:-} != fixture-value ]]; then
+    fatal "local contract mode accepts only the built-in synthetic fixture credentials"
+  fi
+  CENTRAL_PORTAL_URL=${LOCAL_CONTRACT_BASE_URL}
+  OSSRH_STAGING_API_URL=${LOCAL_CONTRACT_BASE_URL}
+  # Consumed by the sourced polling functions.
+  # shellcheck disable=SC2034
+  POLL_INTERVAL_SEC=1
+  # shellcheck disable=SC2034
+  POLL_TIMEOUT_SEC=${LOCAL_CONTRACT_POLL_TIMEOUT}
+elif [[ ${LOCAL_CONTRACT_POLL_TIMEOUT} != 3 ]]; then
+  fatal "local polling overrides require --local-contract-base-url"
+fi
 
 require_arg --input "${INPUT_DIR}"
 require_arg --group-id "${GROUP_ID}"

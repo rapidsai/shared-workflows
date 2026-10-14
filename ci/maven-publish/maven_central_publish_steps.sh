@@ -152,7 +152,7 @@ create_bundle_zip() {
 require_no_open_staging_repository() {
   local response count
   response=$(staging_search_repositories open)
-  count=$(jq -er '.repositories | length' <<< "${response}") \
+  count=$(jq -er '.repositories | select(type == "array") | length' <<< "${response}") \
     || fatal "OSSRH staging search returned an invalid response"
   if (( count != 0 )); then
     jq . <<< "${response}" >&2 || true
@@ -177,7 +177,7 @@ upload_tree_to_staging() {
 find_open_staging_repository() {
   local response count
   response=$(staging_search_repositories open)
-  count=$(jq -er '.repositories | length' <<< "${response}") \
+  count=$(jq -er '.repositories | select(type == "array") | length' <<< "${response}") \
     || fatal "OSSRH staging search returned an invalid response"
   if (( count != 1 )); then
     jq . <<< "${response}" >&2 || true
