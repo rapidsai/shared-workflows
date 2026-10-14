@@ -10,22 +10,22 @@ repos:
     rev: v0.14.10
     hooks:
       - id: ruff-check
-        files: ^(tests/test_(maven_http|conda_upload)_contract\.py|ci/conda-publish/local_rehearsal\.py)$
+        files: ^(tests/test_(maven_http|conda_upload|container_upload)_contract\.py|ci/(conda|container)-publish/local_rehearsal\.py)$
         args: ['--select=E,F,B', '--ignore=E501']
       - id: ruff-format
-        files: ^(tests/test_(maven_http|conda_upload)_contract\.py|ci/conda-publish/local_rehearsal\.py)$
+        files: ^(tests/test_(maven_http|conda_upload|container_upload)_contract\.py|ci/(conda|container)-publish/local_rehearsal\.py)$
   - repo: https://github.com/PyCQA/bandit
     rev: 1.9.2
     hooks:
       - id: bandit
-        files: ^(tests/test_(maven_http|conda_upload)_contract\.py|ci/conda-publish/local_rehearsal\.py)$
+        files: ^(tests/test_(maven_http|conda_upload|container_upload)_contract\.py|ci/(conda|container)-publish/local_rehearsal\.py)$
         args: [--skip, B101]
   - repo: https://github.com/PyCQA/flake8
     rev: 7.3.0
     hooks:
       - id: flake8
         name: Publication contract bugbear checks without Ruff equivalents
-        files: ^(tests/test_(maven_http|conda_upload)_contract\.py|ci/conda-publish/local_rehearsal\.py)$
+        files: ^(tests/test_(maven_http|conda_upload|container_upload)_contract\.py|ci/(conda|container)-publish/local_rehearsal\.py)$
         additional_dependencies: [flake8-bugbear==25.10.21]
         args: ['--select=B001,B036,B040,B042']
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -68,6 +68,13 @@ repos:
           )$
   - repo: local
     hooks:
+      - id: container-upload-contract
+        name: real authenticated registry and Docker contract
+        entry: python -B -m pytest -q tests/test_container_upload_contract.py
+        language: python
+        additional_dependencies: [pytest==8.4.2, requests==2.34.2]
+        pass_filenames: false
+        always_run: true
       - id: conda-upload-contract
         name: real Anaconda client loopback contract
         entry: python -m pytest -q tests/test_conda_upload_contract.py
