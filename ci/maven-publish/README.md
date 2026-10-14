@@ -1,13 +1,8 @@
 # Maven release publication
 
-The reusable workflow exposes `deployment-state`, `deployment-id`, and `version`
-outputs. A dependent Maven coordinate can wait for `deployment-state` to equal
-`PUBLISHED`, even if a subsequent docs dispatch fails. cuVS publishes Java before
-Lucene because the Lucene POM depends on the matching Java release.
-
 The release tag authorizes publication. Java release callers enable
-`publish-to-maven-central: true` to build, sign, validate, publish, and start docs
-without another release approval. Non-release builds publish snapshots.
+`publish-to-maven-central: true` to build, sign, validate, and publish without
+another release approval. Non-release builds publish snapshots.
 
 ```yaml
 java-publish:
@@ -20,7 +15,6 @@ java-publish:
     GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
     GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
     MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
-    DOCS_DISPATCH_APP_PRIVATE_KEY: ${{ secrets.DOCS_DISPATCH_APP_PRIVATE_KEY }}
   with:
     artifact-name: cudf_java_maven_repo
     source-git-sha: ${{ github.sha }}
@@ -30,45 +24,66 @@ java-publish:
 
 The Maven version must match the tag, allowing a zero-padded patch component
 (`v26.12.00` authorizes `26.12.0`). The Portal deployment's package URL must match
-the Maven coordinates before promotion. Docs dispatch occurs only after
-`PUBLISHED`, with the version extracted from the artifact's POM.
+the Maven coordinates before promotion. `deployment-state`, `deployment-id`,
+and `version` outputs allow a dependent coordinate to wait for `PUBLISHED`.
+cuVS publishes Java before Lucene because Lucene depends on that Java release.
 
-## Credentials and rollout
+## Publication receipts and docs
 
-The Sonatype user token and GPG credentials use the existing configuration.
-For docs dispatch, configure `DOCS_DISPATCH_APP_ID` as a repository or organization
-variable and `DOCS_DISPATCH_APP_PRIVATE_KEY` as a secret available to each caller.
-The GitHub App must be installed on `rapidsai/docs` with Actions write permission.
-The workflow requests an installation token scoped to that repository and
-permission. Docs dispatch configuration is checked before publication; token
-issuance and the remote workflow still require a live integration check.
+An optional `docs-project` labels a completed publication. The source build SHA
+must equal the tagged workflow commit. After confirming `PUBLISHED`, the workflow
+retains `publication.json` in an artifact named
+`maven-central-published-<docs-project>`. Each workflow run has its own artifact;
+reruns preserve an existing receipt. Receipts are retained for 90 days.
 
-Deploy `rapidsai/docs`'s `deploy-java-docs.yaml` and register the project there
-before enabling its caller. Enable cuDF for the 26.12 release branch. Other Java
-projects use the same publisher inputs and add their own docs registry entry.
-Projects without hosted Java docs can omit `docs-project` and the App secret.
+Schema version 1 records `state`, `docs_project`, `group_id`, `artifact_id`,
+`version`, `deployment_id`, `source_repository`, `source_repository_id`,
+`source_ref`, `source_sha`, `workflow_run_id`, and `workflow_run_attempt`.
+Only a completed publication emits this receipt. It is distinct from the
+deployment receipt retained before polling for recovery.
 
-Existing callers that do not enable automatic publication retain the validation
-and staging options. `stage-for-maven-central-publish: false` validates and drops;
+The standalone `dispatch-java-docs.yml` workflow in `rapidsai/release-tracking`
+checks for these receipts every five minutes. It validates repository identity,
+coordinates, workflow event/path, run metadata, and the current release tag's
+commit before dispatching `rapidsai/docs`. Source publishers need no GitHub App
+credentials. The existing release dispatcher App remains in release-tracking's
+protected `release-dispatch` environment; no release train/controller is needed.
+
+## Configuration and rollout
+
+Sonatype user tokens and GPG credentials use the existing configuration. Deploy
+the docs workflow and project registrations, then the standalone dispatcher,
+then enable the shared publisher and project callers on the release branch.
+The dispatcher registry pins the canonical NVIDIA/cuDF and NVIDIA/cuVS repository
+IDs and Maven coordinates. Its existing App needs source repository reads and
+Actions write access to `rapidsai/docs`. No App key or PAT belongs in a publisher.
+
+Existing callers that do not enable automatic publication retain validation and
+staging behavior. `stage-for-maven-central-publish: false` validates and drops;
 `true` leaves a validated deployment. Automatic publication overrides that input.
+Neither validation nor staging emits a completed-publication receipt.
 
 ## Recovery
 
-The publisher records the deployment ID and Maven coordinates before polling,
-then retains the receipt as a run-specific Actions artifact, including on failure.
-Rerun the failed workflow within the 90-day artifact retention period to resume
-the same deployment. `VALIDATED` can be promoted, `PUBLISHING` is polled, and
-`PUBLISHED` succeeds without another upload or publish request. An uncertain
-publish response is followed by status polling rather than HTTP-level retries.
-The publisher serializes attempts for the same caller and artifact without
-cancelling publication in progress.
+The publisher records the deployment ID and coordinates before polling, then
+retains that recovery receipt as a run-specific artifact, including on failure.
+Rerun failed jobs within the 90-day retention period to resume the same deployment.
+`VALIDATED` can be promoted, `PUBLISHING` is polled, and `PUBLISHED` succeeds without
+another upload or publish request. An uncertain publish response is followed by
+status polling rather than HTTP-level retries. Publication is serialized without
+cancelling an active release.
 
-If the docs dispatch job fails after publication, rerun the failed job. A docs
-deployment that was accepted but later failed can be rerun in `rapidsai/docs`.
-The docs workflow waits for Maven Central download availability, uploads the
-javadoc, and opens the stable-version PR. The PR follows the docs repository's
-existing merge process; publication and the S3 upload are automatic.
+If completed receipt upload fails after publication, rerun the failed publisher
+job: it resumes the published deployment and retries receipt creation. An
+interrupted staging handoff before a recovery receipt is retained requires
+Portal-side reconciliation before retrying.
 
-An interrupted staging handoff before a receipt is retained still requires
-checking the Portal and recovering the identified deployment. Do not restart
-the build as a new release or drop a publishing deployment.
+The docs dispatcher skips active and successful docs runs. Failed docs runs are
+retried up to three total attempts; after repairing the failure, manually run the
+dispatcher with the project selected and `retry-failed` enabled. `dry-run` checks
+evidence and reports intended dispatches without starting docs. GitHub schedules
+can be delayed; manual dispatch provides immediate recovery.
+
+Docs upload and the existing stable-link PR occur in the docs repository. That
+PR follows its existing merge process. A failed docs deployment can be rerun
+directly for an already published Maven version, without republishing artifacts.

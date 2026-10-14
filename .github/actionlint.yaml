@@ -8,7 +8,6 @@ self-hosted-runner:
 config-variables:
   - AWS_REGION
   - AWS_ROLE_ARN
-  - DOCS_DISPATCH_APP_ID
   - MAVEN_DEPLOY_USERNAME
   - TELEMETRY_ENABLED
 

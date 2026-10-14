@@ -52,7 +52,8 @@ on:
       docs-project:
         description: |
           Optional registered Java docs project in rapidsai/docs, e.g. cudf-java.
-          Dispatch docs after PUBLISHED. Requires the docs dispatcher App credentials.
+          Retain a completed-publication receipt after PUBLISHED. The standalone
+          dispatcher in release-tracking starts docs using its existing App.
         required: false
         type: string
         default: ''
@@ -81,9 +82,6 @@ on:
       MAVEN_DEPLOY_TOKEN:
         description: Auth token paired with vars.MAVEN_DEPLOY_USERNAME.
         required: true
-      DOCS_DISPATCH_APP_PRIVATE_KEY:
-        description: Private key for the App with Actions write access to rapidsai/docs.
-        required: false
 
 defaults:
   run:
@@ -132,28 +130,23 @@ jobs:
             echo "is_release=false" >> "${GITHUB_OUTPUT}"
           fi
 
-      - name: Check docs dispatcher configuration
-        if: ${{ steps.destination.outputs.is_release == 'true' && inputs.docs-project != '' }}
-        env:
-          AUTO_PUBLISH: ${{ inputs.publish-to-maven-central }}
-          DOCS_APP_ID: ${{ vars.DOCS_DISPATCH_APP_ID }}
-          DOCS_APP_KEY: ${{ secrets.DOCS_DISPATCH_APP_PRIVATE_KEY }}
-        run: |
-          [[ ${AUTO_PUBLISH} == true ]] || { echo "Docs dispatch requires automatic publication" >&2; exit 1; }
-          [[ -n ${DOCS_APP_ID} && -n ${DOCS_APP_KEY} ]] || { echo "Docs dispatcher App credentials are missing" >&2; exit 1; }
-
       - name: Find retained deployment from an earlier attempt
         id: receipt
         if: ${{ steps.destination.outputs.is_release == 'true' && inputs.publish-to-maven-central }}
         env:
           GH_TOKEN: ${{ github.token }}
           RECEIPT_NAME: maven-central-deployment-${{ inputs.artifact-name }}-${{ github.run_id }}
+          PUBLICATION_NAME: maven-central-published-${{ inputs.docs-project }}
         run: |
-          ids=$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts" \
-            | jq -er --arg name "${RECEIPT_NAME}" \
+          artifacts=$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts")
+          ids=$(jq -er --arg name "${RECEIPT_NAME}" \
               '[.[].artifacts[] | select(.name == $name and .expired == false)]
-               | if length <= 1 then (.[0].id // "") else error("duplicate receipts") end')
+               | if length <= 1 then (.[0].id // "") else error("duplicate receipts") end' <<< "${artifacts}")
           echo "artifact-id=${ids}" >> "${GITHUB_OUTPUT}"
+          published=$(jq -er --arg name "${PUBLICATION_NAME}" \
+            '[.[].artifacts[] | select(.name == $name and .expired == false)]
+             | if length <= 1 then (.[0].id // "") else error("duplicate publication receipts") end' <<< "${artifacts}")
+          echo "published-artifact-id=${published}" >> "${GITHUB_OUTPUT}"
 
       - name: Restore retained deployment
         if: ${{ steps.receipt.outputs.artifact-id != '' }}
@@ -183,6 +176,9 @@ jobs:
         id: publish-central
         if: ${{ steps.destination.outputs.is_release == 'true' }}
         run: |
+          if [[ -n ${DOCS_PROJECT} && ${AUTO_PUBLISH} == true ]]; then
+            shared-workflows/ci/maven-publish/write_maven_publication_receipt.sh --validate
+          fi
           args=(
             --input signed-maven-repo
             --group-id "${GROUP_ID}"
@@ -207,8 +203,32 @@ jobs:
           VERSION: ${{ steps.prepare.outputs.VERSION }}
           AUTO_DROP: ${{ !inputs.stage-for-maven-central-publish && !inputs.publish-to-maven-central }}
           AUTO_PUBLISH: ${{ inputs.publish-to-maven-central }}
+          DOCS_PROJECT: ${{ inputs.docs-project }}
+          SOURCE_GIT_SHA: ${{ inputs.source-git-sha || github.sha }}
           MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME }}
           MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
+
+      - name: Write completed-publication receipt
+        if: ${{ !cancelled() && steps.publish-central.outputs.DEPLOYMENT_STATE == 'PUBLISHED' && inputs.docs-project != '' && steps.receipt.outputs.published-artifact-id == '' }}
+        env:
+          DOCS_PROJECT: ${{ inputs.docs-project }}
+          GROUP_ID: ${{ steps.prepare.outputs.GROUP_ID }}
+          ARTIFACT_ID: ${{ steps.prepare.outputs.ARTIFACT_ID }}
+          VERSION: ${{ steps.prepare.outputs.VERSION }}
+          SOURCE_GIT_SHA: ${{ inputs.source-git-sha || github.sha }}
+          DEPLOYMENT_ID: ${{ steps.publish-central.outputs.DEPLOYMENT_ID }}
+          DEPLOYMENT_STATE: ${{ steps.publish-central.outputs.DEPLOYMENT_STATE }}
+        run: |
+          shared-workflows/ci/maven-publish/write_maven_publication_receipt.sh completed-publication/publication.json
+
+      - name: Retain completed-publication receipt
+        if: ${{ !cancelled() && steps.publish-central.outputs.DEPLOYMENT_STATE == 'PUBLISHED' && inputs.docs-project != '' && steps.receipt.outputs.published-artifact-id == '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: maven-central-published-${{ inputs.docs-project }}
+          path: completed-publication/publication.json
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Retain deployment for publication recovery
         if: ${{ !cancelled() && inputs.publish-to-maven-central && steps.receipt.outputs.artifact-id == '' }}
@@ -253,28 +273,3 @@ jobs:
           path: snapshot-bundle.zip
           if-no-files-found: ignore
           retention-days: 90
-
-  deploy-java-docs:
-    name: Start Java docs deployment
-    needs: maven-publish
-    if: ${{ needs.maven-publish.outputs.deployment-state == 'PUBLISHED' && inputs.docs-project != '' }}
-    runs-on: ubuntu-latest
-    permissions: {}
-    steps:
-      - name: Mint docs dispatcher token
-        id: docs-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          app-id: ${{ vars.DOCS_DISPATCH_APP_ID }}
-          private-key: ${{ secrets.DOCS_DISPATCH_APP_PRIVATE_KEY }}
-          owner: rapidsai
-          repositories: docs
-          permission-actions: write
-      - name: Dispatch docs deployment
-        env:
-          GH_TOKEN: ${{ steps.docs-token.outputs.token }}
-          DOCS_PROJECT: ${{ inputs.docs-project }}
-          VERSION: ${{ needs.maven-publish.outputs.version }}
-        run: |
-          gh workflow run deploy-java-docs.yaml --repo rapidsai/docs --ref main \
-            -f "project=${DOCS_PROJECT}" -f "version=${VERSION}"
