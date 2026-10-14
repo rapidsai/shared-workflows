@@ -314,12 +314,12 @@ jobs:
       - name: Resolve controller-bound candidate metadata
         id: candidate-context
         if: ${{ inputs.build_type == 'release-candidate' && inputs.candidate-train-sha256 == '' }}
-        uses: rapidsai/shared-actions/release-candidate-context@837f3939f7dc55759d1b4a0b365f0f1b7a43c1b3
+        uses: rapidsai/shared-actions/release-candidate-context@9c89b865c51b05cb19a82ede92d840e0e23b84e1
         with:
           source-sha: ${{ env.RAPIDS_SHA }}
       - name: Prepare candidate dependencies and build policy
         if: ${{ inputs.build_type == 'release-candidate' }}
-        uses: rapidsai/shared-actions/release-candidate-dependencies@837f3939f7dc55759d1b4a0b365f0f1b7a43c1b3
+        uses: rapidsai/shared-actions/release-candidate-dependencies@9c89b865c51b05cb19a82ede92d840e0e23b84e1
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
           artifact-family: wheel
@@ -449,7 +449,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}
       - name: Create wheel release catalog companion
         if: ${{ inputs.build_type == 'release-candidate' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@837f3939f7dc55759d1b4a0b365f0f1b7a43c1b3
+        uses: rapidsai/shared-actions/release-catalog-dispatch@9c89b865c51b05cb19a82ede92d840e0e23b84e1
         with:
           config: >-
             {
