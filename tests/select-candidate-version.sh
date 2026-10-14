@@ -73,24 +73,62 @@ run_selector() {
 expected_digest="$(make_train)"
 : >"${temporary_directory}/environment"
 run_selector "${expected_digest}" conda "${temporary_directory}/environment"
-grep -Fxq 'RAPIDS_RELEASE_CANDIDATE_VERSION=26.12.00' "${temporary_directory}/environment"
+grep -Fxq 'RAPIDS_RELEASE_CANDIDATE_UNIT_VERSION=26.12.00' "${temporary_directory}/environment"
 
 : >"${temporary_directory}/environment"
 run_selector "${expected_digest}" wheel "${temporary_directory}/environment"
-grep -Fxq 'RAPIDS_RELEASE_CANDIDATE_VERSION=26.12.0' "${temporary_directory}/environment"
+grep -Fxq 'RAPIDS_RELEASE_CANDIDATE_UNIT_VERSION=26.12.0' "${temporary_directory}/environment"
 
 # A second repository exercises family-profile selection against its own
 # frozen source identity, rather than assuming the selector is CLI-specific.
 : >"${temporary_directory}/environment"
 run_selector "${expected_digest}" conda "${temporary_directory}/environment" \
   rapids-dask-dependency abcdef0123456789abcdef0123456789abcdef01
-grep -Fxq 'RAPIDS_RELEASE_CANDIDATE_VERSION=26.12.00' "${temporary_directory}/environment"
+grep -Fxq 'RAPIDS_RELEASE_CANDIDATE_UNIT_VERSION=26.12.00' "${temporary_directory}/environment"
 
 # A unit override must take precedence over its family's default version.
 expected_digest="$(make_train 0.9.0)"
 : >"${temporary_directory}/environment"
 run_selector "${expected_digest}" conda "${temporary_directory}/environment"
-grep -Fxq 'RAPIDS_RELEASE_CANDIDATE_VERSION=0.9.0' "${temporary_directory}/environment"
+grep -Fxq 'RAPIDS_RELEASE_CANDIDATE_UNIT_VERSION=0.9.0' "${temporary_directory}/environment"
+
+# UCXX deliberately freezes its package identity with a two-component version.
+ucxx_sha=abcdefabcdefabcdefabcdefabcdefabcdefabcd
+ucxx_base="$(jq -cn --arg sha "${ucxx_sha}" '
+  {
+    schema_version: 2,
+    version_contract: {
+      package_versions: {conda: "26.12.00", wheel: "26.12.0"},
+      unit_package_versions: {"conda:ucxx": "0.53", "wheel:ucxx": "0.53"}
+    },
+    source_revisions: {ucxx: $sha},
+    github_repositories: {ucxx: "rapidsai/ucxx"},
+    release_units: [
+      {id: "conda:ucxx", repository: "ucxx", artifact_family: "conda", version_profile: "conda", source_revision: $sha},
+      {id: "wheel:ucxx", repository: "ucxx", artifact_family: "wheel", version_profile: "wheel", source_revision: $sha}
+    ]
+  }')"
+ucxx_digest="$(jq -cSj . <<<"${ucxx_base}" | sha256sum | awk '{print $1}')"
+jq -cn --argjson base "${ucxx_base}" --arg train_sha "${ucxx_digest}" \
+  '$base + {train_sha256: $train_sha}' >"${temporary_directory}/train.json"
+for family in conda wheel; do
+  : >"${temporary_directory}/environment"
+  run_selector "${ucxx_digest}" "${family}" "${temporary_directory}/environment" \
+    ucxx "${ucxx_sha}"
+  grep -Fxq 'RAPIDS_RELEASE_CANDIDATE_UNIT_VERSION=0.53' "${temporary_directory}/environment"
+done
+
+# A two-component allowance is numeric-only; prerelease suffixes remain invalid.
+expected_digest="$(make_train 0.9.0rc1)"
+: >"${temporary_directory}/environment"
+if run_selector "${expected_digest}" conda "${temporary_directory}/environment"; then
+  echo "selector accepted a non-final frozen unit version" >&2
+  exit 1
+fi
+if [[ -s "${temporary_directory}/environment" ]]; then
+  echo "selector wrote a non-final candidate version" >&2
+  exit 1
+fi
 
 # Reject altered train bytes before writing an environment value.
 jq '.version_contract.package_versions.conda = "99.99.99"' \

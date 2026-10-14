@@ -59,10 +59,10 @@ candidate_version="$(jq -er \
      else ($train.version_contract.unit_package_versions[$unit_id]
            // $train.version_contract.package_versions[$unit.version_profile])
      end
-   | select(type == "string" and test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))' \
+   | select(type == "string" and test("^[0-9]+\\.[0-9]+(\\.[0-9]+)?$"))' \
   "${train_path}")" || {
     echo "release train has no valid frozen version for ${unit_id} at the requested source revision" >&2
     exit 1
   }
 
-printf 'RAPIDS_RELEASE_CANDIDATE_VERSION=%s\n' "${candidate_version}" >>"${GITHUB_ENV}"
+printf 'RAPIDS_RELEASE_CANDIDATE_UNIT_VERSION=%s\n' "${candidate_version}" >>"${GITHUB_ENV}"

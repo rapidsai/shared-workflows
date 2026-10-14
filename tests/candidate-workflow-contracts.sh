@@ -94,7 +94,7 @@ for workflow in "${!candidate_version_families[@]}"; do
 done
 for workflow in conda-python-build.yaml wheels-build.yaml; do
   path="${root}/.github/workflows/${workflow}"
-  if ! rg -Fq 'export SETUPTOOLS_SCM_PRETEND_VERSION="${RAPIDS_RELEASE_CANDIDATE_VERSION}"' "${path}"; then
+  if ! rg -Fq 'export SETUPTOOLS_SCM_PRETEND_VERSION="${RAPIDS_RELEASE_CANDIDATE_UNIT_VERSION}"' "${path}"; then
     echo "${workflow} must pass the frozen version to its source build only" >&2
     exit 1
   fi

@@ -347,8 +347,8 @@ jobs:
         run: |
           ulimit -n "$(ulimit -Hn)"
           if [[ "${BUILD_TYPE}" == "release-candidate" ]]; then
-            : "${RAPIDS_RELEASE_CANDIDATE_VERSION:?candidate version was not selected}"
-            export SETUPTOOLS_SCM_PRETEND_VERSION="${RAPIDS_RELEASE_CANDIDATE_VERSION}"
+            : "${RAPIDS_RELEASE_CANDIDATE_UNIT_VERSION:?candidate unit version was not selected}"
+            export SETUPTOOLS_SCM_PRETEND_VERSION="${RAPIDS_RELEASE_CANDIDATE_UNIT_VERSION}"
           fi
           # shellcheck disable=SC1090
           source "${INPUTS_SCRIPT}"
