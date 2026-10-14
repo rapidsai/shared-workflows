@@ -147,6 +147,12 @@ rg -Fq "inputs.candidate-docs && 'false'" "${custom}"
 
 for workflow in conda-cpp-build.yaml conda-python-build.yaml wheels-build.yaml custom-job.yaml; do
   path="${root}/.github/workflows/${workflow}"
+  telemetry_steps="$(rg -c 'uses: rapidsai/shared-actions/telemetry-dispatch-(setup|stash-job-artifacts)@' "${path}")"
+  telemetry_pins="$(rg -c 'SHARED_ACTIONS_REF: 83a68283134b22b0e7e7a072194358aaf3d3d90b' "${path}")"
+  if [[ "${telemetry_steps}" != 2 || "${telemetry_pins}" != 2 ]]; then
+    echo "${workflow} telemetry runtime checkout must use the same pinned shared-actions revision" >&2
+    exit 1
+  fi
   role_line="$(rg -n -F 'role-to-assume: ${{ vars.AWS_ROLE_ARN }}' "${path}" | cut -d: -f1)"
   role_guard="$(sed -n "$((role_line - 3)),$((role_line - 1))p" "${path}")"
   if ! rg -Fq "inputs.build_type != 'release-candidate' && github.event.inputs.build_type != 'release-candidate'" <<<"${role_guard}" ||
