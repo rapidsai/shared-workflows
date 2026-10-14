@@ -1,5 +1,10 @@
 # Maven release publication
 
+The reusable workflow exposes `deployment-state`, `deployment-id`, and `version`
+outputs. A dependent Maven coordinate can wait for `deployment-state` to equal
+`PUBLISHED`, even if a subsequent docs dispatch fails. cuVS publishes Java before
+Lucene because the Lucene POM depends on the matching Java release.
+
 The release tag authorizes publication. Java release callers enable
 `publish-to-maven-central: true` to build, sign, validate, publish, and start docs
 without another release approval. Non-release builds publish snapshots.

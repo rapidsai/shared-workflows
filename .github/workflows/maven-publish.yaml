@@ -12,6 +12,16 @@ name: Maven publish
 
 on:
   workflow_call:
+    outputs:
+      deployment-state:
+        description: Maven Central deployment state; PUBLISHED authorizes dependent releases.
+        value: ${{ jobs.maven-publish.outputs.deployment-state }}
+      deployment-id:
+        description: Sonatype Portal deployment ID for release recovery.
+        value: ${{ jobs.maven-publish.outputs.deployment-id }}
+      version:
+        description: Maven version read from the published POM.
+        value: ${{ jobs.maven-publish.outputs.version }}
     inputs:
       artifact-name:
         description: |
@@ -93,6 +103,7 @@ jobs:
     outputs:
       version: ${{ steps.prepare.outputs.VERSION }}
       deployment-state: ${{ steps.publish-central.outputs.DEPLOYMENT_STATE }}
+      deployment-id: ${{ steps.publish-central.outputs.DEPLOYMENT_ID }}
     steps:
       - name: Self-checkout shared-workflows
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
