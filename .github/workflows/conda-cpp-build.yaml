@@ -204,7 +204,7 @@ jobs:
           } >> "${GITHUB_ENV}"
 
       - name: Setup proxy cache
-        uses: nv-gha-runners/setup-proxy-cache@eadc57871cde0c92a223d0f486ab669a2360f978 # main
+        uses: nv-gha-runners/setup-proxy-cache@main
         continue-on-error: true
         with:
           enable-apt: true
