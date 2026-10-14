@@ -70,10 +70,10 @@ MATRIX="$(
 echo "${MATRIX}" | jq
 ```
 
-### Conda artifacts
+### Package artifacts
 
-Conda C++ and Python build artifacts are uploaded without additional Zlib
-compression because the Conda packages are already compressed. Compression of
+Conda C++ and Python build artifacts and wheel build artifacts are uploaded without
+additional Zlib compression because the packages are already compressed. Compression of
 the packages themselves is controlled by each project's build scripts.
 
 ### Secrets
