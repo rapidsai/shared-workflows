@@ -195,7 +195,7 @@ jobs:
           persist-credentials: false
       - name: Setup caller cache
         if: inputs.cache-paths != '' || inputs.cache-key-prefix != '' || inputs.cache-key-files != '' || inputs.cache-environment != ''
-        uses: rapidsai/shared-actions/setup-caller-cache@main
+        uses: rapidsai/shared-actions/setup-caller-cache@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
         with:
           cache-paths: ${{ inputs.cache-paths }}
           cache-key-prefix: ${{ inputs.cache-key-prefix }}
@@ -236,7 +236,7 @@ jobs:
             echo "RAPIDS_NIGHTLY_DATE=${RAPIDS_NIGHTLY_DATE}"
           } >> "${GITHUB_ENV}"
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
@@ -245,7 +245,7 @@ jobs:
         with:
           extra_attributes: "rapids.PACKAGER=conda,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
       - name: Setup proxy cache
-        uses: nv-gha-runners/setup-proxy-cache@main
+        uses: nv-gha-runners/setup-proxy-cache@eadc57871cde0c92a223d0f486ab669a2360f978
         continue-on-error: true
         with:
           enable-apt: true
@@ -264,12 +264,12 @@ jobs:
       - name: Resolve controller-bound candidate metadata
         id: candidate-context
         if: ${{ inputs.build_type == 'release-candidate' && inputs.candidate-train-sha256 == '' }}
-        uses: rapidsai/shared-actions/release-candidate-context@39fc31647bd5514c99fca7b0463d45c2446148b7
+        uses: rapidsai/shared-actions/release-candidate-context@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
         with:
           source-sha: ${{ env.RAPIDS_SHA }}
       - name: Prepare candidate dependencies and build policy
         if: ${{ inputs.build_type == 'release-candidate' }}
-        uses: rapidsai/shared-actions/release-candidate-dependencies@39fc31647bd5514c99fca7b0463d45c2446148b7
+        uses: rapidsai/shared-actions/release-candidate-dependencies@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
           prepare-conda-channel: 'true'
@@ -281,7 +281,7 @@ jobs:
       # available. The producer role is limited to private candidate data.
       - name: Setup sccache-dist
         if: ${{ inputs.build_type != 'release-candidate' && github.event.inputs.build_type != 'release-candidate' && !(github.ref_type == 'branch' && startsWith(github.ref_name, 'release-test-')) && !startsWith(github.head_ref, 'release-test-') }}
-        uses: rapidsai/shared-actions/setup-sccache-dist@main
+        uses: rapidsai/shared-actions/setup-sccache-dist@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
         env:
           AWS_REGION: "${{env.AWS_REGION}}"
           AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
@@ -383,7 +383,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}
       - name: Create Conda release catalog companion
         if: ${{ inputs.build_type == 'release-candidate' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@39fc31647bd5514c99fca7b0463d45c2446148b7
+        uses: rapidsai/shared-actions/release-catalog-dispatch@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
         with:
           config: >-
             {
@@ -400,7 +400,7 @@ jobs:
         if: ${{ !cancelled() && inputs.build_type != 'release-candidate' }}
         run: rapids-upload-artifacts-dir "cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}"
       - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:

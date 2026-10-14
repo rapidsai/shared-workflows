@@ -20,8 +20,8 @@ runs:
     - name: Check out shared-workflows implementation
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
-        repository: ${{ inputs.action-repo || 'rapidsai/shared-workflows' }}
-        ref: ${{ inputs.action-ref || 'main' }}
+        repository: ${{ inputs.action-repo }}
+        ref: ${{ inputs.action-ref }}
         path: ./shared-workflows
         persist-credentials: false
     - id: prepare-matrix
