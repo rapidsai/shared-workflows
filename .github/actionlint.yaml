@@ -17,6 +17,10 @@ paths:
     ignore:
       # https://github.com/rhysd/actionlint/issues/711
       - 'specifying action "\$/.github/actions/prepare-matrix-dispatch" in invalid format because ref is missing. available formats are "{owner}/{repo}@{ref}" or "{owner}/{repo}/{path}@{ref}"'
+      # job.workflow_repository / job.workflow_sha are the reusable workflow's pinned source.
+      # actionlint's current context type schema does not yet include these GitHub properties.
+      - 'property "workflow_repository" is not defined in object type'
+      - 'property "workflow_sha" is not defined in object type'
   .github/workflows/conda-python-tests.yaml:
     ignore:
       # ${{ secrets.CODECOV_TOKEN }} is valid if a secret like that exists in the calling repo,

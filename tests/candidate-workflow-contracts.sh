@@ -34,6 +34,27 @@ for workflow in "${workflows[@]}"; do
   done < <(rg -n -F --no-heading "${expected_role}" "${path}" | cut -d: -f1)
 done
 
+candidate_action_paths=(
+  "${root}/.github/workflows/conda-cpp-build.yaml"
+  "${root}/.github/workflows/conda-python-build.yaml"
+  "${root}/.github/workflows/wheels-build.yaml"
+  "${root}/.github/workflows/custom-job.yaml"
+  "${root}/.github/workflows/compute-matrix.yaml"
+  "${root}/.github/actions/prepare-matrix-dispatch/action.yaml"
+)
+if rg -nP 'uses:\s+[^\s@]+@(?![a-f0-9]{40}(?:\s|$))[^\s]+' "${candidate_action_paths[@]}"; then
+  echo "candidate build paths must pin external actions and workflows to full commit SHAs" >&2
+  exit 1
+fi
+matrix_workflow="${root}/.github/workflows/compute-matrix.yaml"
+matrix_dispatch_action="${root}/.github/actions/prepare-matrix-dispatch/action.yaml"
+if ! rg -Fq 'action-repo: ${{ job.workflow_repository }}' "${matrix_workflow}" ||
+  ! rg -Fq 'action-ref: ${{ job.workflow_sha }}' "${matrix_workflow}" ||
+  rg -Fq "|| 'main'" "${matrix_dispatch_action}"; then
+  echo "candidate matrix checkout must use the exact reusable-workflow repository and SHA" >&2
+  exit 1
+fi
+
 pins="$(rg -o 'uses: rapidsai/shared-actions/(release-candidate-[^@[:space:]]+|release-catalog-dispatch)@[[:alnum:]]+' "${root}/.github/workflows" \
   | sed 's/.*@//' | sort -u)"
 if [[ "$(printf '%s\n' "${pins}" | wc -l | tr -d ' ')" != 1 ]] ||
