@@ -74,6 +74,33 @@ for workflow in conda-cpp-build.yaml conda-python-build.yaml wheels-build.yaml; 
   fi
 done
 
+declare -A candidate_version_families=(
+  [conda-cpp-build.yaml]=conda
+  [conda-python-build.yaml]=conda
+  [wheels-build.yaml]=wheel
+)
+for workflow in "${!candidate_version_families[@]}"; do
+  path="${root}/.github/workflows/${workflow}"
+  version_step="$(rg -n -F 'uses: $/.github/actions/select-candidate-version' "${path}" | cut -d: -f1)"
+  dependencies_step="$(rg -n -F 'name: Prepare candidate dependencies and build policy' "${path}" | cut -d: -f1)"
+  if [[ -z "${version_step}" || -z "${dependencies_step}" || "${version_step}" -ge "${dependencies_step}" ]] ||
+    ! rg -Fq "artifact-family: ${candidate_version_families[${workflow}]}" "${path}" ||
+    ! rg -Fq 'repository: ${{ inputs.repo || github.repository }}' "${path}" ||
+    ! rg -Fq 'source-sha: ${{ env.RAPIDS_SHA }}' "${path}" ||
+    rg -Fq 'release-candidate source checkout has no VERSION file' "${path}"; then
+    echo "${workflow} must select its version from the frozen train before candidate dependencies are installed" >&2
+    exit 1
+  fi
+done
+for workflow in conda-python-build.yaml wheels-build.yaml; do
+  path="${root}/.github/workflows/${workflow}"
+  if ! rg -Fq 'export SETUPTOOLS_SCM_PRETEND_VERSION="${RAPIDS_RELEASE_CANDIDATE_VERSION}"' "${path}"; then
+    echo "${workflow} must pass the frozen version to its source build only" >&2
+    exit 1
+  fi
+done
+bash "${root}/tests/select-candidate-version.sh"
+
 declare -A candidate_catalog_directories=(
   [conda-cpp-build.yaml]=.release-candidate-artifacts/conda
   [conda-python-build.yaml]=.release-candidate-artifacts/conda
