@@ -206,6 +206,7 @@ jobs:
     if: ${{ inputs.build_type != 'release-candidate' && github.event.inputs.build_type != 'release-candidate' }}
     name: ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}, ${{ matrix.GPU }}, ${{ matrix.DRIVER }}-driver, ${{ matrix.DEPENDENCIES }}-deps
     needs: compute-matrix
+    timeout-minutes: 120
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
       RAPIDS_DEPENDENCIES: ${{ matrix.DEPENDENCIES }}
