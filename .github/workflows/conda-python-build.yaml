@@ -44,6 +44,10 @@ on:
         default: true
         required: false
         description: "One of [true, false], true if artifacts should be uploaded to GitHub's artifact store"
+      artifact-compression-level:
+        description: "Zlib compression level (0-9) for uploaded Conda artifacts; use 0 for already-compressed packages."
+        type: number
+        default: 6
       candidate-train-sha256:
         description: "Canonical SHA-256 of the release train; required for release-candidate builds."
         type: string
@@ -222,7 +226,7 @@ jobs:
         with:
           extra_attributes: "rapids.PACKAGER=conda,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
       - name: Setup proxy cache
-        uses: nv-gha-runners/setup-proxy-cache@main
+        uses: nv-gha-runners/setup-proxy-cache@eadc57871cde0c92a223d0f486ab669a2360f978 # main
         continue-on-error: true
         with:
           enable-apt: true
@@ -302,6 +306,7 @@ jobs:
           if-no-files-found: 'error'
           name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
           path: ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
+          compression-level: ${{ inputs.artifact-compression-level }}
 
       - name: Configure release-candidate store credentials
         if: ${{ inputs.build_type == 'release-candidate' }}
