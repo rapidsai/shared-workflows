@@ -80,6 +80,17 @@ if rg -Fq 'name: Restore build credentials' "${custom}"; then
   exit 1
 fi
 rg -Fq "inputs.build_type == 'release-candidate' && inputs.release-catalog-config != ''" "${custom}"
+rg -Fq 'candidate-dependency-family:' "${custom}"
+rg -Fq 'candidate-skip-github-artifact-upload:' "${custom}"
+rg -Fq 'inputs.candidate-skip-github-artifact-upload &&' "${custom}"
+rg -Fq 'candidate-docs-directory:' "${custom}"
+rg -Fq 'candidate-matrix-arch: ${{ inputs.arch }}' "${custom}"
+rg -Fq 'candidate-matrix-cuda-version: ${{ inputs.candidate-cuda-version }}' "${custom}"
+rg -Fq 'candidate-matrix-python-version: ${{ inputs.candidate-python-version }}' "${custom}"
+rg -Fq 'astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86' "${custom}"
+rg -Fq 'RAPIDS_DOCS_DIR="${DOCS_DIRECTORY}" rapids-upload-docs' "${custom}"
+rg -Fq 'RAPIDS_DOCS_PUBLISH:' "${custom}"
+rg -Fq "inputs.candidate-docs && 'false'" "${custom}"
 
 for workflow in conda-cpp-build.yaml conda-python-build.yaml wheels-build.yaml custom-job.yaml; do
   path="${root}/.github/workflows/${workflow}"
