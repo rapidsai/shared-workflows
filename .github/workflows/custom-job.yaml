@@ -236,7 +236,7 @@ jobs:
       - name: Resolve controller-bound candidate metadata
         id: candidate-context
         if: ${{ inputs.build_type == 'release-candidate' && inputs.candidate-train-sha256 == '' }}
-        uses: rapidsai/shared-actions/release-candidate-context@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
+        uses: rapidsai/shared-actions/release-candidate-context@7ee1c5b75c3390fd3bb04ca125d66bc4d364ee26
         with:
           source-sha: ${{ inputs.sha || github.sha }}
           script: ${{ inputs.script }}
@@ -252,7 +252,7 @@ jobs:
         if: ${{ inputs.build_type == 'release-candidate' && !inputs.candidate-docs }}
         run: echo "${GITHUB_WORKSPACE}/candidate-gha-tools/tools" >> "${GITHUB_PATH}"
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@7ee1c5b75c3390fd3bb04ca125d66bc4d364ee26
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
@@ -275,7 +275,7 @@ jobs:
         run: | # zizmor: ignore[template-injection]
           echo "RAPIDS_BASE_BRANCH=${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}" >> "${GITHUB_ENV}"
       - name: Standardize repository information
-        uses: rapidsai/shared-actions/rapids-github-info@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
+        uses: rapidsai/shared-actions/rapids-github-info@7ee1c5b75c3390fd3bb04ca125d66bc4d364ee26
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
@@ -291,7 +291,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}
       - name: Prepare candidate dependencies and build policy
         if: ${{ inputs.build_type == 'release-candidate' && (inputs.candidate-docs || inputs.candidate-dependency-family != '') }}
-        uses: rapidsai/shared-actions/release-candidate-dependencies@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
+        uses: rapidsai/shared-actions/release-candidate-dependencies@7ee1c5b75c3390fd3bb04ca125d66bc4d364ee26
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
           prepare-conda-channel: ${{ inputs.candidate-prepare-conda-channel || inputs.candidate-docs }}
@@ -304,7 +304,7 @@ jobs:
       # available. The producer role is limited to private candidate data.
       - name: Setup sccache-dist
         if: ${{ inputs.build_type != 'release-candidate' && github.event.inputs.build_type != 'release-candidate' && !(github.ref_type == 'branch' && startsWith(github.ref_name, 'release-test-')) && !startsWith(github.head_ref, 'release-test-') }}
-        uses: rapidsai/shared-actions/setup-sccache-dist@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
+        uses: rapidsai/shared-actions/setup-sccache-dist@7ee1c5b75c3390fd3bb04ca125d66bc4d364ee26
         env:
           AWS_REGION: "${{env.AWS_REGION}}"
           AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
@@ -337,7 +337,7 @@ jobs:
           persist-credentials: false
       - name: Stage candidate documentation privately
         if: ${{ inputs.build_type == 'release-candidate' && inputs.candidate-docs }}
-        uses: rapidsai/shared-actions/release-candidate-docs@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
+        uses: rapidsai/shared-actions/release-candidate-docs@7ee1c5b75c3390fd3bb04ca125d66bc4d364ee26
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
       - name: Set up uv for candidate documentation
@@ -389,7 +389,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}
       - name: Create release catalog companion
         if: ${{ inputs.build_type == 'release-candidate' && inputs.release-catalog-config != '' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
+        uses: rapidsai/shared-actions/release-catalog-dispatch@7ee1c5b75c3390fd3bb04ca125d66bc4d364ee26
         with:
           config: ${{ inputs.release-catalog-config }}
           source-artifact-name: ${{ inputs.candidate-artifact-name || inputs.artifact-name }}
@@ -402,7 +402,7 @@ jobs:
         if: ${{ !cancelled() && inputs.build_type != 'release-candidate' }}
         run: rapids-upload-artifacts-dir "custom-job-$(arch)"
       - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@7ee1c5b75c3390fd3bb04ca125d66bc4d364ee26
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:

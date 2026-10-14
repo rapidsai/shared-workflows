@@ -195,7 +195,7 @@ jobs:
           persist-credentials: false
       - name: Setup caller cache
         if: inputs.cache-paths != '' || inputs.cache-key-prefix != '' || inputs.cache-key-files != '' || inputs.cache-environment != ''
-        uses: rapidsai/shared-actions/setup-caller-cache@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
+        uses: rapidsai/shared-actions/setup-caller-cache@7ee1c5b75c3390fd3bb04ca125d66bc4d364ee26
         with:
           cache-paths: ${{ inputs.cache-paths }}
           cache-key-prefix: ${{ inputs.cache-key-prefix }}
@@ -217,7 +217,7 @@ jobs:
             echo "RAPIDS_NIGHTLY_DATE=${RAPIDS_NIGHTLY_DATE}"
           } >> "${GITHUB_ENV}"
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@7ee1c5b75c3390fd3bb04ca125d66bc4d364ee26
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
@@ -245,7 +245,7 @@ jobs:
       - name: Resolve controller-bound candidate metadata
         id: candidate-context
         if: ${{ inputs.build_type == 'release-candidate' && inputs.candidate-train-sha256 == '' }}
-        uses: rapidsai/shared-actions/release-candidate-context@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
+        uses: rapidsai/shared-actions/release-candidate-context@7ee1c5b75c3390fd3bb04ca125d66bc4d364ee26
         with:
           source-sha: ${{ env.RAPIDS_SHA }}
       - name: Select frozen release-candidate unit version
@@ -258,7 +258,7 @@ jobs:
           source-sha: ${{ env.RAPIDS_SHA }}
       - name: Prepare candidate dependencies and build policy
         if: ${{ inputs.build_type == 'release-candidate' }}
-        uses: rapidsai/shared-actions/release-candidate-dependencies@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
+        uses: rapidsai/shared-actions/release-candidate-dependencies@7ee1c5b75c3390fd3bb04ca125d66bc4d364ee26
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
           prepare-conda-channel: 'true'
@@ -270,7 +270,7 @@ jobs:
       # available. The producer role is limited to private candidate data.
       - name: Setup sccache-dist
         if: ${{ inputs.build_type != 'release-candidate' && github.event.inputs.build_type != 'release-candidate' && !(github.ref_type == 'branch' && startsWith(github.ref_name, 'release-test-')) && !startsWith(github.head_ref, 'release-test-') }}
-        uses: rapidsai/shared-actions/setup-sccache-dist@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
+        uses: rapidsai/shared-actions/setup-sccache-dist@7ee1c5b75c3390fd3bb04ca125d66bc4d364ee26
         env:
           AWS_REGION: "${{env.AWS_REGION}}"
           AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
@@ -377,7 +377,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}
       - name: Create Conda release catalog companion
         if: ${{ inputs.build_type == 'release-candidate' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
+        uses: rapidsai/shared-actions/release-catalog-dispatch@7ee1c5b75c3390fd3bb04ca125d66bc4d364ee26
         with:
           config: >-
             {
@@ -394,7 +394,7 @@ jobs:
         if: ${{ !cancelled() && inputs.build_type != 'release-candidate' }}
         run: rapids-upload-artifacts-dir "cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}"
       - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@0ebaa9f3d17a30bba8e983d2edd12922eba9fd4d
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@7ee1c5b75c3390fd3bb04ca125d66bc4d364ee26
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
