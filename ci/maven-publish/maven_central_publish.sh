@@ -5,7 +5,7 @@
 # Creates a deployment bundle from a signed Maven repository tree, uploads its
 # files through Sonatype's OSSRH staging compatibility API, and polls the
 # Publisher Portal until the deployment passes validation.
-# Never calls the /publish endpoint: publication always requires a human click.
+# Can publish a validated release and resume it using a retained receipt.
 
 set -euo pipefail
 
@@ -24,7 +24,7 @@ OSSRH_STAGING_API_URL="https://ossrh-staging-api.central.sonatype.com"
 # shellcheck disable=SC2034
 POLL_INTERVAL_SEC=15
 # shellcheck disable=SC2034
-POLL_TIMEOUT_SEC=900
+POLL_TIMEOUT_SEC=${POLL_TIMEOUT_SEC:-1800}
 
 INPUT_DIR=""
 GROUP_ID=""
@@ -33,6 +33,8 @@ ARTIFACT_ID=""
 VERSION=""
 OUTPUT_BUNDLE=""
 AUTO_DROP="true"
+AUTO_PUBLISH="false"
+DEPLOYMENT_RECEIPT=""
 
 print_help() {
   cat << EOF
@@ -59,6 +61,10 @@ OPTIONS:
                                     com.nvidia for a com.nvidia.cuopt groupId). Defaults to
                                     --group-id.
     --auto-drop <true|false>       Drop after VALIDATED (default: true).
+    --auto-publish <true|false>    Publish and wait for PUBLISHED (default: false).
+                                  Requires --auto-drop false.
+    --deployment-receipt <path>   Save the deployment id before polling; if the
+                                  receipt exists, resume that deployment.
     -h, --help                     Show this help message.
 
 ENVIRONMENT VARIABLES:
@@ -112,6 +118,16 @@ parse_args() {
         AUTO_DROP=$2
         shift 2
         ;;
+      --auto-publish)
+        require_value "$1" "${2:-}"
+        AUTO_PUBLISH=$2
+        shift 2
+        ;;
+      --deployment-receipt)
+        require_value "$1" "${2:-}"
+        DEPLOYMENT_RECEIPT=$2
+        shift 2
+        ;;
       *)
         echo "Error: Unknown argument $1"
         print_help
@@ -132,8 +148,25 @@ require_arg --output-bundle "${OUTPUT_BUNDLE}"
 if [[ ${AUTO_DROP} != "true" && ${AUTO_DROP} != "false" ]]; then
   fatal "--auto-drop must be 'true' or 'false' (got '${AUTO_DROP}')"
 fi
+if [[ ${AUTO_PUBLISH} != true && ${AUTO_PUBLISH} != false ]]; then
+  fatal "--auto-publish must be 'true' or 'false'"
+fi
+if [[ ${AUTO_PUBLISH} == true && ${AUTO_DROP} == true ]]; then
+  fatal "automatic publishing and automatic dropping are mutually exclusive"
+fi
 require_maven_coordinates "${GROUP_ID}" "${ARTIFACT_ID}" "${VERSION}"
 require_release_version "${VERSION}"
+if [[ ${AUTO_PUBLISH} == true && -n ${GITHUB_REF:-} ]]; then
+  if [[ ! ${GITHUB_REF} =~ ^refs/tags/v([0-9]{2})\.([0-9]{2})\.([0-9]+)$ ]]; then
+    fatal "automatic publication requires a release tag"
+  fi
+  TAG_MAJOR=${BASH_REMATCH[1]}
+  TAG_MINOR=${BASH_REMATCH[2]}
+  TAG_PATCH=$(printf '%s' "${BASH_REMATCH[3]}" | sed 's/^0*//')
+  if [[ ${VERSION} != "${TAG_MAJOR}.${TAG_MINOR}.${TAG_PATCH:-0}" ]]; then
+    fatal "Maven version '${VERSION}' does not match release tag '${GITHUB_REF}'"
+  fi
+fi
 # A groupId nested under a verified parent namespace (e.g. com.nvidia.cuopt under the
 # verified com.nvidia) still searches/creates its OSSRH staging repo under the parent's
 # Sonatype profile, not the full groupId string -- so default to GROUP_ID, but let callers
@@ -146,6 +179,20 @@ fi
 : "${MAVEN_DEPLOY_TOKEN:?must be set}"
 
 require_cmds base64 curl jq zip md5sum sha1sum
+
+if [[ -n ${DEPLOYMENT_RECEIPT} && -f ${DEPLOYMENT_RECEIPT} ]]; then
+  [[ ${AUTO_PUBLISH} == true ]] || fatal "only automatic publication may resume a receipt"
+  DEPLOYMENT_ID=$(jq -er --arg group "${GROUP_ID}" --arg artifact "${ARTIFACT_ID}" \
+    --arg version "${VERSION}" \
+    'select(.groupId == $group and .artifactId == $artifact and .version == $version)
+     | .deploymentId | select(type == "string" and test("^[A-Za-z0-9-]+$"))' \
+    "${DEPLOYMENT_RECEIPT}") || fatal "deployment receipt does not match this release"
+  if [[ -n ${GITHUB_OUTPUT:-} ]]; then
+    echo "DEPLOYMENT_ID=${DEPLOYMENT_ID}" >> "${GITHUB_OUTPUT}"
+  fi
+  publish_deployment "${DEPLOYMENT_ID}"
+  exit 0
+fi
 
 INPUT_DIR="$(cd "${INPUT_DIR}" && pwd)"
 OUTPUT_BUNDLE_PARENT="$(dirname "${OUTPUT_BUNDLE}")"
@@ -210,9 +257,20 @@ echo "Handing staging repository to the Publisher Portal"
 staging_handoff_repository "${STAGING_REPOSITORY_KEY}"
 wait_for_portal_handoff "${STAGING_REPOSITORY_KEY}"
 STAGING_HANDED_OFF="true"
+if [[ -n ${DEPLOYMENT_RECEIPT} ]]; then
+  jq -n --arg deployment "${DEPLOYMENT_ID}" --arg group "${GROUP_ID}" \
+    --arg artifact "${ARTIFACT_ID}" --arg version "${VERSION}" \
+    '{deploymentId: $deployment, groupId: $group, artifactId: $artifact, version: $version}' \
+    > "${DEPLOYMENT_RECEIPT}"
+fi
 if [[ -n ${GITHUB_OUTPUT:-} ]]; then
   echo "STAGING_REPOSITORY_KEY=${STAGING_REPOSITORY_KEY}" >> "${GITHUB_OUTPUT}"
   echo "DEPLOYMENT_ID=${DEPLOYMENT_ID}" >> "${GITHUB_OUTPUT}"
+fi
+
+if [[ ${AUTO_PUBLISH} == true ]]; then
+  publish_deployment "${DEPLOYMENT_ID}"
+  exit 0
 fi
 
 wait_for_validated "${DEPLOYMENT_ID}"
@@ -221,7 +279,7 @@ if [[ ${AUTO_DROP} == "true" ]]; then
   drop_deployment "${DEPLOYMENT_ID}"
 else
   cat <<EOF
-Deployment left in PENDING state.
+Deployment left in VALIDATED state.
   Deployment id:  ${DEPLOYMENT_ID}
   Portal UI:      ${CENTRAL_PORTAL_URL}/publishing/deployments
 A human must review the deployment and click Publish to release it to

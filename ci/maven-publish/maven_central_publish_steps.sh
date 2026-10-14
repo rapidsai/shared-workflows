@@ -22,10 +22,10 @@ _sonatype_error_log() {
 # Bearer auth, no request body. Prints response body on 2xx; logs failure and
 # returns 1 on non-2xx.
 _sonatype_call() {
-  local method=$1 url=$2
+  local method=$1 url=$2 retries=${3:-3}
   local body_file status
   body_file=$(mktemp)
-  status=$(curl -sS --retry 3 --retry-delay 2 \
+  status=$(curl -sS --connect-timeout 15 --max-time 60 --retry "${retries}" --retry-delay 2 \
     -H "Authorization: Bearer $(_portal_auth)" \
     -X "${method}" -o "${body_file}" -w '%{http_code}' "${url}") \
     || status="transport-error"
@@ -102,6 +102,57 @@ portal_drop_deployment() {
   _sonatype_call DELETE \
     "${CENTRAL_PORTAL_URL}/api/v1/publisher/deployment/${deployment_id}" \
     >/dev/null
+}
+
+portal_publish_deployment() {
+  _sonatype_call POST \
+    "${CENTRAL_PORTAL_URL}/api/v1/publisher/deployment/$1" 0 >/dev/null
+}
+
+# Resume the same deployment after an uncertain publish response or a timeout.
+# Never upload another bundle merely because publication is still in progress.
+publish_deployment() {
+  local deployment_id=$1 response state elapsed=0 requested=false
+  local expected_purl="pkg:maven/${GROUP_ID}/${ARTIFACT_ID}@${VERSION}"
+  echo "Publishing deployment ${deployment_id}"
+  while (( elapsed < POLL_TIMEOUT_SEC )); do
+    response=$(portal_get_status "${deployment_id}")
+    state=$(jq -r '.deploymentState // "UNKNOWN"' <<< "${response}")
+    echo "  [${elapsed}s] state=${state}"
+    case "${state}" in
+      VALIDATED|PUBLISHING|PUBLISHED)
+        jq -e --arg expected "${expected_purl}" \
+          '.purls == [$expected]' <<< "${response}" >/dev/null \
+          || fatal "Portal deployment does not match ${expected_purl}"
+        ;;
+    esac
+    case "${state}" in
+      VALIDATED)
+        if [[ ${requested} == false ]]; then
+          # A failed response may follow an accepted request. Check state before
+          # attempting another promotion, including after a workflow rerun.
+          portal_publish_deployment "${deployment_id}" \
+            || echo "Publish response uncertain; checking deployment state" >&2
+          requested=true
+        fi
+        ;;
+      PUBLISHED)
+        if [[ -n ${GITHUB_OUTPUT:-} ]]; then
+          echo "DEPLOYMENT_STATE=PUBLISHED" >> "${GITHUB_OUTPUT}"
+        fi
+        return 0
+        ;;
+      FAILED|VALIDATION_FAILED)
+        jq . <<< "${response}" >&2 || true
+        fatal "Publisher Portal reported terminal state ${state}"
+        ;;
+      PENDING|VALIDATING|PUBLISHING|UNKNOWN) ;;
+      *) fatal "unexpected Portal deployment state '${state}'" ;;
+    esac
+    sleep "${POLL_INTERVAL_SEC}"
+    elapsed=$((elapsed + POLL_INTERVAL_SEC))
+  done
+  fatal "timed out waiting for PUBLISHED; resume deployment ${deployment_id}, last state '${state}'"
 }
 
 copy_bundle() {

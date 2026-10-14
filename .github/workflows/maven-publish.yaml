@@ -5,7 +5,7 @@
 # file is GPG-signed. The destination is chosen inside this workflow with
 # `rapids-is-release-build`:
 #   - release build (vYY.MM.PP tag) -> Maven Central via the Sonatype Central
-#     Publisher Portal (OSSRH staging + validation, human-gated publish).
+#     Publisher Portal (OSSRH staging, validation, optional automatic publication).
 #   - non-release build (nightly, branch push) -> Sonatype snapshot repository
 #     (direct HTTP PUT, immediately available, no staging or portal step).
 name: Maven publish
@@ -22,14 +22,30 @@ on:
         type: string
       stage-for-maven-central-publish:
         description: |
-          When true, leave the bundle PENDING in the Sonatype Central
+          When true, leave the bundle VALIDATED in the Sonatype Central
           Publisher Portal for a human to release via the Portal UI
           (https://central.sonatype.com). When false (default), validate then
           drop the bundle. Only applies to the Maven Central path (release
-          builds). Ignored on the snapshot path.
+          builds). Ignored on the snapshot path and when automatic publication
+          is enabled.
         required: false
         type: boolean
         default: false
+      publish-to-maven-central:
+        description: |
+          Publish release-tag deployments automatically and wait for PUBLISHED.
+          The release tag authorizes publication. Overrides the staging option;
+          ignored for snapshots. Enable this for Java release callers.
+        required: false
+        type: boolean
+        default: false
+      docs-project:
+        description: |
+          Optional registered Java docs project in rapidsai/docs, e.g. cudf-java.
+          Dispatch docs after PUBLISHED. Requires the docs dispatcher App credentials.
+        required: false
+        type: string
+        default: ''
       source-git-sha:
         description: |
           Git SHA to include in the retained bundle name for provenance.
@@ -55,6 +71,9 @@ on:
       MAVEN_DEPLOY_TOKEN:
         description: Auth token paired with vars.MAVEN_DEPLOY_USERNAME.
         required: true
+      DOCS_DISPATCH_APP_PRIVATE_KEY:
+        description: Private key for the App with Actions write access to rapidsai/docs.
+        required: false
 
 defaults:
   run:
@@ -68,6 +87,12 @@ jobs:
   maven-publish:
     name: maven publish
     runs-on: linux-amd64-cpu4
+    concurrency:
+      group: maven-central-${{ github.repository }}-${{ inputs.artifact-name }}
+      cancel-in-progress: false
+    outputs:
+      version: ${{ steps.prepare.outputs.VERSION }}
+      deployment-state: ${{ steps.publish-central.outputs.DEPLOYMENT_STATE }}
     steps:
       - name: Self-checkout shared-workflows
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -96,6 +121,37 @@ jobs:
             echo "is_release=false" >> "${GITHUB_OUTPUT}"
           fi
 
+      - name: Check docs dispatcher configuration
+        if: ${{ steps.destination.outputs.is_release == 'true' && inputs.docs-project != '' }}
+        env:
+          AUTO_PUBLISH: ${{ inputs.publish-to-maven-central }}
+          DOCS_APP_ID: ${{ vars.DOCS_DISPATCH_APP_ID }}
+          DOCS_APP_KEY: ${{ secrets.DOCS_DISPATCH_APP_PRIVATE_KEY }}
+        run: |
+          [[ ${AUTO_PUBLISH} == true ]] || { echo "Docs dispatch requires automatic publication" >&2; exit 1; }
+          [[ -n ${DOCS_APP_ID} && -n ${DOCS_APP_KEY} ]] || { echo "Docs dispatcher App credentials are missing" >&2; exit 1; }
+
+      - name: Find retained deployment from an earlier attempt
+        id: receipt
+        if: ${{ steps.destination.outputs.is_release == 'true' && inputs.publish-to-maven-central }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECEIPT_NAME: maven-central-deployment-${{ inputs.artifact-name }}-${{ github.run_id }}
+        run: |
+          ids=$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts" \
+            | jq -er --arg name "${RECEIPT_NAME}" \
+              '[.[].artifacts[] | select(.name == $name and .expired == false)]
+               | if length <= 1 then (.[0].id // "") else error("duplicate receipts") end')
+          echo "artifact-id=${ids}" >> "${GITHUB_OUTPUT}"
+
+      - name: Restore retained deployment
+        if: ${{ steps.receipt.outputs.artifact-id != '' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ steps.receipt.outputs.artifact-id }}
+          path: deployment-receipt
+          merge-multiple: true
+
       - name: Download Maven repository artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -123,7 +179,12 @@ jobs:
             --version "${VERSION}"
             --output-bundle central-bundle.zip
             --auto-drop "${AUTO_DROP}"
+            --auto-publish "${AUTO_PUBLISH}"
           )
+          if [[ ${AUTO_PUBLISH} == true ]]; then
+            mkdir -p deployment-receipt
+            args+=(--deployment-receipt deployment-receipt/deployment.json)
+          fi
           if [[ -n ${PROFILE_ID} ]]; then
             args+=(--profile-id "${PROFILE_ID}")
           fi
@@ -133,10 +194,19 @@ jobs:
           PROFILE_ID: ${{ inputs.profile-id }}
           ARTIFACT_ID: ${{ steps.prepare.outputs.ARTIFACT_ID }}
           VERSION: ${{ steps.prepare.outputs.VERSION }}
-          # Invert: stage-for-...=true means don't auto-drop.
-          AUTO_DROP: ${{ !inputs.stage-for-maven-central-publish }}
+          AUTO_DROP: ${{ !inputs.stage-for-maven-central-publish && !inputs.publish-to-maven-central }}
+          AUTO_PUBLISH: ${{ inputs.publish-to-maven-central }}
           MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME }}
           MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
+
+      - name: Retain deployment for publication recovery
+        if: ${{ !cancelled() && inputs.publish-to-maven-central && steps.receipt.outputs.artifact-id == '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: maven-central-deployment-${{ inputs.artifact-name }}-${{ github.run_id }}
+          path: deployment-receipt/deployment.json
+          if-no-files-found: ignore
+          retention-days: 90
 
       - name: Upload to Sonatype snapshots
         id: publish-snapshot
@@ -172,3 +242,28 @@ jobs:
           path: snapshot-bundle.zip
           if-no-files-found: ignore
           retention-days: 90
+
+  deploy-java-docs:
+    name: Start Java docs deployment
+    needs: maven-publish
+    if: ${{ needs.maven-publish.outputs.deployment-state == 'PUBLISHED' && inputs.docs-project != '' }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Mint docs dispatcher token
+        id: docs-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.DOCS_DISPATCH_APP_ID }}
+          private-key: ${{ secrets.DOCS_DISPATCH_APP_PRIVATE_KEY }}
+          owner: rapidsai
+          repositories: docs
+          permission-actions: write
+      - name: Dispatch docs deployment
+        env:
+          GH_TOKEN: ${{ steps.docs-token.outputs.token }}
+          DOCS_PROJECT: ${{ inputs.docs-project }}
+          VERSION: ${{ needs.maven-publish.outputs.version }}
+        run: |
+          gh workflow run deploy-java-docs.yaml --repo rapidsai/docs --ref main \
+            -f "project=${DOCS_PROJECT}" -f "version=${VERSION}"
