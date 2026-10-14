@@ -27,6 +27,14 @@ done
 MOCK_CURL='#!/bin/bash
 set -euo pipefail
 printf "%s\n" "$*" >> "${MOCK_STATE_DIR}/curl.log"
+args=("$@")
+response_file=""
+for ((index=0; index<${#args[@]}; index++)); do
+  if [[ ${args[index]} == -o ]]; then
+    response_file=${args[index+1]}
+  fi
+done
+: "${response_file:?mock curl requires a response body file}"
 case "$*" in
   *manual/search/repositories*state=open*)
     if [[ ${PREEXISTING_OPEN:-false} == true || -f ${MOCK_STATE_DIR}/uploaded ]]; then
@@ -58,7 +66,8 @@ case "$*" in
   *publisher/deployment/*) touch "${MOCK_STATE_DIR}/portal-dropped" ;;
   *manual/drop/repository/*) touch "${MOCK_STATE_DIR}/staging-dropped" ;;
   *) echo "unexpected curl invocation: $*" >&2; exit 1 ;;
-esac'
+esac > "${response_file}"
+printf 200'
 printf '%s\n' "${MOCK_CURL}" > "${MOCK_BIN}/curl"
 chmod +x "${MOCK_BIN}/curl"
 
