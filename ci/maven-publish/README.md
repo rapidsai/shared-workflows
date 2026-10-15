@@ -1,8 +1,7 @@
 # Maven release publication
 
-The release tag authorizes publication. Java release callers enable
-`publish-to-maven-central: true` to build, sign, validate, and publish without
-another release approval. Non-release builds publish snapshots.
+The release tag authorizes publication. Release builds sign, validate, and
+publish automatically, then wait for `PUBLISHED`. Non-release builds publish snapshots.
 
 ```yaml
 java-publish:
@@ -18,7 +17,6 @@ java-publish:
   with:
     artifact-name: cudf_java_maven_repo
     source-git-sha: ${{ github.sha }}
-    publish-to-maven-central: true
     docs-project: cudf-java
 ```
 
@@ -58,10 +56,9 @@ The dispatcher registry pins the canonical NVIDIA/cuDF and NVIDIA/cuVS repositor
 IDs and Maven coordinates. Its existing App needs source repository reads and
 Actions write access to `rapidsai/docs`. No App key or PAT belongs in a publisher.
 
-Existing callers that do not enable automatic publication retain validation and
-staging behavior. `stage-for-maven-central-publish: false` validates and drops;
-`true` leaves a validated deployment. Automatic publication overrides that input.
-Neither validation nor staging emits a completed-publication receipt.
+Release publication has one path: validate, publish, and wait for `PUBLISHED`.
+The former `stage-for-maven-central-publish` and `publish-to-maven-central` inputs
+are removed; callers must omit them when adopting this workflow version.
 
 ## Recovery
 

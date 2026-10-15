@@ -97,13 +97,6 @@ portal_get_status() {
     || echo '{}'
 }
 
-portal_drop_deployment() {
-  local deployment_id=$1
-  _sonatype_call DELETE \
-    "${CENTRAL_PORTAL_URL}/api/v1/publisher/deployment/${deployment_id}" \
-    >/dev/null
-}
-
 portal_publish_deployment() {
   _sonatype_call POST \
     "${CENTRAL_PORTAL_URL}/api/v1/publisher/deployment/$1" 0 >/dev/null
@@ -268,35 +261,4 @@ wait_for_portal_handoff() {
     elapsed=$((elapsed + POLL_INTERVAL_SEC))
   done
   fatal "timed out waiting for OSSRH staging repository '${repository_key}' to reach the Portal"
-}
-
-wait_for_validated() {
-  local deployment_id=$1
-  local response state elapsed=0
-  echo "Polling status (interval=${POLL_INTERVAL_SEC}s, timeout=${POLL_TIMEOUT_SEC}s)"
-  while (( elapsed < POLL_TIMEOUT_SEC )); do
-    response=$(portal_get_status "${deployment_id}")
-    state=$(jq -r '.deploymentState // "UNKNOWN"' <<< "${response}")
-    echo "  [${elapsed}s] state=${state}"
-    case "${state}" in
-      VALIDATED) return 0 ;;
-      FAILED|VALIDATION_FAILED)
-        jq . <<< "${response}" >&2 || true
-        fatal "Publisher Portal reported terminal state ${state}"
-        ;;
-      PUBLISHED)
-        fatal "unexpected PUBLISHED state (USER_MANAGED deployments should never auto-publish)"
-        ;;
-    esac
-    sleep "${POLL_INTERVAL_SEC}"
-    elapsed=$((elapsed + POLL_INTERVAL_SEC))
-  done
-  fatal "timed out waiting for VALIDATED, last state was '${state}'"
-}
-
-drop_deployment() {
-  local deployment_id=$1
-  echo "Dropping deployment ${deployment_id} (--auto-drop true)"
-  portal_drop_deployment "${deployment_id}"
-  echo "Deployment dropped. Nothing was published to Maven Central."
 }

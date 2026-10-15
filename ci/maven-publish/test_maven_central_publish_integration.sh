@@ -28,6 +28,7 @@ export PATH="${MOCK_BIN}:${PATH}"
 export GITHUB_OUTPUT MOCK_STATE_DIR
 export MAVEN_DEPLOY_USERNAME=test-user
 export MAVEN_DEPLOY_TOKEN=test-token
+export GITHUB_REF=refs/tags/v26.08.00
 
 OUTPUT_BUNDLE="${TEST_ROOT}/central-bundle.zip"
 "${SCRIPT_DIR}/maven_central_publish.sh" \
@@ -35,8 +36,7 @@ OUTPUT_BUNDLE="${TEST_ROOT}/central-bundle.zip"
   --group-id ai.rapids \
   --artifact-id example \
   --version 26.08.0 \
-  --output-bundle "${OUTPUT_BUNDLE}" \
-  --auto-drop true
+  --output-bundle "${OUTPUT_BUNDLE}"
 
 unzip -tq "${OUTPUT_BUNDLE}" >/dev/null
 unzip -l "${OUTPUT_BUNDLE}" | grep -F 'example-26.08.0.jar.asc.sha1'
@@ -50,7 +50,7 @@ if grep -Fq 'api/v1/publisher/upload' "${MOCK_STATE_DIR}/curl.log"; then
   echo "bundle upload endpoint must not be used" >&2
   exit 1
 fi
-[[ -f ${MOCK_STATE_DIR}/portal-dropped ]]
+[[ -f ${MOCK_STATE_DIR}/publish-requested && ! -f ${MOCK_STATE_DIR}/portal-dropped ]]
 [[ ! -f ${MOCK_STATE_DIR}/staging-dropped ]]
 
 rm -f "${MOCK_STATE_DIR}"/*
@@ -60,8 +60,7 @@ if "${SCRIPT_DIR}/maven_central_publish.sh" \
   --group-id ai.rapids \
   --artifact-id example \
   --version 26.08.0 \
-  --output-bundle "${TEST_ROOT}/blocked-bundle.zip" \
-  --auto-drop true; then
+  --output-bundle "${TEST_ROOT}/blocked-bundle.zip"; then
   echo "a pre-existing open staging repository must block publication" >&2
   exit 1
 fi
@@ -76,8 +75,7 @@ if "${SCRIPT_DIR}/maven_central_publish.sh" \
   --group-id ai.rapids \
   --artifact-id example \
   --version 26.08.0 \
-  --output-bundle "${TEST_ROOT}/failed-upload-bundle.zip" \
-  --auto-drop true; then
+  --output-bundle "${TEST_ROOT}/failed-upload-bundle.zip"; then
   echo "an upload failure must fail publication" >&2
   exit 1
 fi
@@ -90,7 +88,7 @@ run_publish() {
   "${SCRIPT_DIR}/maven_central_publish.sh" \
     --input "${TEST_ROOT}/signed" --group-id ai.rapids --artifact-id example \
     --version 26.08.0 --output-bundle "${TEST_ROOT}/automatic-bundle.zip" \
-    --auto-drop false --auto-publish true --deployment-receipt "${RECEIPT}"
+    --deployment-receipt "${RECEIPT}"
 }
 
 rm -f "${MOCK_STATE_DIR}"/*

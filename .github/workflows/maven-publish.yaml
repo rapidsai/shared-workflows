@@ -5,7 +5,7 @@
 # file is GPG-signed. The destination is chosen inside this workflow with
 # `rapids-is-release-build`:
 #   - release build (vYY.MM.PP tag) -> Maven Central via the Sonatype Central
-#     Publisher Portal (OSSRH staging, validation, optional automatic publication).
+#     Publisher Portal (OSSRH staging, validation, automatic publication).
 #   - non-release build (nightly, branch push) -> Sonatype snapshot repository
 #     (direct HTTP PUT, immediately available, no staging or portal step).
 name: Maven publish
@@ -30,25 +30,6 @@ on:
           a Maven repository directory.
         required: true
         type: string
-      stage-for-maven-central-publish:
-        description: |
-          When true, leave the bundle VALIDATED in the Sonatype Central
-          Publisher Portal for a human to release via the Portal UI
-          (https://central.sonatype.com). When false (default), validate then
-          drop the bundle. Only applies to the Maven Central path (release
-          builds). Ignored on the snapshot path and when automatic publication
-          is enabled.
-        required: false
-        type: boolean
-        default: false
-      publish-to-maven-central:
-        description: |
-          Publish release-tag deployments automatically and wait for PUBLISHED.
-          The release tag authorizes publication. Overrides the staging option;
-          ignored for snapshots. Enable this for Java release callers.
-        required: false
-        type: boolean
-        default: false
       docs-project:
         description: |
           Optional registered Java docs project in rapidsai/docs, e.g. cudf-java.
@@ -132,7 +113,7 @@ jobs:
 
       - name: Find retained deployment from an earlier attempt
         id: receipt
-        if: ${{ steps.destination.outputs.is_release == 'true' && inputs.publish-to-maven-central }}
+        if: ${{ steps.destination.outputs.is_release == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
           RECEIPT_NAME: maven-central-deployment-${{ inputs.artifact-name }}-${{ github.run_id }}
@@ -176,22 +157,18 @@ jobs:
         id: publish-central
         if: ${{ steps.destination.outputs.is_release == 'true' }}
         run: |
-          if [[ -n ${DOCS_PROJECT} && ${AUTO_PUBLISH} == true ]]; then
+          if [[ -n ${DOCS_PROJECT} ]]; then
             shared-workflows/ci/maven-publish/write_maven_publication_receipt.sh --validate
           fi
+          mkdir -p deployment-receipt
           args=(
             --input signed-maven-repo
             --group-id "${GROUP_ID}"
             --artifact-id "${ARTIFACT_ID}"
             --version "${VERSION}"
             --output-bundle central-bundle.zip
-            --auto-drop "${AUTO_DROP}"
-            --auto-publish "${AUTO_PUBLISH}"
+            --deployment-receipt deployment-receipt/deployment.json
           )
-          if [[ ${AUTO_PUBLISH} == true ]]; then
-            mkdir -p deployment-receipt
-            args+=(--deployment-receipt deployment-receipt/deployment.json)
-          fi
           if [[ -n ${PROFILE_ID} ]]; then
             args+=(--profile-id "${PROFILE_ID}")
           fi
@@ -201,8 +178,6 @@ jobs:
           PROFILE_ID: ${{ inputs.profile-id }}
           ARTIFACT_ID: ${{ steps.prepare.outputs.ARTIFACT_ID }}
           VERSION: ${{ steps.prepare.outputs.VERSION }}
-          AUTO_DROP: ${{ !inputs.stage-for-maven-central-publish && !inputs.publish-to-maven-central }}
-          AUTO_PUBLISH: ${{ inputs.publish-to-maven-central }}
           DOCS_PROJECT: ${{ inputs.docs-project }}
           SOURCE_GIT_SHA: ${{ inputs.source-git-sha || github.sha }}
           MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME }}
@@ -231,7 +206,7 @@ jobs:
           retention-days: 90
 
       - name: Retain deployment for publication recovery
-        if: ${{ !cancelled() && inputs.publish-to-maven-central && steps.receipt.outputs.artifact-id == '' }}
+        if: ${{ !cancelled() && steps.destination.outputs.is_release == 'true' && steps.receipt.outputs.artifact-id == '' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: maven-central-deployment-${{ inputs.artifact-name }}-${{ github.run_id }}
