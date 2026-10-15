@@ -2,9 +2,12 @@
 # SPDX-License-Identifier: Apache-2.0
 """Actual authenticated registry/Docker roundtrip and local destination guards."""
 
+import hashlib
 import http.server
+import io
 import importlib.util
 from pathlib import Path
+import tarfile
 import threading
 
 import pytest
@@ -27,6 +30,18 @@ def test_real_registry_docker_roundtrip_and_denials():
     assert report["wrong_digest_api"] == "MANIFEST_UNKNOWN/404"
     assert report["digest_pulls"] == "passed"
     assert report["identical_retry"] == "unchanged"
+    assert report["oras_version"].startswith("Version:    1.3.3")
+    assert report["oci_archive_sha256"]
+    assert report["oci_source_index_digest"] == report["oci_import_index_digest"]
+    assert report["oci_archive_platforms"] == ["linux/amd64", "linux/arm64"]
+    assert len(report["oci_import_manifest_digests"]) == 3
+    assert len(report["oci_import_blob_digests"]) >= 3
+    assert report["oci_archive_import"] == "byte-identical"
+    assert report["oci_import_wrong_digest"] == "rejected-before-upload"
+    assert report["oci_import_missing_variant"] == "rejected-before-upload"
+    assert report["oci_import_external_url"] == "rejected-before-upload"
+    assert report["oci_import_conflict"] == "preserved-existing-tag"
+    assert report["oci_import_retry"] == "unchanged"
     assert report["cleanup_verified"]
 
 
@@ -42,6 +57,77 @@ def test_real_registry_docker_roundtrip_and_denials():
 def test_external_or_unreserved_image_reference_rejected(reference):
     with pytest.raises(ValueError):
         REHEARSAL.local_reference(reference)
+
+
+def test_import_reference_is_reserved_and_loopback_only():
+    assert (
+        REHEARSAL.local_reference("127.0.0.1:5000/pub01-aa/fixture-import:multi")
+        == "127.0.0.1:5000/pub01-aa/fixture-import:multi"
+    )
+
+
+@pytest.mark.parametrize(
+    "member_name",
+    ["./oci-layout", "../oci-layout", "/oci-layout", "blobs//sha256/example"],
+)
+def test_oci_archive_rejects_noncanonical_or_unsafe_member_paths(tmp_path, member_name):
+    archive = tmp_path / "unsafe.tar"
+    with tarfile.open(archive, "w") as bundle:
+        info = tarfile.TarInfo(member_name)
+        info.size = 1
+        bundle.addfile(info, io.BytesIO(b"x"))
+    digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+
+    with pytest.raises(ValueError, match="unsafe or duplicate path"):
+        REHEARSAL.inspect_oci_archive(
+            archive, digest, ["linux/amd64", "linux/arm64"], tmp_path
+        )
+
+
+def test_oci_archive_rejects_normalized_duplicate_paths(tmp_path):
+    archive = tmp_path / "duplicate.tar"
+    with tarfile.open(archive, "w") as bundle:
+        for name in ("oci-layout", "./oci-layout"):
+            info = tarfile.TarInfo(name)
+            info.size = 1
+            bundle.addfile(info, io.BytesIO(b"x"))
+    digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+
+    with pytest.raises(ValueError, match="unsafe or duplicate path"):
+        REHEARSAL.inspect_oci_archive(
+            archive, digest, ["linux/amd64", "linux/arm64"], tmp_path
+        )
+
+
+@pytest.mark.parametrize("member_type", [tarfile.SYMTYPE, tarfile.LNKTYPE])
+def test_oci_archive_rejects_links(tmp_path, member_type):
+    archive = tmp_path / "link.tar"
+    with tarfile.open(archive, "w") as bundle:
+        info = tarfile.TarInfo("oci-layout")
+        info.type = member_type
+        info.linkname = "../../outside"
+        bundle.addfile(info)
+    digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+
+    with pytest.raises(ValueError, match="regular files"):
+        REHEARSAL.inspect_oci_archive(
+            archive, digest, ["linux/amd64", "linux/arm64"], tmp_path
+        )
+
+
+def test_oci_import_rejects_digest_destination_before_registry_access(tmp_path):
+    with pytest.raises(ValueError, match="destinations must use a tag"):
+        REHEARSAL.import_oci_archive(
+            "unused",
+            tmp_path / "missing.tar",
+            "0" * 64,
+            ["linux/amd64", "linux/arm64"],
+            tmp_path,
+            "http://127.0.0.1:5000",
+            "127.0.0.1:5000/pub01-aa/fixture-import@sha256:" + "0" * 64,
+            tmp_path / "auth.json",
+            tmp_path,
+        )
 
 
 def test_readback_http_redirect_rejected_without_contacting_target():
