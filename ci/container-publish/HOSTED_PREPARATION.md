@@ -95,15 +95,69 @@ escapes, archive changes, immutable retry conflicts and ambient credential
 isolation. This demonstrates local protocol mechanics, not live private ACLs,
 real candidate admission/provenance, production authorization or hosted startup.
 
-The hosted write path is deliberately not enabled: ORAS 1.3.3's CLI has no
-redirect-deny switch. Checking the initial HTTPS origin cannot constrain upload
-`Location`, bearer-token realms or subsequent redirects. The current local
-readback client's no-redirect guard is not a guard around ORAS uploads. Do not
-use this descriptor as permission to run arbitrary ORAS against a supplied host.
-The ORAS-Go project has published upload-Location and authentication redirect
-security fixes; any hosted client selection must review its actual embedded
-library version and behavior, not assume the CLI version proves that boundary.
-See the [upload-Location advisory](https://github.com/oras-project/oras-go/security/advisories/GHSA-jxpm-75mh-9fp7).
+## Guarded registry transport source
+
+`guarded_oci_transport.publish_prepared()` is the next source-only adapter. It
+re-runs preparation with the independently authenticated policy/handoff/train
+expectations and frozen identity, then copies only verified config/layer blobs
+into a private temporary directory. It uses the actual Distribution V2 API:
+manifest GET, blob HEAD, upload POST, digest-qualified upload PUT, blob GET and
+manifest PUT/GET. Original manifest bytes, layer order and repeated layer
+references are preserved. It independently hashes every readback body; an HTTP
+success or `Docker-Content-Digest` header alone is never digest proof. The actual
+[Distribution API](https://distribution.github.io/distribution/spec/api/) describes
+these operations; this deliberately narrow adapter is not a general OCI client.
+
+The adapter accepts explicit Basic credentials only, supplied separately by the
+authorized calling job. It performs no Vault/credential lookup and has no hosted
+execution CLI or workflow wiring. Requests 2.34.2 is pinned by the contract hook.
+`Session.trust_env=False` is set before request preparation, so ambient netrc,
+proxy and CA-bundle environment configuration cannot supply credentials or alter
+transport. TLS verification stays enabled for HTTPS; an optional explicit CA
+file is a caller-reviewed trust input, never an insecure flag. The existing
+loopback-fixture switch permits HTTP only on `127.0.0.1` with an explicit port.
+It is not suitable for production credentials.
+
+Every request rechecks the descriptor deadline and is guarded against the exact
+approved origin and repository API prefix. HTTP 3xx responses are errors for GET, HEAD, POST and PUT; requests never
+follow them. Bearer/other authentication challenges fail without token-realm
+requests. Server-controlled upload `Location` must be an absolute URL at the
+same origin or an origin-relative `/v2/<exact-repository>/blobs/uploads/<id>`.
+Path-relative locations, other authorities/schemes/repos, percent-encoded paths,
+traversal, fragments, controls and unknown query parameters are rejected before
+a PUT. The only server-supplied query supported is one opaque URL-safe `_state`;
+only the client adds the verified SHA-256 `digest`. This supports the tested
+Distribution registry's locations; other vendor conventions fail closed.
+Responses, credential values and opaque upload locations are excluded from
+errors and receipts. Transport/read failures stop with no automatic retry.
+
+Existing matching tags and blobs are read back and verified on an identical
+retry; conflicting tag bytes are rejected before any upload. An absent tag is
+checked again before PUT, but this is not an atomic concurrent-writer guarantee.
+Require a single authorized writer or separately proven registry immutability.
+No blob mounts, DELETE, chunked PATCH/resume, token service, external storage
+redirect, multi-platform index publication or referrer support is implemented.
+There is a 128-unique-blob bound in addition to the archive limits above. An
+interrupted POST may leave a remote upload session; operator retention/cleanup
+and partial-failure recovery remain required hosted acceptance work.
+
+Local tests exercise the guarded transport against the existing real private
+Basic-auth registry, including wrong credentials, original manifest/config/layer
+readback, ordered repeated layers and identical retry. ORAS 1.3.3 then imports the
+same prepared bytes as an independent baseline. Malicious actual HTTP fixtures
+verify all redirect classes, POST/PUT redirects, uncontacted redirect/token realm
+targets, origin/repository/encoded-location/query escapes, implicit netrc/proxy
+isolation, disconnected/503 POST without retry, conflicting manifest and corrupt
+or oversized readback. Fixtures and credentials are synthetic. No hosted service
+or real publication credentials are involved.
+
+The ORAS baseline itself still has no redirect-deny switch. Its initial origin
+check does not constrain upload `Location`, token realms or subsequent redirects;
+the guarded HTTP adapter does not claim to configure or sandbox ORAS. The
+ORAS-Go [upload-Location advisory](https://github.com/oras-project/oras-go/security/advisories/GHSA-jxpm-75mh-9fp7)
+illustrates why checking only an initial URL is insufficient. Operators must
+explicitly adopt the guarded adapter or review a different enforced transport
+before any hosted activation.
 
 Before hosted activation, an operator must select and approve:
 
@@ -114,10 +168,12 @@ Before hosted activation, an operator must select and approve:
 3. An enforced and tested registry/client transport boundary covering upload
    locations, token realms, redirects and destination namespaces. This may
    require a supported guarded transport or operator-managed network policy;
-   neither exists in this source tranche. A JSON evidence reference alone does
-   not enforce it.
-4. A reviewed hosted execution adapter that revalidates this policy/handoff and
-   sealed bytes immediately before upload, scopes credential files privately,
+   the new adapter supports only Basic-auth registries with the bounded API
+   above. Other registry authentication/storage schemes require their own
+   transport implementation and tests. A JSON evidence reference alone does not
+   enforce it.
+4. A reviewed hosted job adopting this adapter that revalidates policy/handoff
+   and sealed bytes immediately before upload, scopes credentials privately,
    verifies digest readback and rejects conflict/expiry without blind retries.
    Registry immutability/concurrent-writer behavior needs separate acceptance.
 

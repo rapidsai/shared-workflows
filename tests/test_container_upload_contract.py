@@ -47,6 +47,10 @@ def test_real_registry_docker_roundtrip_and_denials():
     assert report["single_platform_import"] == "manifest-digest-byte-identical"
     assert report["single_platform_handoff_mismatch"] == "rejected-before-upload"
     assert report["destination_preparation"] == "descriptor-to-import-readback-passed"
+    assert (
+        report["guarded_http_transport"]
+        == "exact-byte-upload-readback-and-retry-passed"
+    )
     assert report["cleanup_verified"]
 
 

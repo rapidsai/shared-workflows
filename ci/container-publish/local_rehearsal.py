@@ -1354,6 +1354,7 @@ def rehearse():
                 architecture="amd64",
                 image_tag=single_tag,
                 image_name="rapidsai/ci-conda",
+                repeat_layer=True,
             )
             single_sha256 = hashlib.sha256(single_archive.read_bytes()).hexdigest()
             single_inventory = inspect_single_platform_oci_archive(
@@ -1463,6 +1464,60 @@ def rehearse():
             )
             if prepared_receipt["target"] != single_target:
                 raise ValueError("prepared destination differs from the local registry")
+            transport_spec = importlib.util.spec_from_file_location(
+                "guarded_oci_transport",
+                Path(__file__).with_name("guarded_oci_transport.py"),
+            )
+            transport = importlib.util.module_from_spec(transport_spec)
+            transport_spec.loader.exec_module(transport)
+            transport_arguments = {
+                "credentials": AUTH_PAIR,
+                "policy_sha256": preparation.digest(policy),
+                "handoff_sha256": preparation.digest(single_handoff),
+                "train_sha256": "a" * 64,
+                "identity": single_identity,
+                "loopback_fixture": True,
+                "now": now,
+            }
+            try:
+                transport.publish_prepared(
+                    policy,
+                    descriptor,
+                    single_archive,
+                    root.resolve(),
+                    **{
+                        **transport_arguments,
+                        "credentials": ("fixture-user", "wrong-fixture-value"),
+                    },
+                )
+            except transport.TransportError as error:
+                if "HTTP status 401" not in str(error):
+                    raise
+            else:
+                raise ValueError(
+                    "guarded transport accepted wrong registry credentials"
+                )
+            guarded_import = transport.publish_prepared(
+                policy,
+                descriptor,
+                single_archive,
+                root.resolve(),
+                **transport_arguments,
+            )
+            guarded_retry = transport.publish_prepared(
+                policy,
+                descriptor,
+                single_archive,
+                root.resolve(),
+                **transport_arguments,
+            )
+            if (
+                guarded_import["identical_retry"]
+                or not guarded_retry["identical_retry"]
+            ):
+                raise ValueError(
+                    "guarded transport did not preserve identical retry state"
+                )
             single_import = import_single_platform_oci_archive(
                 oras,
                 prepared_directory / "archive.oci",
@@ -1599,6 +1654,7 @@ def rehearse():
                 ),
                 "single_platform_handoff_mismatch": "rejected-before-upload",
                 "destination_preparation": "descriptor-to-import-readback-passed",
+                "guarded_http_transport": "exact-byte-upload-readback-and-retry-passed",
             }
             return receipt
         finally:
