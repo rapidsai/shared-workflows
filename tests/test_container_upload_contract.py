@@ -3,9 +3,11 @@
 """Actual authenticated registry/Docker roundtrip and local destination guards."""
 
 import hashlib
+import gzip
 import http.server
 import io
 import importlib.util
+import json
 from pathlib import Path
 import tarfile
 import threading
@@ -42,7 +44,271 @@ def test_real_registry_docker_roundtrip_and_denials():
     assert report["oci_import_external_url"] == "rejected-before-upload"
     assert report["oci_import_conflict"] == "preserved-existing-tag"
     assert report["oci_import_retry"] == "unchanged"
+    assert report["single_platform_import"] == "manifest-digest-byte-identical"
+    assert report["single_platform_handoff_mismatch"] == "rejected-before-upload"
     assert report["cleanup_verified"]
+
+
+def _single_platform_archive(tmp_path, *, architecture="arm64"):
+    config = json.dumps(
+        {"architecture": architecture, "os": "linux"}, separators=(",", ":")
+    ).encode()
+    layer = b"small producer-shaped OCI layer"
+    config_digest = hashlib.sha256(config).hexdigest()
+    layer_digest = hashlib.sha256(layer).hexdigest()
+    manifest = json.dumps(
+        {
+            "schemaVersion": 2,
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "config": {
+                "mediaType": "application/vnd.oci.image.config.v1+json",
+                "digest": "sha256:" + config_digest,
+                "size": len(config),
+            },
+            "layers": [
+                {
+                    "mediaType": "application/vnd.oci.image.layer.v1.tar",
+                    "digest": "sha256:" + layer_digest,
+                    "size": len(layer),
+                }
+            ],
+        },
+        separators=(",", ":"),
+    ).encode()
+    manifest_digest = hashlib.sha256(manifest).hexdigest()
+    tag = f"26.12-cuda13.3.0-rockylinux8-py3.12-{architecture}"
+    index = json.dumps(
+        {
+            "schemaVersion": 2,
+            "mediaType": "application/vnd.oci.image.index.v1+json",
+            "manifests": [
+                {
+                    "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                    "digest": "sha256:" + manifest_digest,
+                    "size": len(manifest),
+                    "annotations": {
+                        "io.containerd.image.name": "docker.io/rapidsai/citestwheel:"
+                        + tag,
+                        "org.opencontainers.image.ref.name": tag,
+                    },
+                    "platform": {"architecture": architecture, "os": "linux"},
+                }
+            ],
+        },
+        separators=(",", ":"),
+    ).encode()
+    archive_path = tmp_path / "producer-shaped-single.oci.tar"
+    contents = {
+        "oci-layout": b'{"imageLayoutVersion":"1.0.0"}',
+        "index.json": index,
+        "blobs/sha256/" + config_digest: config,
+        "blobs/sha256/" + layer_digest: layer,
+        "blobs/sha256/" + manifest_digest: manifest,
+    }
+    with tarfile.open(archive_path, "w") as bundle:
+        for name, content in contents.items():
+            info = tarfile.TarInfo(name)
+            info.size = len(content)
+            bundle.addfile(info, io.BytesIO(content))
+    return archive_path
+
+
+def _handoff_for_archive(archive_path, *, architecture="arm64"):
+    inspected = REHEARSAL.inspect_single_platform_oci_archive(
+        archive_path,
+        hashlib.sha256(archive_path.read_bytes()).hexdigest(),
+        archive_path.parent,
+    )
+    tag = f"26.12-cuda13.3.0-rockylinux8-py3.12-{architecture}"
+    return {
+        "schema_version": 1,
+        "train_sha256": "a" * 64,
+        "release_catalog_key": "container:ci-images",
+        "source": {
+            "repository": "rapidsai/ci-imgs",
+            "sha": "b" * 40,
+            "run_id": "123",
+            "run_attempt": "1",
+            "workflow_artifact": "ci-imgs-123.1",
+        },
+        "identity": {
+            "ecosystem": "container",
+            "name": "docker.io/rapidsai/citestwheel",
+            "version": "26.12",
+            "build": tag,
+            "platform": "linux/" + architecture,
+        },
+        "archive": {
+            key: inspected[key]
+            for key in (
+                "transport_sha256",
+                "oci_index_sha256",
+                "runnable_manifest_sha256",
+                "config_sha256",
+                "layer_sha256s",
+            )
+        },
+    }
+
+
+def test_single_platform_handoff_requires_exact_train_identity_and_archive(tmp_path):
+    archive = _single_platform_archive(tmp_path)
+    handoff = _handoff_for_archive(archive)
+    identity = dict(handoff["identity"])
+
+    REHEARSAL.validate_ci_image_import_handoff(handoff, "a" * 64, identity)
+    with pytest.raises(ValueError, match="authenticated release train"):
+        REHEARSAL.validate_ci_image_import_handoff(handoff, "c" * 64, identity)
+    with pytest.raises(ValueError, match="frozen request"):
+        REHEARSAL.validate_ci_image_import_handoff(
+            handoff, "a" * 64, {**identity, "name": "docker.io/rapidsai/ci-conda"}
+        )
+    with pytest.raises(ValueError, match="unsupported or missing fields"):
+        REHEARSAL.validate_ci_image_import_handoff(
+            {**handoff, "trusted": True}, "a" * 64, identity
+        )
+    with pytest.raises(ValueError, match="unsupported"):
+        REHEARSAL.validate_ci_image_import_handoff(
+            {**handoff, "schema_version": True}, "a" * 64, identity
+        )
+
+    changed = json.loads(json.dumps(handoff))
+    changed["archive"]["runnable_manifest_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="runnable_manifest_sha256 does not match"):
+        REHEARSAL.import_single_platform_oci_archive(
+            "unused",
+            archive,
+            changed,
+            "a" * 64,
+            identity,
+            tmp_path,
+            "http://127.0.0.1:5000",
+            "127.0.0.1:5000/pub01-aa/fixture-import:one",
+            tmp_path / "auth.json",
+            tmp_path,
+        )
+
+
+@pytest.mark.parametrize(
+    "field", ["transport_sha256", "oci_index_sha256", "config_sha256"]
+)
+def test_single_platform_handoff_rejects_archive_digest_mismatch_before_registry(
+    tmp_path, field
+):
+    archive = _single_platform_archive(tmp_path)
+    handoff = _handoff_for_archive(archive)
+    handoff["archive"][field] = "0" * 64
+
+    expected_error = (
+        "does not match the handoff"
+        if field == "transport_sha256"
+        else field + " does not match"
+    )
+    with pytest.raises(ValueError, match=expected_error):
+        REHEARSAL.import_single_platform_oci_archive(
+            "unused",
+            archive,
+            handoff,
+            "a" * 64,
+            handoff["identity"],
+            tmp_path,
+            "http://127.0.0.1:5000",
+            "127.0.0.1:5000/pub01-aa/fixture-import:one",
+            tmp_path / "auth.json",
+            tmp_path,
+        )
+
+
+@pytest.mark.parametrize("field", ["runnable_manifest_sha256", "layer_sha256s"])
+def test_single_platform_handoff_rejects_manifest_and_layer_digest_mismatch(
+    tmp_path, field
+):
+    archive = _single_platform_archive(tmp_path)
+    handoff = _handoff_for_archive(archive)
+    handoff["archive"][field] = ["0" * 64] if field == "layer_sha256s" else "0" * 64
+
+    with pytest.raises(ValueError, match=field + " does not match"):
+        REHEARSAL.import_single_platform_oci_archive(
+            "unused",
+            archive,
+            handoff,
+            "a" * 64,
+            handoff["identity"],
+            tmp_path,
+            "http://127.0.0.1:5000",
+            "127.0.0.1:5000/pub01-aa/fixture-import:one",
+            tmp_path / "auth.json",
+            tmp_path,
+        )
+
+
+def test_single_platform_import_checks_archive_platform_against_external_identity(
+    tmp_path,
+):
+    archive = _single_platform_archive(tmp_path, architecture="amd64")
+    handoff = _handoff_for_archive(archive, architecture="amd64")
+    arm_identity = dict(handoff["identity"])
+    arm_identity["platform"] = "linux/arm64"
+    arm_identity["build"] = arm_identity["build"].removesuffix("amd64") + "arm64"
+    handoff["identity"] = arm_identity
+
+    with pytest.raises(ValueError, match="archive platform"):
+        REHEARSAL.import_single_platform_oci_archive(
+            "unused",
+            archive,
+            handoff,
+            "a" * 64,
+            arm_identity,
+            tmp_path,
+            "http://127.0.0.1:5000",
+            "127.0.0.1:5000/pub01-aa/fixture-import:one",
+            tmp_path / "auth.json",
+            tmp_path,
+        )
+
+
+def test_single_platform_archive_accepts_gzip_transport_and_preserves_transport_digest(
+    tmp_path,
+):
+    plain = _single_platform_archive(tmp_path)
+    compressed = tmp_path / "producer-shaped-single.tar.gz"
+    with plain.open("rb") as source, gzip.open(compressed, "wb") as output:
+        REHEARSAL.shutil.copyfileobj(source, output)
+    transport_sha = hashlib.sha256(compressed.read_bytes()).hexdigest()
+
+    report = REHEARSAL.inspect_single_platform_oci_archive(
+        compressed, transport_sha, tmp_path
+    )
+
+    assert report["transport_sha256"] == transport_sha
+    assert report["platform"] == "linux/arm64"
+
+
+def test_single_platform_prepare_rejects_bad_hash_truncation_and_expansion_cap(
+    tmp_path, monkeypatch
+):
+    plain = _single_platform_archive(tmp_path)
+    compressed = tmp_path / "bounded.tar.gz"
+    with plain.open("rb") as source, gzip.open(compressed, "wb") as output:
+        REHEARSAL.shutil.copyfileobj(source, output)
+    digest = hashlib.sha256(compressed.read_bytes()).hexdigest()
+    original = set(tmp_path.iterdir())
+    with pytest.raises(ValueError, match="changed after handoff"):
+        REHEARSAL._prepare_oras_tar(compressed, "0" * 64, tmp_path)
+    assert set(tmp_path.iterdir()) == original
+
+    monkeypatch.setattr(REHEARSAL, "MAX_SINGLE_PLATFORM_CONTENT_BYTES", 16)
+    with pytest.raises(ValueError, match="decompressed OCI archive exceeds"):
+        REHEARSAL._prepare_oras_tar(compressed, digest, tmp_path)
+    assert set(tmp_path.iterdir()) == original
+
+    truncated = tmp_path / "truncated.tar.gz"
+    truncated.write_bytes(compressed.read_bytes()[:-4])
+    with pytest.raises(ValueError, match="safely copied"):
+        REHEARSAL._prepare_oras_tar(
+            truncated, hashlib.sha256(truncated.read_bytes()).hexdigest(), tmp_path
+        )
+    assert set(tmp_path.iterdir()) == original | {truncated}
 
 
 @pytest.mark.parametrize(
