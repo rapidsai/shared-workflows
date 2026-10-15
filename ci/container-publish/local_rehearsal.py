@@ -3,8 +3,10 @@
 """Real Docker publication roundtrip against an ephemeral authenticated registry."""
 
 import argparse
+from datetime import datetime, timedelta, timezone
 import gzip
 import hashlib
+import importlib.util
 import io
 import json
 import os
@@ -1422,9 +1424,48 @@ def rehearse():
                 raise ValueError(
                     "invalid single-platform handoff modified the registry"
                 )
+            preparation_spec = importlib.util.spec_from_file_location(
+                "hosted_preparation", Path(__file__).with_name("hosted_preparation.py")
+            )
+            preparation = importlib.util.module_from_spec(preparation_spec)
+            preparation_spec.loader.exec_module(preparation)
+            now = datetime.now(timezone.utc)
+            policy = {
+                "schema_version": 1,
+                "origin": origin,
+                "namespace": identifier,
+                "revision": "synthetic-local-contract",
+                "expires_at": (now + timedelta(hours=2)).isoformat(),
+                "private_acl_evidence": "fixture:anonymous-deny-only",
+                "transport_boundary_evidence": "fixture:loopback-only-not-hosted",
+                "credential_reference": "kv2/rapids-team/rapids/ci/rehearsal/container/synthetic",
+            }
+            descriptor = {
+                "schema_version": 1,
+                "policy_sha256": preparation.digest(policy),
+                "issued_at": now.isoformat(),
+                "expires_at": (now + timedelta(hours=1)).isoformat(),
+                "repository": identifier + "/fixture-import",
+                "tag": "single-amd64",
+                "handoff": single_handoff,
+            }
+            prepared_receipt, prepared_directory = preparation.prepare(
+                policy,
+                descriptor,
+                single_archive,
+                root.resolve(),
+                policy_sha256=preparation.digest(policy),
+                handoff_sha256=preparation.digest(single_handoff),
+                train_sha256="a" * 64,
+                identity=single_identity,
+                loopback_fixture=True,
+                now=now,
+            )
+            if prepared_receipt["target"] != single_target:
+                raise ValueError("prepared destination differs from the local registry")
             single_import = import_single_platform_oci_archive(
                 oras,
-                single_archive,
+                prepared_directory / "archive.oci",
                 single_handoff,
                 "a" * 64,
                 single_identity,
@@ -1557,6 +1598,7 @@ def rehearse():
                     else "mismatch"
                 ),
                 "single_platform_handoff_mismatch": "rejected-before-upload",
+                "destination_preparation": "descriptor-to-import-readback-passed",
             }
             return receipt
         finally:
