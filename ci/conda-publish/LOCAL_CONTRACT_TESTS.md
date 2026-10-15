@@ -37,10 +37,13 @@ The real CLI's `--skip-existing` returns success based on distribution existence
 without a content comparison. This harness independently retrieves the stored
 bytes and compares SHA-256 before reporting success. Tests distinguish an identical
 retry from a changed archive at the same package identity; the latter fails
-readback without replacing existing bytes. Failed authentication, failed commit,
-changed local input and disallowed initial origins fail without a success receipt.
-Incomplete commits remain fixture state; no deletion or production cleanup policy
-is inferred. The receipt labels itself local-only and records the exact client
+readback without replacing existing bytes. They also exercise an identical retry
+after one synthetic transient commit rejection: the first attempt has no success
+receipt and leaves the staged bytes pending; the second commits and verifies the
+same bytes. Permanent authentication or commit failures, changed local input and
+disallowed initial origins fail without a success receipt. Incomplete commits
+remain fixture state after permanent failure; no deletion or production cleanup
+policy is inferred. The receipt labels itself local-only and records the exact client
 and installed dependency versions. Transitive dependencies are recorded rather
 than represented as a fully locked environment.
 

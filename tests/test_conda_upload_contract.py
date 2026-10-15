@@ -30,6 +30,7 @@ def _service(mode="success", *, redirect=None):
         "objects": {},
         "pending": {},
         "storage_posts": 0,
+        "commit_attempts": 0,
     }
 
     class Handler(http.server.BaseHTTPRequestHandler):
@@ -119,7 +120,10 @@ def _service(mode="success", *, redirect=None):
                     self.rfile.read(int(self.headers["Content-Length"]))
                 )
                 assert payload == {"dist_id": key}
-                if mode == "commit-failure":
+                state["commit_attempts"] += 1
+                if mode == "commit-failure" or (
+                    mode == "commit-failure-once" and state["commit_attempts"] == 1
+                ):
                     self._reply(400, {"error": "synthetic incomplete commit"})
                 else:
                     state["objects"][key] = state["pending"].pop(key)
@@ -258,6 +262,31 @@ def test_failed_auth_or_commit_never_has_success_receipt(tmp_path, mode):
     assert result.returncode != 0
     assert not state["objects"]
     assert '"local_contract_only": true' not in result.stdout
+
+
+def test_identical_retry_recovers_after_transient_commit_failure(tmp_path):
+    package = _package(tmp_path)
+    original = package.read_bytes()
+    digest = hashlib.sha256(original).hexdigest()
+    with _service("commit-failure-once") as (url, state):
+        first = _run(package, url)
+        assert first.returncode != 0
+        assert '"local_contract_only": true' not in first.stdout
+        assert state["commit_attempts"] == 1
+        assert state["storage_posts"] == 1
+        assert not state["objects"]
+        assert list(state["pending"].values()) == [original]
+
+        retry = _run(package, url)
+
+    assert retry.returncode == 0, retry.stderr
+    assert state["commit_attempts"] == 2
+    assert state["storage_posts"] == 2
+    assert not state["pending"]
+    assert list(state["objects"].values()) == [original]
+    receipt = json.loads(retry.stdout.splitlines()[-1])
+    assert receipt["sha256"] == digest
+    assert receipt["local_contract_only"] is True
 
 
 @pytest.mark.parametrize("mode", ["redirect", "foreign-storage"])
