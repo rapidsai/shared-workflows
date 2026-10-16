@@ -4,6 +4,8 @@
 
 This repository contains [reusable GitHub Action workflows](https://docs.github.com/en/actions/using-workflows/reusing-workflows).
 
+For cross-repository contributor responsibilities and the tested local workflow, see the [release-system contributor guide](https://github.com/rapidsai/release-tracking/blob/codex/team-onboarding/docs/guide/README.md). That link uses the temporary `codex/team-onboarding` branch while the guide awaits adoption into `main`; the [work map](https://github.com/rapidsai/release-tracking/blob/codex/team-onboarding/WORK_PLAN.md) tracks current source and activation status.
+
 Reusable composite actions can be found in https://github.com/rapidsai/shared-actions.
 
 See the articles below for a comparison between these two types of reusable GitHub Action components:
