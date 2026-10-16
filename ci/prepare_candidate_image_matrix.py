@@ -49,20 +49,39 @@ def prepare_matrix(
     attach: Callable[..., dict[str, Any]],
 ) -> dict[str, Any]:
     """Return the matrix with a digest-pinned image on each exact row."""
-    if not _SHA256.fullmatch(expected_train_sha256) or train.get("train_sha256") != expected_train_sha256:
-        raise CandidateImageMatrixError("release train does not match its independently supplied SHA-256")
-    if not _SHA256.fullmatch(expected_preflight_sha256) or preflight.get("preflight_sha256") != expected_preflight_sha256:
-        raise CandidateImageMatrixError("image preflight does not match its independently supplied SHA-256")
+    if (
+        not _SHA256.fullmatch(expected_train_sha256)
+        or train.get("train_sha256") != expected_train_sha256
+    ):
+        raise CandidateImageMatrixError(
+            "release train does not match its independently supplied SHA-256"
+        )
+    if (
+        not _SHA256.fullmatch(expected_preflight_sha256)
+        or preflight.get("preflight_sha256") != expected_preflight_sha256
+    ):
+        raise CandidateImageMatrixError(
+            "image preflight does not match its independently supplied SHA-256"
+        )
     if not _SHA1.fullmatch(source_sha):
-        raise CandidateImageMatrixError("candidate source SHA must be a full commit SHA")
+        raise CandidateImageMatrixError(
+            "candidate source SHA must be a full commit SHA"
+        )
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
         raise CandidateImageMatrixError("candidate repository must be owner/name")
     unit_id = f"conda:{repository.rsplit('/', maxsplit=1)[1]}"
+    release_version = train.get("release_version")
+    if not isinstance(release_version, str) or not release_version:
+        raise CandidateImageMatrixError("release train has no frozen release version")
     include = matrix.get("include")
     if not isinstance(include, list) or not include or len(include) > MAX_ROWS:
-        raise CandidateImageMatrixError("computed build matrix must contain 1 to 512 rows")
+        raise CandidateImageMatrixError(
+            f"computed build matrix must contain 1 to {MAX_ROWS} rows"
+        )
     if set(matrix) != {"include"}:
-        raise CandidateImageMatrixError("computed build matrix contains unsupported top-level fields")
+        raise CandidateImageMatrixError(
+            "computed build matrix contains unsupported top-level fields"
+        )
 
     result = []
     seen_rows: set[bytes] = set()
@@ -70,7 +89,9 @@ def prepare_matrix(
         if not isinstance(row, Mapping):
             raise CandidateImageMatrixError("computed matrix row must be an object")
         if "candidate_image_reference" in row:
-            raise CandidateImageMatrixError("computed matrix unexpectedly contains a candidate image reference")
+            raise CandidateImageMatrixError(
+                "computed matrix unexpectedly contains a candidate image reference"
+            )
         arch = _required_text(row, "ARCH")
         cuda = _required_text(row, "CUDA_VER")
         python = _required_text(row, "PY_VER")
@@ -79,7 +100,9 @@ def prepare_matrix(
             raise CandidateImageMatrixError("matrix Linux version is malformed")
         canonical_row = _canonical(dict(row))
         if canonical_row in seen_rows:
-            raise CandidateImageMatrixError("computed build matrix contains an exact duplicate row")
+            raise CandidateImageMatrixError(
+                "computed build matrix contains an exact duplicate row"
+            )
         seen_rows.add(canonical_row)
         try:
             bound = attach(
@@ -89,11 +112,12 @@ def prepare_matrix(
                 consumer_id=consumer_id,
                 runtime_image_reference=_digest_reference_for_row(
                     preflight,
-                    release_version=str(train.get("release_version", "")),
+                    release_version=release_version,
                     consumer_id=consumer_id,
                     arch=arch,
                     cuda_version=cuda,
                     python_version=python,
+                    linux_version=linux,
                     source_sha=source_sha,
                     unit_id=unit_id,
                 ),
@@ -106,19 +130,31 @@ def prepare_matrix(
                 python_version=python,
             )
         except (KeyError, TypeError, ValueError) as error:
-            raise CandidateImageMatrixError(f"candidate image preflight does not bind to matrix row: {error}") from error
+            raise CandidateImageMatrixError(
+                f"candidate image preflight does not bind to matrix row: {error}"
+            ) from error
         image = bound.get("ci_image_preflight", {}).get("runtime_image", {})
         identity = image.get("identity") if isinstance(image, Mapping) else None
         if not isinstance(identity, Mapping):
-            raise CandidateImageMatrixError("validated image binding has no frozen identity")
+            raise CandidateImageMatrixError(
+                "validated image binding has no frozen identity"
+            )
         build = identity.get("build")
         parts = _image_build_parts(build)
-        if parts is None or parts["linux"] != linux:
-            raise CandidateImageMatrixError("frozen image Linux identity does not match the matrix row")
+        if (
+            parts is None
+            or parts["version"] != release_version
+            or parts["linux"] != linux
+        ):
+            raise CandidateImageMatrixError(
+                "frozen image Linux identity does not match the matrix row"
+            )
         result.append({**dict(row), "candidate_image_reference": image["reference"]})
     prepared = {"include": result}
     if len(_canonical(prepared)) > MAX_MATRIX_BYTES:
-        raise CandidateImageMatrixError(f"prepared matrix exceeds {MAX_MATRIX_BYTES} bytes")
+        raise CandidateImageMatrixError(
+            f"prepared matrix exceeds {MAX_MATRIX_BYTES} bytes"
+        )
     return prepared
 
 
@@ -130,6 +166,7 @@ def _digest_reference_for_row(
     arch: str,
     cuda_version: str,
     python_version: str,
+    linux_version: str,
     source_sha: str,
     unit_id: str,
 ) -> str:
@@ -146,7 +183,9 @@ def _digest_reference_for_row(
         and item.get("source_sha") == source_sha
     ]
     if len(matches) != 1:
-        raise CandidateImageMatrixError("preflight must contain exactly one matching consumer/source/unit")
+        raise CandidateImageMatrixError(
+            "preflight must contain exactly one matching consumer/source/unit"
+        )
     images = matches[0].get("images")
     if not isinstance(images, list):
         raise CandidateImageMatrixError("preflight consumer images must be a list")
@@ -162,22 +201,36 @@ def _digest_reference_for_row(
             identity.get("ecosystem") == "container"
             and identity.get("version") == release_version
             and parsed is not None
+            and parsed["version"] == release_version
             and parsed["arch"] == _arch(arch)
             and parsed["cuda"] == cuda_version
             and parsed["python"] == python_version
+            and parsed["linux"] == linux_version
         ):
             manifest = item.get("runnable_manifest_sha256")
             destination = item.get("destination_reference")
             if not isinstance(manifest, str) or not _SHA256.fullmatch(manifest):
-                raise CandidateImageMatrixError("preflight runnable manifest digest is invalid")
-            if not isinstance(destination, str) or "@" in destination or ":" not in destination:
-                raise CandidateImageMatrixError("preflight destination must be an explicit tagged reference")
+                raise CandidateImageMatrixError(
+                    "preflight runnable manifest digest is invalid"
+                )
+            if (
+                not isinstance(destination, str)
+                or "@" in destination
+                or ":" not in destination
+            ):
+                raise CandidateImageMatrixError(
+                    "preflight destination must be an explicit tagged reference"
+                )
             repository, _, _tag = destination.rpartition(":")
             if not repository:
-                raise CandidateImageMatrixError("preflight destination repository is empty")
+                raise CandidateImageMatrixError(
+                    "preflight destination repository is empty"
+                )
             selected.append(f"{repository}@sha256:{manifest}")
     if len(selected) != 1:
-        raise CandidateImageMatrixError("preflight must select exactly one image for each matrix row")
+        raise CandidateImageMatrixError(
+            "preflight must select exactly one image for each matrix row"
+        )
     return selected[0]
 
 
@@ -208,7 +261,13 @@ def _required_text(row: Mapping[str, Any], name: str) -> str:
 
 
 def _canonical(value: Any) -> bytes:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
 
 
 def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -224,7 +283,9 @@ def _read_json(path: Path, max_bytes: int, label: str) -> tuple[Any, bytes]:
     try:
         raw = path.read_bytes()
         if not raw or len(raw) > max_bytes:
-            raise CandidateImageMatrixError(f"{label} must contain 1 to {max_bytes} bytes")
+            raise CandidateImageMatrixError(
+                f"{label} must contain 1 to {max_bytes} bytes"
+            )
         value = json.loads(raw.decode("utf-8"), object_pairs_hook=_unique_object)
     except CandidateImageMatrixError:
         raise
@@ -236,12 +297,18 @@ def _read_json(path: Path, max_bytes: int, label: str) -> tuple[Any, bytes]:
 
 
 def _load_attach(shared_actions: Path) -> Callable[..., dict[str, Any]]:
-    script = shared_actions / "release-candidate-dependencies" / "attach_image_preflight.py"
+    script = (
+        shared_actions / "release-candidate-dependencies" / "attach_image_preflight.py"
+    )
     if not script.is_file():
-        raise CandidateImageMatrixError("pinned shared-actions image binding helper is missing")
+        raise CandidateImageMatrixError(
+            "pinned shared-actions image binding helper is missing"
+        )
     spec = importlib.util.spec_from_file_location("attach_image_preflight", script)
     if spec is None or spec.loader is None:
-        raise CandidateImageMatrixError("unable to load pinned shared-actions image binding helper")
+        raise CandidateImageMatrixError(
+            "unable to load pinned shared-actions image binding helper"
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
@@ -262,7 +329,9 @@ def main() -> int:
     args = parser.parse_args()
     try:
         train, _ = _read_json(args.train, MAX_TRAIN_BYTES, "release train")
-        preflight, preflight_raw = _read_json(args.preflight, MAX_PREFLIGHT_BYTES, "image preflight")
+        preflight, preflight_raw = _read_json(
+            args.preflight, MAX_PREFLIGHT_BYTES, "image preflight"
+        )
         matrix, _ = _read_json(args.matrix, MAX_MATRIX_BYTES, "build matrix")
         result = prepare_matrix(
             matrix,
@@ -281,7 +350,9 @@ def main() -> int:
         matrix_json = json.dumps(result, separators=(",", ":"))
         with Path(output).open("a", encoding="utf-8") as stream:
             stream.write(f"matrix={matrix_json}\n")
-            stream.write(f"preflight-document-sha256={hashlib.sha256(preflight_raw).hexdigest()}\n")
+            stream.write(
+                f"preflight-document-sha256={hashlib.sha256(preflight_raw).hexdigest()}\n"
+            )
     except (CandidateImageMatrixError, OSError, ValueError) as error:
         print(f"candidate image preflight rejected: {error}", file=sys.stderr)
         return 2
