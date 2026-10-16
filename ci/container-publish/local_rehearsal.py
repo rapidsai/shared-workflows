@@ -992,7 +992,26 @@ def import_oci_archive(
     return inventory
 
 
-def rehearse():
+def rehearse(*, single_archive_input=None, single_archive_sha256=None):
+    if (single_archive_input is None) != (single_archive_sha256 is None):
+        raise ValueError("planned OCI input requires an independent transport digest")
+    if single_archive_input is not None:
+        single_archive_input = Path(single_archive_input)
+        if (
+            single_archive_input.is_symlink()
+            or not single_archive_input.is_file()
+            or single_archive_input.stat().st_size > MAX_SINGLE_PLATFORM_ARCHIVE_BYTES
+            or not re.fullmatch(r"[a-f0-9]{64}", single_archive_sha256)
+        ):
+            raise ValueError("invalid planned OCI archive input")
+        with single_archive_input.open("rb") as stream:
+            if (
+                hashlib.file_digest(stream, "sha256").hexdigest()
+                != single_archive_sha256
+            ):
+                raise ValueError(
+                    "planned OCI archive digest mismatch before any registry operation"
+                )
     docker = shutil.which("docker")
     htpasswd = shutil.which("htpasswd")
     oras = shutil.which("oras")
@@ -1349,14 +1368,22 @@ def rehearse():
             # registry fixture; no external registry is contacted.
             single_archive = root / "single-platform.tar.gz"
             single_tag = "26.12-cuda12.9.2-rockylinux8-py3.12-amd64"
-            write_producer_shaped_single_platform_archive(
-                single_archive,
-                architecture="amd64",
-                image_tag=single_tag,
-                image_name="rapidsai/ci-conda",
-                repeat_layer=True,
-            )
+            if single_archive_input is None:
+                write_producer_shaped_single_platform_archive(
+                    single_archive,
+                    architecture="amd64",
+                    image_tag=single_tag,
+                    image_name="rapidsai/ci-conda",
+                    repeat_layer=True,
+                )
+            else:
+                shutil.copyfile(single_archive_input, single_archive)
             single_sha256 = hashlib.sha256(single_archive.read_bytes()).hexdigest()
+            if (
+                single_archive_sha256 is not None
+                and single_sha256 != single_archive_sha256
+            ):
+                raise ValueError("planned OCI archive changed during fixture staging")
             single_inventory = inspect_single_platform_oci_archive(
                 single_archive, single_sha256, root
             )
@@ -1653,6 +1680,7 @@ def rehearse():
                     else "mismatch"
                 ),
                 "single_platform_handoff_mismatch": "rejected-before-upload",
+                "single_platform_archive": single_import,
                 "destination_preparation": "descriptor-to-import-readback-passed",
                 "guarded_http_transport": "exact-byte-upload-readback-and-retry-passed",
             }
