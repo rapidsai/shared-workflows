@@ -38,12 +38,26 @@ def test_real_four_family_plan_clients_retrieval_install_and_completion(
     monkeypatch.setenv("HTTP_PROXY", "http://external.invalid:9")
     monkeypatch.setenv("HTTPS_PROXY", "http://external.invalid:9")
     expected = DRIVER.prepare(tmp_path)
-    report = DRIVER.run(tmp_path, expected, sdk_source())
+    tools = {}
+    if os.environ.get("PUB01_CONDA_PYTHON") or os.environ.get("PUB01_PIXI"):
+        tools = {
+            "conda_python": os.environ.get("PUB01_CONDA_PYTHON"),
+            "pixi": os.environ.get("PUB01_PIXI"),
+        }
+    report = DRIVER.run(tmp_path, expected, sdk_source(), **tools)
     assert set(report["families"]) == {"conda", "python-kitmaker", "maven", "oci"}
     assert report["local_fixture_only"] is True
     assert report["production_authorization"] is False
     assert report["kitmaker_worker_simulated"] is True
     assert report["families"]["conda"]["identical_retry_upload_count"] == 1
+    if tools:
+        assert report["families"]["conda"]["channel_install_exercised"]
+        assert (
+            report["families"]["conda"]["channel_install"][
+                "channel_index_solve_install"
+            ]
+            == "verified"
+        )
     python = report["families"]["python-kitmaker"]
     assert python["worker_delivery"] == "SIMULATED"
     assert python["pip_offline_install_import"] == "26.12.0:local-rehearsal"

@@ -14,7 +14,7 @@ negative tests continue using the same implementations.
 
 | Family | Actual executable operations and receipt | Explicit limits |
 | --- | --- | --- |
-| Conda | Anaconda client 1.15.0 stage/object upload/commit, authenticated download, SHA-256 against the planned archive, identical retry with one storage upload | Synthetic API service; channel indexing and a Conda dependency solve/install are not exercised. |
+| Conda | Anaconda client 1.15.0 stage/object upload/commit, authenticated download, SHA-256 against the planned archive, identical retry with one storage upload; with explicit indexer/Pixi tools, real channel indexing and authenticated solver/install of those readback bytes, installed package identity and payload hash | Synthetic API/channel services. The no-dependency noarch package tests retrieval and installation, not RAPIDS dependency compatibility or hosted ACL/indexing. Without both tools, the receipt explicitly retains the unexercised install gap. |
 | Python through Kitmaker | Exact reviewed SDK project discovery, release POST, UUID and completed-status calls; simulated worker fetches the planned wheel; actual pip reads an authenticated Simple index, downloads with `--require-hashes`, installs offline into a disposable venv, and imports/executes the fixture | The Portal, worker and Simple index are **simulated**, including the returned `completed` state. This is not evidence that hosted Kitmaker delivers to a private index. Synthetic wheel only; no sdist. Direct public PyPI is never used. |
 | Maven | Existing shell/curl Central publisher uploads, hands off and reaches VALIDATED; independent authenticated GET hashes all 24 coordinate/checksum files, verifies original planned bytes and MD5/SHA-1 metadata, then drops the dummy deployment | Synthetic Central protocol; `.asc` files are synthetic bytes, not valid signatures. No snapshot deploy-plugin, hosted repository indexing or public release. SHA-256 is used for evidence; legacy checksums are compatibility metadata. |
 | OCI | Planned gzip OCI input passes the existing real authenticated registry, guarded HTTP publisher, independent digest readback and ORAS baseline; ordered/repeated layer references retained, digest pull and owned-resource cleanup checked | Synthetic image and local registry. No hosted ACL/TLS acceptance, private managed-runner startup or full-train image coverage. |
@@ -68,8 +68,31 @@ python ci/publication-rehearsal/run_local.py prepare --directory /private/job/re
 python ci/publication-rehearsal/run_local.py run \
   --directory /private/job/rehearsal \
   --plan-sha256 <digest printed by prepare> \
-  --kitmaker-checkout /private/job/reviewed-release-scripts
+  --kitmaker-checkout /private/job/reviewed-release-scripts \
+  --conda-python /private/tools/conda-environment/bin/python \
+  --pixi /private/tools/pixi
 ```
+
+The optional Conda tool pair closes the channel/install part of the local
+rehearsal. Supply both or neither; partial tool context fails before publication
+clients run. The indexer Python must provide real `conda-index` and its Conda
+runtime. Local acceptance used conda-index 0.13.0, Conda 26.9.2 and Pixi 0.81.0;
+the receipt records actual versions rather than establishing a production lock.
+The synthetic `.conda` contains a real `info/files`/`info/paths.json` payload.
+Only hash-verified upload readback bytes are indexed. Real `conda-index` emits
+repodata; its package SHA-256/size/identity must match the planned archive.
+
+Pixi uses a fresh job-local manifest, prefix and cache, exactly one owned
+authenticated loopback channel, `--no-config` and an explicit empty auth file.
+It inherits no operator proxy/auth/config environment; HOME is not reassigned.
+The only credentials are fixed synthetic Basic values in the disposable local
+manifest, never in the report. The temporary workspace and auth file are removed
+on completion/failure. Evidence binds repodata, authenticated archive response,
+installed archive identity/hash, installed `payload.txt` hash and Pixi lock hash.
+Anonymous/wrong credentials, missing indexed package and changed archive bytes
+are tested through the actual client. No public fallback channel is configured.
+This owned server emits no redirects; it is not an egress guard for arbitrary
+Conda endpoints or proof of hosted private service access.
 
 The SDK checkout's production client defaults are unchanged. The local harness
 supplies only synthetic fixture credentials. Child environments contain only
@@ -92,18 +115,23 @@ evidence. Local input/runtime directories remain for inspection; remove only
 your own replay directory when finished. Docker resources are cleaned by the
 existing fixture's ownership checks.
 
-## Checks and opt-in SDK integration
+## Checks and opt-in runtime integration
 
 The pre-commit hook always runs the plan/input/source-tamper, private-mode,
 exclusive-write/symlink, body-bound and other local contract regressions.
-Only the two tests that execute the cross-repository SDK opt in through:
+The two cross-repository SDK tests and five real Conda runtime cases opt in
+through their explicitly supplied tool/source inputs:
 
 ```text
-PUB01_KITMAKER_SOURCE=/private/job/reviewed-release-scripts pre-commit run --all-files
+PUB01_KITMAKER_SOURCE=/private/job/reviewed-release-scripts \
+PUB01_CONDA_PYTHON=/private/tools/conda-environment/bin/python \
+PUB01_PIXI=/private/tools/pixi pre-commit run --all-files
 ```
 
-Without that explicit checkout the two integration cases skip with a precise
-reason; this does not claim a four-family replay occurred. A supplied wrong SHA,
+Without the explicit checkout the two SDK integration cases skip with a precise
+reason; without both Conda tools those five runtime cases skip. Pure validation
+contracts always run. Supplying just one Conda tool is a failure. Skips do not
+claim an install or four-family replay occurred. A supplied wrong SHA,
 dirty checkout, failed/nonterminal SDK status or bad package hash is a failure,
 never a skip or fallback. The standalone `run` command always requires the
 reviewed checkout. Its actual completion receipt, rather than a standalone CI
