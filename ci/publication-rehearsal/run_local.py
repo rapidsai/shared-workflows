@@ -26,6 +26,7 @@ KITMAKER_REVISION = "b95debb0b3310c4e4a86b8fa62e565b34af3683d"
 CLIENTS = (
     "ci/publication-rehearsal/run_local.py",
     "ci/publication-rehearsal/conda_fixture.py",
+    "ci/publication-rehearsal/conda_channel_install.py",
     "ci/publication-rehearsal/maven_fixture.py",
     "ci/publication-rehearsal/kitmaker_fixture.py",
     "ci/conda-publish/local_rehearsal.py",
@@ -287,10 +288,11 @@ def fetch(
     return expected
 
 
-def conda_run(root, plan):
+def conda_run(root, plan, *, conda_python=None, pixi=None):
     fixture = load("unified_conda", "ci/publication-rehearsal/conda_fixture.py")
     relative = "conda/conda-fixture-26.12.00-h0_0.conda"
     package = root / relative
+    download = root / "conda" / "readback.conda"
     with fixture.service() as (origin, state):
         for _retry in range(2):
             result = fixture.run(package, origin, expected=plan["inputs"][relative])
@@ -303,7 +305,22 @@ def conda_run(root, plan):
             plan["inputs"][relative],
             auth="token fixture-value",
             maximum_bytes=package.stat().st_size,
+            destination=download,
         )
+        installed = None
+        if conda_python is not None:
+            channel = load(
+                "unified_conda_channel",
+                "ci/publication-rehearsal/conda_channel_install.py",
+            )
+            # Keep the exact conventional filename for indexing the readback bytes.
+            install_input = root / "conda" / "readback"
+            install_input.mkdir(mode=0o700)
+            verified = install_input / package.name
+            verified.write_bytes(download.read_bytes())
+            installed = channel.rehearse(
+                verified, plan["inputs"][relative], root, python=conda_python, pixi=pixi
+            )
         return {
             "sha256": receipt["sha256"],
             "client": "anaconda-client",
@@ -311,10 +328,10 @@ def conda_run(root, plan):
             "upload_readback": "verified",
             "identical_retry_upload_count": state["storage_posts"],
             "dependencies": receipt["dependencies"],
-            "limits": [
-                "synthetic API service",
-                "channel indexing/Conda solve not exercised",
-            ],
+            "channel_install": installed,
+            "channel_install_exercised": installed is not None,
+            "limits": ["synthetic API service"]
+            + ([] if installed else ["channel indexing/Conda solve not exercised"]),
         }
 
 
@@ -517,9 +534,16 @@ def python_run(root, plan, checkout):
         }
 
 
-def run(root, expected_sha256, kitmaker_checkout):
+def run(root, expected_sha256, kitmaker_checkout, *, conda_python=None, pixi=None):
+    if (conda_python is None) != (pixi is None):
+        raise RehearsalError("Conda install requires both explicit runtime tools")
     root = private_root(root)
     plan = validate(root, expected_sha256)
+    if conda_python is not None:
+        tools = load(
+            "unified_conda_tools", "ci/publication-rehearsal/conda_channel_install.py"
+        )
+        conda_python, pixi = tools.executable(conda_python), tools.executable(pixi)
     checkout = verify_kitmaker(kitmaker_checkout)
     if any(
         path.exists() or path.is_symlink()
@@ -532,7 +556,12 @@ def run(root, expected_sha256, kitmaker_checkout):
     results.mkdir(mode=0o700)
     reports = {}
     for family, operation in (
-        ("conda", lambda: conda_run(root, plan)),
+        (
+            "conda",
+            lambda: conda_run(root, plan, conda_python=conda_python, pixi=pixi)
+            if conda_python
+            else conda_run(root, plan),
+        ),
         ("python-kitmaker", lambda: python_run(root, plan, checkout)),
         ("maven", lambda: maven_run(root, plan)),
     ):
@@ -580,6 +609,8 @@ def main():
     parser.add_argument("--directory", required=True, type=Path)
     parser.add_argument("--plan-sha256")
     parser.add_argument("--kitmaker-checkout", type=Path)
+    parser.add_argument("--conda-python", type=Path)
+    parser.add_argument("--pixi", type=Path)
     args = parser.parse_args()
     if args.command == "prepare":
         print(prepare(args.directory))
@@ -588,7 +619,13 @@ def main():
             parser.error("run requires --plan-sha256 and --kitmaker-checkout")
         print(
             json.dumps(
-                run(args.directory, args.plan_sha256, args.kitmaker_checkout),
+                run(
+                    args.directory,
+                    args.plan_sha256,
+                    args.kitmaker_checkout,
+                    conda_python=args.conda_python,
+                    pixi=args.pixi,
+                ),
                 sort_keys=True,
             )
         )

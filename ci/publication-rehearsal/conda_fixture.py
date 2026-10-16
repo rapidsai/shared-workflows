@@ -178,10 +178,32 @@ def package(tmp_path, extension=".conda", content=b"immutable fixture"):
         json.dumps({"summary": "synthetic local fixture", "license": "BSD-3-Clause"})
     )
     (source / "payload.txt").write_bytes(content)
+    (source / "info/files").write_text("payload.txt\n")
+    (source / "info/paths.json").write_text(
+        json.dumps(
+            {
+                "paths_version": 1,
+                "paths": [
+                    {
+                        "_path": "payload.txt",
+                        "path_type": "hardlink",
+                        "sha256": hashlib.sha256(content).hexdigest(),
+                        "size_in_bytes": len(content),
+                    }
+                ],
+            }
+        )
+    )
     name = "conda-fixture-26.12.00-h0_0" + extension
     create(
         str(source),
-        ["info/index.json", "info/about.json", "payload.txt"],
+        [
+            "info/index.json",
+            "info/about.json",
+            "info/files",
+            "info/paths.json",
+            "payload.txt",
+        ],
         name,
         out_folder=str(tmp_path),
     )
