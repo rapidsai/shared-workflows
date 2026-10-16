@@ -111,3 +111,25 @@ See the
 [`shared-actions` release catalog documentation](https://github.com/rapidsai/shared-actions/tree/main/release-catalog)
 for the companion layout, configuration schema, examples, and evidence
 semantics.
+
+### Candidate C++ digest-image opt-in
+
+`conda-cpp-build.yaml` accepts an optional pre-start CI-image preflight for
+release-candidate runs. Callers provide the canonical release-train JSON, its
+expected `candidate-train-sha256`, the preflight JSON, its independently
+expected canonical SHA-256, and the selected consumer ID together. Each JSON
+input is limited to 120 KiB; the computed matrix is also limited to 120 KiB so
+it fits runner environment transport. A partial set fails the host preflight
+and prevents build-container startup. When all inputs are empty, the existing
+workflow path and image tag are unchanged.
+
+The host job checks that the supplied documents agree with the exact source,
+unit, and computed `ARCH`/`CUDA_VER`/`PY_VER`/`LINUX_VER` matrix, and resolves
+only digest-pinned image references. The build job writes the same preflight
+bytes, checks their raw SHA against the host job, and passes them to the
+reviewed shared-actions BuildInput binder. This is consistency validation of
+caller-supplied documents, not authentication: the caller must authenticate
+the train, preflight, and expected hashes before invoking the workflow. It
+does not grant private registry access or provide credentials required by
+GitHub to pull a private container before a job starts. Those caller/provider
+and pre-pull access requirements must be established before using this path.

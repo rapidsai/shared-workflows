@@ -10,15 +10,15 @@ repos:
     rev: v0.14.10
     hooks:
       - id: ruff-check
-        files: ^(tests/test_((maven_http|conda_upload|container_upload)_contract|hosted_oci_preparation|guarded_oci_transport|guarded_oci_tls|four_family_rehearsal|four_family_plan_contract)\.py|ci/((conda|container)-publish/local_rehearsal|container-publish/(hosted_preparation|guarded_oci_transport))\.py|ci/publication-rehearsal/[^/]+\.py)$
+        files: ^(tests/test_((maven_http|conda_upload|container_upload)_contract|hosted_oci_preparation|guarded_oci_transport|guarded_oci_tls|four_family_rehearsal|four_family_plan_contract|candidate_image_matrix)\.py|ci/((conda|container)-publish/local_rehearsal|container-publish/(hosted_preparation|guarded_oci_transport)|prepare_candidate_image_matrix)\.py|ci/publication-rehearsal/[^/]+\.py)$
         args: ['--select=E,F,B', '--ignore=E501']
       - id: ruff-format
-        files: ^(tests/test_((maven_http|conda_upload|container_upload)_contract|hosted_oci_preparation|guarded_oci_transport|guarded_oci_tls|four_family_rehearsal|four_family_plan_contract)\.py|ci/((conda|container)-publish/local_rehearsal|container-publish/(hosted_preparation|guarded_oci_transport))\.py|ci/publication-rehearsal/[^/]+\.py)$
+        files: ^(tests/test_((maven_http|conda_upload|container_upload)_contract|hosted_oci_preparation|guarded_oci_transport|guarded_oci_tls|four_family_rehearsal|four_family_plan_contract|candidate_image_matrix)\.py|ci/((conda|container)-publish/local_rehearsal|container-publish/(hosted_preparation|guarded_oci_transport)|prepare_candidate_image_matrix)\.py|ci/publication-rehearsal/[^/]+\.py)$
   - repo: https://github.com/PyCQA/bandit
     rev: 1.9.2
     hooks:
       - id: bandit
-        files: ^(tests/test_((maven_http|conda_upload|container_upload)_contract|hosted_oci_preparation|guarded_oci_transport|guarded_oci_tls|four_family_rehearsal|four_family_plan_contract)\.py|ci/((conda|container)-publish/local_rehearsal|container-publish/(hosted_preparation|guarded_oci_transport))\.py|ci/publication-rehearsal/[^/]+\.py)$
+        files: ^(tests/test_((maven_http|conda_upload|container_upload)_contract|hosted_oci_preparation|guarded_oci_transport|guarded_oci_tls|four_family_rehearsal|four_family_plan_contract|candidate_image_matrix)\.py|ci/((conda|container)-publish/local_rehearsal|container-publish/(hosted_preparation|guarded_oci_transport)|prepare_candidate_image_matrix)\.py|ci/publication-rehearsal/[^/]+\.py)$
         args: [--skip, B101]
   - repo: https://github.com/PyCQA/flake8
     rev: 7.3.0

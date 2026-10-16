@@ -48,6 +48,26 @@ on:
         description: "Canonical SHA-256 of the release train; required for release-candidate builds."
         type: string
         default: ""
+      candidate-image-train-json:
+        description: "Opt-in only: caller-authenticated canonical train JSON (maximum 120 KiB) for pre-start digest image validation."
+        type: string
+        required: false
+        default: ""
+      candidate-image-preflight-json:
+        description: "Opt-in only: caller-authenticated CI-image preflight JSON (maximum 120 KiB)."
+        type: string
+        required: false
+        default: ""
+      candidate-image-preflight-sha256:
+        description: "Independent expected canonical SHA-256 of candidate-image-preflight-json."
+        type: string
+        required: false
+        default: ""
+      candidate-image-consumer-id:
+        description: "Exact controller-selected consumer ID in the candidate image preflight."
+        type: string
+        required: false
+        default: ""
       matrix_type:
         description: "One or more comma-separated matrix types defined for this workflow's matrix in .github/actions/prepare-matrix/matrix.yaml, e.g. 'pull-request' or 'nightly'. Defaults to 'auto', which must be used alone and means 'choose a value based on what's provided via build_type'."
         required: false
@@ -152,18 +172,100 @@ jobs:
       matrix_name: conda-cpp-build
       matrix_type: ${{ inputs.matrix_type }}
       matrix_filter: ${{ inputs.matrix_filter }}
+  candidate-image-preflight:
+    if: >-
+      ${{ inputs.candidate-image-train-json != '' || inputs.candidate-image-preflight-json != '' ||
+          inputs.candidate-image-preflight-sha256 != '' || inputs.candidate-image-consumer-id != '' }}
+    needs: compute-matrix
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.validate.outputs.matrix }}
+      preflight-document-sha256: ${{ steps.validate.outputs.preflight-document-sha256 }}
+    steps:
+      - name: Check out the reviewed matrix binder
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: rapidsai/shared-workflows
+          ref: c74836a849551cc1f2c3afbfe88d808d6aa3acdc
+          path: .build06-shared-workflows
+          persist-credentials: false
+      - name: Check out the reviewed BuildInput validator
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: rapidsai/shared-actions
+          ref: aa27f344e33b176945146e5a4218a182d72e1688
+          path: .build06-shared-actions
+          persist-credentials: false
+      - name: Validate the caller-supplied image preflight before build startup
+        id: validate
+        env:
+          BUILD_TYPE: ${{ inputs.build_type }}
+          TRAIN_JSON: ${{ inputs.candidate-image-train-json }}
+          PREFLIGHT_JSON: ${{ inputs.candidate-image-preflight-json }}
+          MATRIX_JSON: ${{ needs.compute-matrix.outputs.matrix }}
+          EXPECTED_TRAIN_SHA256: ${{ inputs.candidate-train-sha256 }}
+          EXPECTED_PREFLIGHT_SHA256: ${{ inputs.candidate-image-preflight-sha256 }}
+          CONSUMER_ID: ${{ inputs.candidate-image-consumer-id }}
+          REPOSITORY: ${{ inputs.repo || github.repository }}
+          SOURCE_SHA: ${{ inputs.sha }}
+          SHARED_ACTIONS: ${{ github.workspace }}/.build06-shared-actions
+        run: |
+          set -euo pipefail
+          if [[ "${BUILD_TYPE}" != "release-candidate" ]]; then
+            echo "candidate image preflight inputs are valid only for release-candidate builds" >&2
+            exit 1
+          fi
+          printf '%s' "${TRAIN_JSON}" > "${RUNNER_TEMP}/candidate-train.json"
+          printf '%s' "${PREFLIGHT_JSON}" > "${RUNNER_TEMP}/candidate-image-preflight.json"
+          printf '%s' "${MATRIX_JSON}" > "${RUNNER_TEMP}/candidate-build-matrix.json"
+          python3 "${GITHUB_WORKSPACE}/.build06-shared-workflows/ci/prepare_candidate_image_matrix.py" \
+            --train "${RUNNER_TEMP}/candidate-train.json" \
+            --preflight "${RUNNER_TEMP}/candidate-image-preflight.json" \
+            --matrix "${RUNNER_TEMP}/candidate-build-matrix.json" \
+            --shared-actions "${SHARED_ACTIONS}" \
+            --expected-train-sha256 "${EXPECTED_TRAIN_SHA256}" \
+            --expected-preflight-sha256 "${EXPECTED_PREFLIGHT_SHA256}" \
+            --consumer-id "${CONSUMER_ID}" \
+            --repository "${REPOSITORY}" \
+            --source-sha "${SOURCE_SHA}"
   build:
     name: ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}
-    needs: compute-matrix
+    needs: [compute-matrix, candidate-image-preflight]
+    if: >-
+      ${{ !cancelled() && needs.compute-matrix.result == 'success' &&
+          ((inputs.candidate-image-train-json == '' && inputs.candidate-image-preflight-json == '' &&
+            inputs.candidate-image-preflight-sha256 == '' && inputs.candidate-image-consumer-id == '' &&
+            needs.candidate-image-preflight.result == 'skipped') ||
+           ((inputs.candidate-image-train-json != '' || inputs.candidate-image-preflight-json != '' ||
+             inputs.candidate-image-preflight-sha256 != '' || inputs.candidate-image-consumer-id != '') &&
+            needs.candidate-image-preflight.result == 'success' &&
+            needs.candidate-image-preflight.outputs.matrix != '' &&
+            needs.candidate-image-preflight.outputs.preflight-document-sha256 != '')) }}
     timeout-minutes: 480
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.compute-matrix.outputs.matrix) }}
+      matrix: >-
+        ${{ fromJSON(
+          (inputs.candidate-image-train-json != '' || inputs.candidate-image-preflight-json != '' ||
+           inputs.candidate-image-preflight-sha256 != '' || inputs.candidate-image-consumer-id != '') &&
+          needs.candidate-image-preflight.outputs.matrix ||
+          (inputs.candidate-image-train-json == '' && inputs.candidate-image-preflight-json == '' &&
+           inputs.candidate-image-preflight-sha256 == '' && inputs.candidate-image-consumer-id == '') &&
+          needs.compute-matrix.outputs.matrix
+        ) }}
     runs-on: "linux-${{ matrix.ARCH }}-${{ inputs.node_type }}"
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     container:
-      image: rapidsai/ci-conda:26.12-cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
+      image: >-
+        ${{ ((inputs.candidate-image-train-json != '' || inputs.candidate-image-preflight-json != '' ||
+             inputs.candidate-image-preflight-sha256 != '' || inputs.candidate-image-consumer-id != '') &&
+            matrix.candidate_image_reference) ||
+            ((inputs.candidate-image-train-json == '' && inputs.candidate-image-preflight-json == '' &&
+              inputs.candidate-image-preflight-sha256 == '' && inputs.candidate-image-consumer-id == '') &&
+             format('rapidsai/ci-conda:26.12-cuda{0}-{1}-py{2}', matrix.CUDA_VER, matrix.LINUX_VER, matrix.PY_VER)) }} # zizmor: ignore[unpinned-images]
       env:
         # Candidate orchestration retains its own input mode, while RAPIDS
         # build helpers use the established nightly dependency behavior.
@@ -253,7 +355,7 @@ jobs:
           repository: ${{ inputs.repo || github.repository }}
           source-sha: ${{ env.RAPIDS_SHA }}
       - name: Prepare candidate dependencies and build policy
-        if: ${{ inputs.build_type == 'release-candidate' }}
+        if: ${{ inputs.build_type == 'release-candidate' && inputs.candidate-image-preflight-json == '' }}
         uses: rapidsai/shared-actions/release-candidate-dependencies@cea935cc5e25ec216756d0e2676c3cd32717aa4e
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
@@ -262,6 +364,33 @@ jobs:
           arch: ${{ matrix.ARCH }}
           cuda-version: ${{ matrix.CUDA_VER }}
           python-version: ${{ matrix.PY_VER }}
+      - name: Write the same image preflight document validated before startup
+        if: ${{ inputs.build_type == 'release-candidate' && inputs.candidate-image-preflight-json != '' }}
+        env:
+          PREFLIGHT_JSON: ${{ inputs.candidate-image-preflight-json }}
+          EXPECTED_DOCUMENT_SHA256: ${{ needs.candidate-image-preflight.outputs.preflight-document-sha256 }}
+        run: |
+          set -euo pipefail
+          preflight_file="${GITHUB_WORKSPACE}/.candidate-image-preflight.json"
+          printf '%s' "${PREFLIGHT_JSON}" > "${preflight_file}"
+          actual_sha256="$(sha256sum "${preflight_file}" | awk '{print $1}')"
+          if [[ "${actual_sha256}" != "${EXPECTED_DOCUMENT_SHA256}" ]]; then
+            echo "candidate image preflight bytes differ from the pre-start validated document" >&2
+            exit 1
+          fi
+      - name: Bind pre-start image selection into candidate build input
+        if: ${{ inputs.build_type == 'release-candidate' && inputs.candidate-image-preflight-json != '' }}
+        uses: rapidsai/shared-actions/release-candidate-dependencies@aa27f344e33b176945146e5a4218a182d72e1688
+        with:
+          candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
+          prepare-conda-channel: 'true'
+          artifact-family: conda
+          arch: ${{ matrix.ARCH }}
+          cuda-version: ${{ matrix.CUDA_VER }}
+          python-version: ${{ matrix.PY_VER }}
+          image-preflight-file: ${{ github.workspace }}/.candidate-image-preflight.json
+          consumer-id: ${{ inputs.candidate-image-consumer-id }}
+          runtime-image-reference: ${{ matrix.candidate_image_reference }}
       # Candidate builds avoid the general CI role until a cache-only role is
       # available. The producer role is limited to private candidate data.
       - name: Setup sccache-dist

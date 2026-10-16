@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import importlib.util
 import hashlib
+import json
 import os
 import shutil
 import subprocess  # nosec B404 - fixed git queries inspect a caller-configured source checkout only.
@@ -220,6 +221,117 @@ def test_rejects_build_identity_version_inconsistent_with_frozen_version():
         MATRIX_HELPER.CandidateImageMatrixError, match="exactly one image"
     ):
         _prepare(train, preflight, _fake_attach)
+
+
+def _cli_arguments(tmp_path, train, preflight, matrix):
+    train_file = tmp_path / "train.json"
+    preflight_file = tmp_path / "preflight.json"
+    matrix_file = tmp_path / "matrix.json"
+    for path, value in (
+        (train_file, train),
+        (preflight_file, preflight),
+        (matrix_file, matrix),
+    ):
+        path.write_text(json.dumps(value, separators=(",", ":")), encoding="utf-8")
+    return [
+        str(SCRIPT_PATH),
+        "--train",
+        str(train_file),
+        "--preflight",
+        str(preflight_file),
+        "--matrix",
+        str(matrix_file),
+        "--shared-actions",
+        str(SHARED_ACTIONS_ROOT),
+        "--expected-train-sha256",
+        train["train_sha256"],
+        "--expected-preflight-sha256",
+        preflight["preflight_sha256"],
+        "--consumer-id",
+        "example-test",
+        "--repository",
+        "rapidsai/example",
+        "--source-sha",
+        "a" * 40,
+    ]
+
+
+def test_cli_emits_digest_matrix_and_exact_preflight_document_sha(
+    tmp_path, monkeypatch
+):
+    attach, fixture = _actual_contract()
+    train, preflight, _, image = fixture()
+    build = MATRIX_HELPER._image_build_parts(image["identity"]["build"])
+    matrix = {
+        "include": [
+            {
+                "ARCH": build["arch"],
+                "CUDA_VER": build["cuda"],
+                "PY_VER": build["python"],
+                "LINUX_VER": build["linux"],
+            }
+        ]
+    }
+    output = tmp_path / "github-output"
+    output.touch()
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    monkeypatch.setattr(sys, "argv", _cli_arguments(tmp_path, train, preflight, matrix))
+
+    assert MATRIX_HELPER.main() == 0
+
+    lines = output.read_text(encoding="utf-8").splitlines()
+    values = dict(line.split("=", maxsplit=1) for line in lines)
+    emitted = json.loads(values["matrix"])
+    assert emitted["include"][0]["candidate_image_reference"].endswith(
+        "@sha256:" + image["runnable_manifest_sha256"]
+    )
+    assert (
+        values["preflight-document-sha256"]
+        == hashlib.sha256(
+            json.dumps(preflight, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+    )
+
+
+def test_cli_rejects_tampered_preflight_without_emitting_outputs(tmp_path, monkeypatch):
+    _attach, fixture = _actual_contract()
+    train, preflight, _, image = fixture()
+    image["runnable_manifest_sha256"] = "f" * 64
+    matrix = {"include": [_row()]}
+    output = tmp_path / "github-output"
+    output.touch()
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    monkeypatch.setattr(sys, "argv", _cli_arguments(tmp_path, train, preflight, matrix))
+
+    assert MATRIX_HELPER.main() == 2
+    assert output.read_text(encoding="utf-8") == ""
+
+
+def test_prepared_output_size_is_bounded():
+    train, preflight = _minimal_documents()
+    row = _row()
+    row["caller_metadata"] = "x" * (MATRIX_HELPER.MAX_MATRIX_BYTES - 200)
+    matrix = {"include": [row]}
+    assert len(MATRIX_HELPER._canonical(matrix)) <= MATRIX_HELPER.MAX_MATRIX_BYTES
+
+    with pytest.raises(
+        MATRIX_HELPER.CandidateImageMatrixError, match="prepared matrix exceeds"
+    ):
+        _prepare(train, preflight, _fake_attach, matrix=matrix)
+
+
+def test_cli_rejects_oversized_preflight_before_json_parsing(tmp_path, monkeypatch):
+    train, preflight = _minimal_documents()
+    args = _cli_arguments(tmp_path, train, preflight, {"include": [_row()]})
+    preflight_path = Path(args[args.index("--preflight") + 1])
+    preflight_path.write_bytes(b" " * (MATRIX_HELPER.MAX_PREFLIGHT_BYTES + 1))
+    output = tmp_path / "github-output"
+    output.touch()
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    monkeypatch.setattr(sys, "argv", args)
+
+    assert MATRIX_HELPER.main() == 2
+    assert output.read_text(encoding="utf-8") == ""
 
 
 def _prepare(train, preflight, attach, matrix=None, **overrides):

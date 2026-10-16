@@ -59,10 +59,32 @@ fi
 bash "${root}/tests/prepare-matrix-dispatch-pins.sh"
 
 pins="$(rg -o 'uses: rapidsai/shared-actions/(release-candidate-[^@[:space:]]+|release-catalog-dispatch)@[[:alnum:]]+' "${root}/.github/workflows" \
-  | sed 's/.*@//' | sort -u)"
+  | grep -v '@aa27f344e33b176945146e5a4218a182d72e1688$' | sed 's/.*@//' | sort -u)"
 if [[ "$(printf '%s\n' "${pins}" | wc -l | tr -d ' ')" != 1 ]] ||
   [[ ! "${pins}" =~ ^[0-9a-f]{40}$ ]]; then
   echo "candidate implementation actions must share one full commit SHA; found: ${pins}" >&2
+  exit 1
+fi
+cpp_build="${root}/.github/workflows/conda-cpp-build.yaml"
+legacy_image_condition="if: \${{ inputs.build_type == 'release-candidate' && inputs.candidate-image-preflight-json == '' }}"
+if [[ "$(rg -c 'uses: rapidsai/shared-actions/release-candidate-dependencies@aa27f344e33b176945146e5a4218a182d72e1688' "${cpp_build}")" != 1 ]] ||
+  ! rg -Fq 'runtime-image-reference: ${{ matrix.candidate_image_reference }}' "${cpp_build}" ||
+  ! rg -Fq 'ref: c74836a849551cc1f2c3afbfe88d808d6aa3acdc' "${cpp_build}" ||
+  ! rg -Fq "${legacy_image_condition}" "${cpp_build}" ||
+  ! rg -Fq 'needs: [compute-matrix, candidate-image-preflight]' "${cpp_build}" ||
+  ! rg -Fq 'inputs.candidate-image-preflight-json !=' "${cpp_build}" ||
+  ! rg -Fq 'needs.candidate-image-preflight.outputs.matrix' "${cpp_build}" ||
+  ! rg -Fq 'needs.compute-matrix.outputs.matrix' "${cpp_build}" ||
+  ! rg -Fq 'inputs.candidate-image-preflight-json ==' "${cpp_build}" ||
+  ! rg -Fq 'matrix.candidate_image_reference) ||' "${cpp_build}" ||
+  ! rg -Fq "needs.candidate-image-preflight.outputs.matrix != ''" "${cpp_build}" ||
+  ! rg -Fq "needs.candidate-image-preflight.outputs.preflight-document-sha256 != ''" "${cpp_build}" ||
+  ! rg -Fq "needs.candidate-image-preflight.result == 'skipped'" "${cpp_build}" ||
+  ! rg -Fq 'candidate image preflight bytes differ from the pre-start validated document' "${cpp_build}" ||
+  ! rg -Fq 'image: >-' "${cpp_build}" ||
+  ! rg -Fq 'matrix.candidate_image_reference) ||' "${cpp_build}" ||
+  ! rg -Fq "inputs.candidate-image-consumer-id == ''" "${cpp_build}"; then
+  echo "C++ candidate image opt-in must retain the legacy action and bind the reviewed digest path" >&2
   exit 1
 fi
 
