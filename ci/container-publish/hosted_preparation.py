@@ -114,7 +114,11 @@ def validate_destination(policy, descriptor, *, policy_sha256, now, loopback_fix
             "registry origin must be canonical and contain no credentials/path"
         )
     if loopback_fixture:
-        if parsed.scheme != "http" or parsed.hostname != "127.0.0.1" or not port:
+        if (
+            parsed.scheme not in {"http", "https"}
+            or parsed.hostname != "127.0.0.1"
+            or not port
+        ):
             raise ValueError("fixture origin must be explicit IPv4 loopback")
     elif parsed.scheme != "https" or parsed.hostname in {
         "localhost",

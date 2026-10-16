@@ -72,6 +72,31 @@ def prepare(inputs, output, **kwargs):
     )
 
 
+@pytest.mark.parametrize(
+    "origin,fixture",
+    [
+        ("https://127.0.0.1:1234", False),
+        ("https://localhost:1234", True),
+        ("https://registry.invalid:1234", True),
+        ("https://127.0.0.1", True),
+    ],
+)
+def test_tls_fixture_does_not_expand_hosted_or_loopback_boundary(
+    inputs, origin, fixture
+):
+    policy, descriptor, _archive = inputs
+    policy["origin"] = origin
+    descriptor["policy_sha256"] = PREP.digest(policy)
+    with pytest.raises(ValueError, match="fixture origin|approved HTTPS"):
+        PREP.validate_destination(
+            policy,
+            descriptor,
+            policy_sha256=PREP.digest(policy),
+            now=NOW,
+            loopback_fixture=fixture,
+        )
+
+
 def test_seals_exact_bytes_and_identical_retry_without_credentials(
     inputs, tmp_path, monkeypatch
 ):

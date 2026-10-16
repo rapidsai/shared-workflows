@@ -29,6 +29,27 @@ production lock or tooling release.
 
 ## Replay
 
+### Local HTTPS acceptance
+
+`tests/test_guarded_oci_tls.py` additionally exercises native TLS on the same
+digest-pinned distribution registry image used by the OCI rehearsal. It generates
+an ephemeral test CA and server certificates through the installed OpenSSL,
+binds only to `127.0.0.1`, and publishes/reads back the exact synthetic OCI bytes
+using the existing explicit `ca_file` API. Identical retry preserves the manifest
+and archive digests. The real registry rejects wrong Basic credentials; its CA
+is not trusted without explicit selection. No trust store or operator config is
+changed, no registry image is pulled, and only the owned container is removed.
+
+Separate instrumented HTTPS response fixtures prove untrusted certificates,
+wrong-host certificates and invalid CA bytes fail before an HTTP request or
+Basic credentials reach the service. A verified HTTPS peer's redirect is rejected
+without contacting the other origin. These malicious endpoints are simulated;
+successful publication and readback use the real registry. TLS verification is
+never disabled. Explicit loopback-fixture mode permits HTTP or HTTPS on
+`127.0.0.1` with an explicit port; hosted mode still rejects that loopback origin.
+This is local certificate/transport acceptance, not hosted service ACL, managed
+runner trust distribution, credential provisioning or production authorization.
+
 Provide Python with the pinned dependencies in the `four-family-rehearsal`
 pre-commit hook, plus the existing local Docker, ORAS 1.3.3, curl, jq, bash and
 standard fixture prerequisites. The SDK comes from a separate clean checkout of

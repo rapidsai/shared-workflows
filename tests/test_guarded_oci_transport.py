@@ -76,7 +76,9 @@ def service(
         thread.join(timeout=5)
 
 
-def publish(tmp_path, origin, *, credentials=("fixture-user", "fixture-value")):
+def publish(
+    tmp_path, origin, *, credentials=("fixture-user", "fixture-value"), ca_file=None
+):
     archive = FIXTURE._single_platform_archive(tmp_path)
     handoff = FIXTURE._handoff_for_archive(archive)
     now = datetime.now(timezone.utc)
@@ -106,6 +108,7 @@ def publish(tmp_path, origin, *, credentials=("fixture-user", "fixture-value")):
         archive,
         tmp_path,
         credentials=credentials,
+        ca_file=ca_file,
         policy_sha256=prep.digest(policy),
         handoff_sha256=prep.digest(handoff),
         train_sha256="a" * 64,
