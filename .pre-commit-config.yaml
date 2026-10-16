@@ -10,22 +10,22 @@ repos:
     rev: v0.14.10
     hooks:
       - id: ruff-check
-        files: ^(tests/test_((maven_http|conda_upload|container_upload)_contract|hosted_oci_preparation|guarded_oci_transport|guarded_oci_tls|four_family_rehearsal|four_family_plan_contract|conda_channel_install|maven_signatures|candidate_image_matrix)\.py|ci/((conda|container)-publish/local_rehearsal|container-publish/(hosted_preparation|guarded_oci_transport)|prepare_candidate_image_matrix)\.py|ci/publication-rehearsal/[^/]+\.py)$
+        files: ^(tests/test_((maven_http|conda_upload|container_upload)_contract|hosted_oci_preparation|guarded_oci_transport|guarded_oci_tls|guarded_oci_bearer|four_family_rehearsal|four_family_plan_contract|conda_channel_install|maven_signatures|candidate_image_matrix)\.py|ci/((conda|container)-publish/local_rehearsal|container-publish/(hosted_preparation|guarded_oci_transport|guarded_oci_bearer)|prepare_candidate_image_matrix)\.py|ci/publication-rehearsal/[^/]+\.py)$
         args: ['--select=E,F,B', '--ignore=E501']
       - id: ruff-format
-        files: ^(tests/test_((maven_http|conda_upload|container_upload)_contract|hosted_oci_preparation|guarded_oci_transport|guarded_oci_tls|four_family_rehearsal|four_family_plan_contract|conda_channel_install|maven_signatures|candidate_image_matrix)\.py|ci/((conda|container)-publish/local_rehearsal|container-publish/(hosted_preparation|guarded_oci_transport)|prepare_candidate_image_matrix)\.py|ci/publication-rehearsal/[^/]+\.py)$
+        files: ^(tests/test_((maven_http|conda_upload|container_upload)_contract|hosted_oci_preparation|guarded_oci_transport|guarded_oci_tls|guarded_oci_bearer|four_family_rehearsal|four_family_plan_contract|conda_channel_install|maven_signatures|candidate_image_matrix)\.py|ci/((conda|container)-publish/local_rehearsal|container-publish/(hosted_preparation|guarded_oci_transport|guarded_oci_bearer)|prepare_candidate_image_matrix)\.py|ci/publication-rehearsal/[^/]+\.py)$
   - repo: https://github.com/PyCQA/bandit
     rev: 1.9.2
     hooks:
       - id: bandit
-        files: ^(tests/test_((maven_http|conda_upload|container_upload)_contract|hosted_oci_preparation|guarded_oci_transport|guarded_oci_tls|four_family_rehearsal|four_family_plan_contract|conda_channel_install|maven_signatures|candidate_image_matrix)\.py|ci/((conda|container)-publish/local_rehearsal|container-publish/(hosted_preparation|guarded_oci_transport)|prepare_candidate_image_matrix)\.py|ci/publication-rehearsal/[^/]+\.py)$
+        files: ^(tests/test_((maven_http|conda_upload|container_upload)_contract|hosted_oci_preparation|guarded_oci_transport|guarded_oci_tls|guarded_oci_bearer|four_family_rehearsal|four_family_plan_contract|conda_channel_install|maven_signatures|candidate_image_matrix)\.py|ci/((conda|container)-publish/local_rehearsal|container-publish/(hosted_preparation|guarded_oci_transport|guarded_oci_bearer)|prepare_candidate_image_matrix)\.py|ci/publication-rehearsal/[^/]+\.py)$
         args: [--skip, B101]
   - repo: https://github.com/PyCQA/flake8
     rev: 7.3.0
     hooks:
       - id: flake8
         name: Publication contract bugbear checks without Ruff equivalents
-        files: ^(tests/test_((maven_http|conda_upload|container_upload)_contract|hosted_oci_preparation|guarded_oci_transport|guarded_oci_tls|four_family_rehearsal|four_family_plan_contract|conda_channel_install|maven_signatures|candidate_image_matrix)\.py|ci/((conda|container)-publish/local_rehearsal|container-publish/(hosted_preparation|guarded_oci_transport)|prepare_candidate_image_matrix)\.py|ci/publication-rehearsal/[^/]+\.py)$
+        files: ^(tests/test_((maven_http|conda_upload|container_upload)_contract|hosted_oci_preparation|guarded_oci_transport|guarded_oci_tls|guarded_oci_bearer|four_family_rehearsal|four_family_plan_contract|conda_channel_install|maven_signatures|candidate_image_matrix)\.py|ci/((conda|container)-publish/local_rehearsal|container-publish/(hosted_preparation|guarded_oci_transport|guarded_oci_bearer)|prepare_candidate_image_matrix)\.py|ci/publication-rehearsal/[^/]+\.py)$
         additional_dependencies: [flake8-bugbear==25.10.21]
         args: ['--select=B001,B036,B040,B042']
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -77,9 +77,9 @@ repos:
         always_run: true
       - id: container-upload-contract
         name: real authenticated registry and Docker contract
-        entry: python -B -m pytest -q tests/test_container_upload_contract.py tests/test_hosted_oci_preparation.py tests/test_guarded_oci_transport.py tests/test_guarded_oci_tls.py
+        entry: python -B -m pytest -q tests/test_container_upload_contract.py tests/test_hosted_oci_preparation.py tests/test_guarded_oci_transport.py tests/test_guarded_oci_tls.py tests/test_guarded_oci_bearer.py
         language: python
-        additional_dependencies: [pytest==8.4.2, requests==2.34.2]
+        additional_dependencies: [pytest==8.4.2, requests==2.34.2, PyJWT==2.15.1, cryptography==50.0.2]
         pass_filenames: false
         always_run: true
       - id: conda-upload-contract

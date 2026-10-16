@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""Bounded Basic-auth OCI transport; no redirects, token realms or ambient auth.
+"""Bounded Basic/Bearer OCI transport; no redirects or ambient auth.
 
 This is a source-only publication adapter, not a deployment or approval gate.
 All policy/handoff expectations must come from an authenticated caller.
@@ -23,6 +23,11 @@ _SPEC = importlib.util.spec_from_file_location(
 )
 PREPARATION = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(PREPARATION)
+_BEARER_SPEC = importlib.util.spec_from_file_location(
+    "guarded_bearer", Path(__file__).with_name("guarded_oci_bearer.py")
+)
+BEARER = importlib.util.module_from_spec(_BEARER_SPEC)
+_BEARER_SPEC.loader.exec_module(BEARER)
 MAX_BLOBS = 128
 
 
@@ -33,7 +38,17 @@ class TransportError(ValueError):
 class Registry:
     """Only exact repository API requests; server URLs never bypass this guard."""
 
-    def __init__(self, origin, repository, credentials, *, ca_file=None, deadline=None):
+    def __init__(
+        self,
+        origin,
+        repository,
+        credentials,
+        *,
+        ca_file=None,
+        deadline=None,
+        bearer_policy=None,
+        token_ca_file=None,
+    ):
         if (
             not isinstance(credentials, tuple)
             or len(credentials) != 2
@@ -47,18 +62,36 @@ class Registry:
             or ":" in credentials[0]
         ):
             raise TransportError("explicit valid Basic credentials are required")
+        self.bearer = None
+        if bearer_policy is not None:
+            if not origin.startswith("https://"):
+                raise TransportError("Bearer registry origin must use verified HTTPS")
+            try:
+                self.bearer = BEARER.Token(
+                    bearer_policy,
+                    repository,
+                    credentials,
+                    ca_file=token_ca_file,
+                    deadline=deadline,
+                )
+            except BEARER.BearerError:
+                raise TransportError("explicit Bearer token policy rejected") from None
+        elif token_ca_file is not None:
+            raise TransportError("token CA requires an explicit Bearer policy")
         self.origin = origin
         self.prefix = "/v2/" + repository + "/"
         self.session = requests.Session()
         # Disable implicit netrc/proxies before prepare_request runs.
         self.session.trust_env = False
-        self.session.auth = credentials
+        self.session.auth = None if self.bearer else credentials
         self.session.verify = str(ca_file) if ca_file else True
         self.requests = 0
         self.deadline = deadline
 
     def close(self):
         self.session.close()
+        if self.bearer:
+            self.bearer.close()
 
     def _url(self, value, *, uploading=False, finalizing=False):
         if (
@@ -117,6 +150,15 @@ class Registry:
                 "destination descriptor expired before registry request"
             )
         url = self._url(path, uploading=uploading, finalizing=finalizing)
+        if self.bearer:
+            try:
+                authorization = self.bearer.authorization()
+            except BEARER.BearerError as error:
+                raise TransportError(str(error)) from None
+            kwargs["headers"] = {
+                **kwargs.get("headers", {}),
+                "Authorization": authorization,
+            }
         try:
             response = self.session.request(
                 method,
@@ -136,8 +178,11 @@ class Registry:
             response.close()
             raise TransportError("registry redirect rejected")
         challenge = response.headers.get("WWW-Authenticate", "")
-        if challenge and not re.fullmatch(
-            r'Basic(?:\s+realm="[^"\r\n]*")?', challenge, re.IGNORECASE
+        if challenge and (
+            self.bearer
+            or not re.fullmatch(
+                r'Basic(?:\s+realm="[^"\r\n]*")?', challenge, re.IGNORECASE
+            )
         ):
             response.close()
             raise TransportError("unsupported registry authentication challenge")
@@ -236,11 +281,14 @@ def publish_prepared(
     loopback_fixture=False,
     now=None,
     ca_file=None,
+    bearer_policy=None,
+    token_ca_file=None,
 ):
     """Revalidate a sealed handoff, then publish exact bytes using guarded HTTP.
 
-    No token-service support, credential lookup, POST retries, remote cleanup or
-    atomic concurrent-writer guarantee. Unexpected responses stop immediately.
+    Basic is the default; optional Bearer uses only an independently configured
+    HTTPS token authority. No refresh, credential lookup, POST retries, remote
+    cleanup or concurrent-writer guarantee. Unexpected responses stop immediately.
     """
     receipt, directory = PREPARATION.prepare(
         policy,
@@ -293,6 +341,8 @@ def publish_prepared(
             credentials,
             ca_file=ca_file,
             deadline=PREPARATION._time(descriptor["expires_at"]),
+            bearer_policy=bearer_policy,
+            token_ca_file=token_ca_file,
         )
         try:
             content = inventory["manifest_bytes"]
@@ -321,11 +371,25 @@ def publish_prepared(
                 descriptor["tag"], content, manifest_digest
             ):
                 raise TransportError("published manifest cannot be read back")
+            auth = (
+                {}
+                if registry.bearer is None
+                else {
+                    "authentication": {
+                        "mode": "bearer",
+                        "token_requests": registry.bearer.requests,
+                    }
+                }
+            )
             return {
                 **receipt,
+                **auth,
                 "state": "uploaded-and-read-back",
-                "http_requests": registry.requests,
-                "transport": "guarded-basic-oci",
+                "http_requests": registry.requests
+                + (registry.bearer.requests if registry.bearer else 0),
+                "transport": "guarded-bearer-oci"
+                if registry.bearer
+                else "guarded-basic-oci",
                 "identical_retry": existed,
             }
         finally:

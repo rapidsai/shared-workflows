@@ -77,7 +77,13 @@ def service(
 
 
 def publish(
-    tmp_path, origin, *, credentials=("fixture-user", "fixture-value"), ca_file=None
+    tmp_path,
+    origin,
+    *,
+    credentials=("fixture-user", "fixture-value"),
+    ca_file=None,
+    bearer_policy=None,
+    token_ca_file=None,
 ):
     archive = FIXTURE._single_platform_archive(tmp_path)
     handoff = FIXTURE._handoff_for_archive(archive)
@@ -109,6 +115,8 @@ def publish(
         tmp_path,
         credentials=credentials,
         ca_file=ca_file,
+        bearer_policy=bearer_policy,
+        token_ca_file=token_ca_file,
         policy_sha256=prep.digest(policy),
         handoff_sha256=prep.digest(handoff),
         train_sha256="a" * 64,

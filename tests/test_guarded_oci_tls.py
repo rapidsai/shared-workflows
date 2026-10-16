@@ -203,7 +203,7 @@ def registry(certificates, tmp_path_factory):
 
 
 @contextmanager
-def tls_service(certificates, *, certificate="trusted", redirect=None):
+def tls_service(certificates, *, certificate="trusted", redirect=None, challenge=None):
     calls = []
 
     class Handler(http.server.BaseHTTPRequestHandler):
@@ -212,13 +212,15 @@ def tls_service(certificates, *, certificate="trusted", redirect=None):
 
         def do_HEAD(self):
             calls.append(self.headers.get("Authorization"))
-            self.send_response(307 if redirect else 404)
+            self.send_response(307 if redirect else 401 if challenge else 404)
             if redirect:
                 self.send_header("Location", redirect)
+            if challenge:
+                self.send_header("WWW-Authenticate", challenge)
             self.send_header("Content-Length", "0")
             self.end_headers()
 
-        do_GET = do_HEAD
+        do_GET = do_POST = do_HEAD
 
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)

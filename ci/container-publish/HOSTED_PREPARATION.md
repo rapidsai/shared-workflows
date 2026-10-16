@@ -108,20 +108,21 @@ success or `Docker-Content-Digest` header alone is never digest proof. The actua
 [Distribution API](https://distribution.github.io/distribution/spec/api/) describes
 these operations; this deliberately narrow adapter is not a general OCI client.
 
-The adapter accepts explicit Basic credentials only, supplied separately by the
-authorized calling job. It performs no Vault/credential lookup and has no hosted
+The adapter defaults to explicit Basic credentials, supplied separately by the
+authorized calling job. [Optional strict Bearer mode](BEARER_TRANSPORT.md) sends
+bootstrap credentials only to an independently configured HTTPS token endpoint. It performs no Vault/credential lookup and has no hosted
 execution CLI or workflow wiring. Requests 2.34.2 is pinned by the contract hook.
 `Session.trust_env=False` is set before request preparation, so ambient netrc,
 proxy and CA-bundle environment configuration cannot supply credentials or alter
 transport. TLS verification stays enabled for HTTPS; an optional explicit CA
 file is a caller-reviewed trust input, never an insecure flag. The existing
-loopback-fixture switch permits HTTP only on `127.0.0.1` with an explicit port.
+loopback-fixture switch permits HTTP or HTTPS only on `127.0.0.1` with an explicit port.
 It is not suitable for production credentials.
 
 Every request rechecks the descriptor deadline and is guarded against the exact
 approved origin and repository API prefix. HTTP 3xx responses are errors for GET, HEAD, POST and PUT; requests never
-follow them. Bearer/other authentication challenges fail without token-realm
-requests. Server-controlled upload `Location` must be an absolute URL at the
+follow them. Authentication challenges never select token realms or retries;
+unexpected challenges fail. Server-controlled upload `Location` must be an absolute URL at the
 same origin or an origin-relative `/v2/<exact-repository>/blobs/uploads/<id>`.
 Path-relative locations, other authorities/schemes/repos, percent-encoded paths,
 traversal, fragments, controls and unknown query parameters are rejected before
@@ -135,7 +136,7 @@ Existing matching tags and blobs are read back and verified on an identical
 retry; conflicting tag bytes are rejected before any upload. An absent tag is
 checked again before PUT, but this is not an atomic concurrent-writer guarantee.
 Require a single authorized writer or separately proven registry immutability.
-No blob mounts, DELETE, chunked PATCH/resume, token service, external storage
+No blob mounts, DELETE, chunked PATCH/resume, token refresh, external storage
 redirect, multi-platform index publication or referrer support is implemented.
 There is a 128-unique-blob bound in addition to the archive limits above. An
 interrupted POST may leave a remote upload session; operator retention/cleanup
@@ -168,8 +169,8 @@ Before hosted activation, an operator must select and approve:
 3. An enforced and tested registry/client transport boundary covering upload
    locations, token realms, redirects and destination namespaces. This may
    require a supported guarded transport or operator-managed network policy;
-   the new adapter supports only Basic-auth registries with the bounded API
-   above. Other registry authentication/storage schemes require their own
+   the adapter supports Basic authentication or the explicitly configured narrow
+   Bearer mode with the bounded API above. Other registry authentication/storage schemes require their own
    transport implementation and tests. A JSON evidence reference alone does not
    enforce it.
 4. A reviewed hosted job adopting this adapter that revalidates policy/handoff
