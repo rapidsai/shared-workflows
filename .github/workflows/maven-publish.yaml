@@ -5,13 +5,23 @@
 # file is GPG-signed. The destination is chosen inside this workflow with
 # `rapids-is-release-build`:
 #   - release build (vYY.MM.PP tag) -> Maven Central via the Sonatype Central
-#     Publisher Portal (OSSRH staging + validation, human-gated publish).
+#     Publisher Portal (OSSRH staging, validation, automatic publication).
 #   - non-release build (nightly, branch push) -> Sonatype snapshot repository
 #     (direct HTTP PUT, immediately available, no staging or portal step).
 name: Maven publish
 
 on:
   workflow_call:
+    outputs:
+      deployment-state:
+        description: Maven Central deployment state; PUBLISHED authorizes dependent releases.
+        value: ${{ jobs.maven-publish.outputs.deployment-state }}
+      deployment-id:
+        description: Sonatype Portal deployment ID for release recovery.
+        value: ${{ jobs.maven-publish.outputs.deployment-id }}
+      version:
+        description: Maven version read from the published POM.
+        value: ${{ jobs.maven-publish.outputs.version }}
     inputs:
       artifact-name:
         description: |
@@ -20,16 +30,14 @@ on:
           a Maven repository directory.
         required: true
         type: string
-      stage-for-maven-central-publish:
+      docs-project:
         description: |
-          When true, leave the bundle PENDING in the Sonatype Central
-          Publisher Portal for a human to release via the Portal UI
-          (https://central.sonatype.com). When false (default), validate then
-          drop the bundle. Only applies to the Maven Central path (release
-          builds). Ignored on the snapshot path.
+          Optional registered Java docs project in rapidsai/docs, e.g. cudf-java.
+          Retain a completed-publication receipt after PUBLISHED. The standalone
+          dispatcher in release-tracking starts docs using its existing App.
         required: false
-        type: boolean
-        default: false
+        type: string
+        default: ''
       source-git-sha:
         description: |
           Git SHA to include in the retained bundle name for provenance.
@@ -68,6 +76,13 @@ jobs:
   maven-publish:
     name: maven publish
     runs-on: linux-amd64-cpu4
+    concurrency:
+      group: maven-central-${{ github.repository }}-${{ inputs.artifact-name }}
+      cancel-in-progress: false
+    outputs:
+      version: ${{ steps.prepare.outputs.VERSION }}
+      deployment-state: ${{ steps.publish-central.outputs.DEPLOYMENT_STATE }}
+      deployment-id: ${{ steps.publish-central.outputs.DEPLOYMENT_ID }}
     steps:
       - name: Self-checkout shared-workflows
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -96,6 +111,32 @@ jobs:
             echo "is_release=false" >> "${GITHUB_OUTPUT}"
           fi
 
+      - name: Find retained deployment from an earlier attempt
+        id: receipt
+        if: ${{ steps.destination.outputs.is_release == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECEIPT_NAME: maven-central-deployment-${{ inputs.artifact-name }}-${{ github.run_id }}
+          PUBLICATION_NAME: maven-central-published-${{ inputs.docs-project }}
+        run: |
+          artifacts=$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts")
+          ids=$(jq -er --arg name "${RECEIPT_NAME}" \
+              '[.[].artifacts[] | select(.name == $name and .expired == false)]
+               | if length <= 1 then (.[0].id // "") else error("duplicate receipts") end' <<< "${artifacts}")
+          echo "artifact-id=${ids}" >> "${GITHUB_OUTPUT}"
+          published=$(jq -er --arg name "${PUBLICATION_NAME}" \
+            '[.[].artifacts[] | select(.name == $name and .expired == false)]
+             | if length <= 1 then (.[0].id // "") else error("duplicate publication receipts") end' <<< "${artifacts}")
+          echo "published-artifact-id=${published}" >> "${GITHUB_OUTPUT}"
+
+      - name: Restore retained deployment
+        if: ${{ steps.receipt.outputs.artifact-id != '' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ steps.receipt.outputs.artifact-id }}
+          path: deployment-receipt
+          merge-multiple: true
+
       - name: Download Maven repository artifact
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -116,13 +157,17 @@ jobs:
         id: publish-central
         if: ${{ steps.destination.outputs.is_release == 'true' }}
         run: |
+          if [[ -n ${DOCS_PROJECT} ]]; then
+            shared-workflows/ci/maven-publish/write_maven_publication_receipt.sh --validate
+          fi
+          mkdir -p deployment-receipt
           args=(
             --input signed-maven-repo
             --group-id "${GROUP_ID}"
             --artifact-id "${ARTIFACT_ID}"
             --version "${VERSION}"
             --output-bundle central-bundle.zip
-            --auto-drop "${AUTO_DROP}"
+            --deployment-receipt deployment-receipt/deployment.json
           )
           if [[ -n ${PROFILE_ID} ]]; then
             args+=(--profile-id "${PROFILE_ID}")
@@ -133,10 +178,41 @@ jobs:
           PROFILE_ID: ${{ inputs.profile-id }}
           ARTIFACT_ID: ${{ steps.prepare.outputs.ARTIFACT_ID }}
           VERSION: ${{ steps.prepare.outputs.VERSION }}
-          # Invert: stage-for-...=true means don't auto-drop.
-          AUTO_DROP: ${{ !inputs.stage-for-maven-central-publish }}
+          DOCS_PROJECT: ${{ inputs.docs-project }}
+          SOURCE_GIT_SHA: ${{ inputs.source-git-sha || github.sha }}
           MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME }}
           MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
+
+      - name: Write completed-publication receipt
+        if: ${{ !cancelled() && steps.publish-central.outputs.DEPLOYMENT_STATE == 'PUBLISHED' && inputs.docs-project != '' && steps.receipt.outputs.published-artifact-id == '' }}
+        env:
+          DOCS_PROJECT: ${{ inputs.docs-project }}
+          GROUP_ID: ${{ steps.prepare.outputs.GROUP_ID }}
+          ARTIFACT_ID: ${{ steps.prepare.outputs.ARTIFACT_ID }}
+          VERSION: ${{ steps.prepare.outputs.VERSION }}
+          SOURCE_GIT_SHA: ${{ inputs.source-git-sha || github.sha }}
+          DEPLOYMENT_ID: ${{ steps.publish-central.outputs.DEPLOYMENT_ID }}
+          DEPLOYMENT_STATE: ${{ steps.publish-central.outputs.DEPLOYMENT_STATE }}
+        run: |
+          shared-workflows/ci/maven-publish/write_maven_publication_receipt.sh completed-publication/publication.json
+
+      - name: Retain completed-publication receipt
+        if: ${{ !cancelled() && steps.publish-central.outputs.DEPLOYMENT_STATE == 'PUBLISHED' && inputs.docs-project != '' && steps.receipt.outputs.published-artifact-id == '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: maven-central-published-${{ inputs.docs-project }}
+          path: completed-publication/publication.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Retain deployment for publication recovery
+        if: ${{ !cancelled() && steps.destination.outputs.is_release == 'true' && steps.receipt.outputs.artifact-id == '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: maven-central-deployment-${{ inputs.artifact-name }}-${{ github.run_id }}
+          path: deployment-receipt/deployment.json
+          if-no-files-found: ignore
+          retention-days: 90
 
       - name: Upload to Sonatype snapshots
         id: publish-snapshot
