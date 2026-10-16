@@ -28,7 +28,13 @@ _BEARER_SPEC = importlib.util.spec_from_file_location(
 )
 BEARER = importlib.util.module_from_spec(_BEARER_SPEC)
 _BEARER_SPEC.loader.exec_module(BEARER)
+_DEADLINE_SPEC = importlib.util.spec_from_file_location(
+    "transport_deadline", Path(__file__).with_name("http_deadline.py")
+)
+HTTP_DEADLINE = importlib.util.module_from_spec(_DEADLINE_SPEC)
+_DEADLINE_SPEC.loader.exec_module(HTTP_DEADLINE)
 MAX_BLOBS = 128
+REQUEST_SECONDS = 30
 
 
 class TransportError(ValueError):
@@ -160,18 +166,21 @@ class Registry:
                 "Authorization": authorization,
             }
         try:
-            response = self.session.request(
-                method,
-                url,
-                timeout=(5, 30),
-                allow_redirects=False,
-                stream=True,
-                proxies={},
-                **kwargs,
-            )
-        except (requests.RequestException, OSError):
+            expires = HTTP_DEADLINE.expires_after(REQUEST_SECONDS, self.deadline)
+            with HTTP_DEADLINE.interrupt_at(expires):
+                response = self.session.request(
+                    method,
+                    url,
+                    timeout=(5, 30),
+                    allow_redirects=False,
+                    stream=True,
+                    proxies={},
+                    **kwargs,
+                )
+            response._guarded_http_expires = expires
+        except (requests.RequestException, OSError, HTTP_DEADLINE.DeadlineError):
             raise TransportError(
-                "registry request failed; no automatic retry"
+                "registry request failed or deadline expired; no automatic retry"
             ) from None
         self.requests += 1
         if 300 <= response.status_code < 400:
@@ -205,14 +214,22 @@ class Registry:
         count = 0
         try:
             with response:
-                for chunk in response.iter_content(1024 * 1024):
-                    count += len(chunk)
-                    if count > size:
-                        raise TransportError("registry readback exceeds expected size")
-                    digest.update(chunk)
-        except requests.RequestException:
+                expires = getattr(response, "_guarded_http_expires", None)
+                if expires is None:
+                    raise TransportError(
+                        "registry response lacks its original request deadline"
+                    )
+                with HTTP_DEADLINE.interrupt_at(expires):
+                    for chunk in response.iter_content(1024 * 1024):
+                        count += len(chunk)
+                        if count > size:
+                            raise TransportError(
+                                "registry readback exceeds expected size"
+                            )
+                        digest.update(chunk)
+        except (requests.RequestException, HTTP_DEADLINE.DeadlineError):
             raise TransportError(
-                "registry readback failed; no automatic retry"
+                "registry readback failed or deadline expired; no automatic retry"
             ) from None
         if count != size or digest.hexdigest() != expected_digest:
             raise TransportError("registry readback bytes differ from admitted digest")
@@ -385,6 +402,9 @@ def publish_prepared(
                 **receipt,
                 **auth,
                 "state": "uploaded-and-read-back",
+                "http_deadline_sha256": hashlib.sha256(
+                    Path(__file__).with_name("http_deadline.py").read_bytes()
+                ).hexdigest(),
                 "http_requests": registry.requests
                 + (registry.bearer.requests if registry.bearer else 0),
                 "transport": "guarded-bearer-oci"

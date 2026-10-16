@@ -39,6 +39,7 @@ CLIENTS = (
     "ci/container-publish/hosted_preparation.py",
     "ci/container-publish/guarded_oci_transport.py",
     "ci/container-publish/guarded_oci_bearer.py",
+    "ci/container-publish/http_deadline.py",
 )
 
 

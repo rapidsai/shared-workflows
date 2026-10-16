@@ -192,3 +192,8 @@ This adapter does not pretend that all destinations share an OCI protocol:
 Live service setup, credential installation and hosted uploads require a separate
 concrete review/authorization. No workflow, proof pin, IAM, Vault or service
 configuration is changed here.
+
+The guarded transport's [deadline execution contract](BEARER_TRANSPORT.md#deadline-execution-contract)
+requires a POSIX main thread with no existing real-time alarm. Its absolute
+budgets interrupt slow socket headers/body without background requests or retry;
+this does not claim universal native-extension or DNS cancellation.

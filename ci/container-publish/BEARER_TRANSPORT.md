@@ -39,9 +39,11 @@ before preparing requests. HTTPS verification is never disabled. Token GET
 redirects and any response Location are rejected. The token request explicitly
 selects `Accept-Encoding: identity`; nonidentity responses are rejected before
 streaming. Declared and streamed response bodies are capped at 64 KiB; tokens
-at 16 KiB. Connect/read inactivity timeouts are five seconds, and the streamed
-body has a ten-second checked budget. These are not a hard wall-clock watchdog
-for a peer that indefinitely drips HTTP headers. No raw token, token-service body/error,
+at 16 KiB. Connect/read inactivity timeouts are five seconds. A POSIX main-thread alarm
+also interrupts the complete token exchange after ten seconds, including slow
+response headers and body, clamped to the descriptor deadline. Registry requests
+have one thirty-second absolute budget shared by upload, headers and readback;
+waiting before reading does not reset that budget. No raw token, token-service body/error,
 bootstrap credential or token-endpoint URL is logged or added to a receipt.
 
 This selected subset requires explicit UTC `issued_at` and integer `expires_in`
@@ -79,3 +81,28 @@ discovery, device/code flow, refresh-token support, single-use-token management,
 or support for arbitrary registry/token providers. Hosted issuer selection,
 credential isolation, private ACLs, trust distribution, operator policy and
 production authorization remain separate acceptance work.
+
+## Deadline execution contract
+
+The synchronous transport requires POSIX `SIGALRM`/`setitimer` support on the main
+Python thread. It refuses an already-active real-time alarm before network I/O,
+rather than taking ownership of another caller's timer. Each protected phase
+restores the prior signal handler and disables only its own timer in `finally`,
+on success and failure. Header timeout, streamed-body timeout and ambiguous POST
+timeout close the connection and never cause retry or token refresh. Receipts
+include the deadline helper's source SHA-256; rehearsal plans bind that helper
+along with the other client sources.
+
+This is real interruption of Python socket operations, including a peer that
+keeps an inactivity timeout alive by dripping headers. It is not process
+isolation or a universal watchdog for uninterruptible native extensions, system
+DNS resolvers or arbitrary caller code. Non-POSIX and worker-thread use fail
+closed; there is no weaker thread-only timeout fallback. Existing TLS, exact
+origin, location, credential and digest boundaries remain mandatory.
+
+The fixed thirty-second registry budget is tested with tiny fixture images and a
+bounded stalled upload, not large RAPIDS archives. Hosted acceptance must size
+and review that bounded budget against actual archive sizes and throughput;
+this source change does not claim large-image transfer readiness. Readback
+rejects responses missing their original request deadline instead of starting a
+new budget.

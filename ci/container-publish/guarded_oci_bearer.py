@@ -8,6 +8,8 @@ token client, verifies the token signature and grants repository actions.
 
 from datetime import datetime, timedelta, timezone
 import json
+import importlib.util
+from pathlib import Path
 import re
 import time
 from urllib.parse import urlsplit
@@ -17,6 +19,14 @@ import requests
 MAX_RESPONSE_BYTES = 64 * 1024
 MAX_TOKEN_BYTES = 16 * 1024
 MAX_TTL_SECONDS = 3600
+
+
+_DEADLINE_SPEC = importlib.util.spec_from_file_location(
+    "token_deadline", Path(__file__).with_name("http_deadline.py")
+)
+HTTP_DEADLINE = importlib.util.module_from_spec(_DEADLINE_SPEC)
+_DEADLINE_SPEC.loader.exec_module(HTTP_DEADLINE)
+REQUEST_SECONDS = 10
 
 
 class BearerError(ValueError):
@@ -126,56 +136,64 @@ class Token:
         self.requests += 1
         started = time.monotonic()
         try:
-            response = self.session.get(
-                self.policy["endpoint"],
-                headers={"Accept-Encoding": "identity"},
-                params={
-                    "service": self.policy["service"],
-                    "scope": "repository:" + self.policy["repository"] + ":pull,push",
-                },
-                timeout=(5, 5),
-                allow_redirects=False,
-                proxies={},
-                stream=True,
-            )
-            with response:
-                if response.status_code != 200 or response.headers.get("Location"):
-                    raise BearerError("token HTTP response/redirect rejected")
-                if response.headers.get("Content-Encoding", "").strip().lower() not in {
-                    "",
-                    "identity",
-                }:
-                    raise BearerError("token response encoding rejected")
-                if (
-                    response.headers.get("Content-Type", "")
-                    .split(";", 1)[0]
-                    .strip()
-                    .lower()
-                    != "application/json"
-                ):
-                    raise BearerError("token response must be JSON")
-                declared = response.headers.get("Content-Length")
-                if declared is not None and (
-                    not declared.isdigit() or int(declared) > MAX_RESPONSE_BYTES
-                ):
-                    raise BearerError("token response exceeds size bound")
-                body = bytearray()
-                # Byte-sized yields enforce the response-body time budget even on a
-                # slow peer that avoids inactivity timeouts by dripping bytes.
-                for chunk in response.iter_content(1):
-                    body.extend(chunk)
+            expires = HTTP_DEADLINE.expires_after(REQUEST_SECONDS, self.deadline)
+            with HTTP_DEADLINE.interrupt_at(expires):
+                response = self.session.get(
+                    self.policy["endpoint"],
+                    headers={"Accept-Encoding": "identity"},
+                    params={
+                        "service": self.policy["service"],
+                        "scope": "repository:"
+                        + self.policy["repository"]
+                        + ":pull,push",
+                    },
+                    timeout=(5, 5),
+                    allow_redirects=False,
+                    proxies={},
+                    stream=True,
+                )
+                with response:
+                    if response.status_code != 200 or response.headers.get("Location"):
+                        raise BearerError("token HTTP response/redirect rejected")
+                    if response.headers.get(
+                        "Content-Encoding", ""
+                    ).strip().lower() not in {
+                        "",
+                        "identity",
+                    }:
+                        raise BearerError("token response encoding rejected")
                     if (
-                        len(body) > MAX_RESPONSE_BYTES
-                        or time.monotonic() - started > 10
+                        response.headers.get("Content-Type", "")
+                        .split(";", 1)[0]
+                        .strip()
+                        .lower()
+                        != "application/json"
                     ):
-                        raise BearerError("token response exceeds size/time bound")
-                    if (
-                        self.deadline is not None
-                        and datetime.now(timezone.utc) >= self.deadline
+                        raise BearerError("token response must be JSON")
+                    declared = response.headers.get("Content-Length")
+                    if declared is not None and (
+                        not declared.isdigit() or int(declared) > MAX_RESPONSE_BYTES
                     ):
-                        raise BearerError("token publication deadline expired")
-        except (requests.RequestException, OSError):
-            raise BearerError("token request failed; no automatic retry") from None
+                        raise BearerError("token response exceeds size bound")
+                    body = bytearray()
+                    # Byte-sized yields enforce the response-body time budget even on a
+                    # slow peer that avoids inactivity timeouts by dripping bytes.
+                    for chunk in response.iter_content(1):
+                        body.extend(chunk)
+                        if (
+                            len(body) > MAX_RESPONSE_BYTES
+                            or time.monotonic() - started > 10
+                        ):
+                            raise BearerError("token response exceeds size/time bound")
+                        if (
+                            self.deadline is not None
+                            and datetime.now(timezone.utc) >= self.deadline
+                        ):
+                            raise BearerError("token publication deadline expired")
+        except (requests.RequestException, OSError, HTTP_DEADLINE.DeadlineError):
+            raise BearerError(
+                "token request failed or deadline expired; no automatic retry"
+            ) from None
         try:
             document = json.loads(
                 body.decode("utf-8"), object_pairs_hook=_unique_object
