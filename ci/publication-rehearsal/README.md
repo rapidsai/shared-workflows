@@ -16,7 +16,7 @@ negative tests continue using the same implementations.
 | --- | --- | --- |
 | Conda | Anaconda client 1.15.0 stage/object upload/commit, authenticated download, SHA-256 against the planned archive, identical retry with one storage upload; with explicit indexer/Pixi tools, real channel indexing and authenticated solver/install of those readback bytes, installed package identity and payload hash | Synthetic API/channel services. The no-dependency noarch package tests retrieval and installation, not RAPIDS dependency compatibility or hosted ACL/indexing. Without both tools, the receipt explicitly retains the unexercised install gap. |
 | Python through Kitmaker | Exact reviewed SDK project discovery, release POST, UUID and completed-status calls; simulated worker fetches the planned wheel; actual pip reads an authenticated Simple index, downloads with `--require-hashes`, installs offline into a disposable venv, and imports/executes the fixture | The Portal, worker and Simple index are **simulated**, including the returned `completed` state. This is not evidence that hosted Kitmaker delivers to a private index. Synthetic wheel only; no sdist. Direct public PyPI is never used. |
-| Maven | Existing shell/curl Central publisher uploads, hands off and reaches VALIDATED; independent authenticated GET hashes all 24 coordinate/checksum files, verifies original planned bytes and MD5/SHA-1 metadata, then drops the dummy deployment | Synthetic Central protocol; `.asc` files are synthetic bytes, not valid signatures. No snapshot deploy-plugin, hosted repository indexing or public release. SHA-256 is used for evidence; legacy checksums are compatibility metadata. |
+| Maven | Existing signing step creates real fixture signatures; shell/curl Central publisher uploads, hands off and reaches VALIDATED; independent authenticated GET hashes all 24 coordinate/checksum files, verifies original planned bytes/legacy checksums and all four detached signatures, then drops the dummy deployment | Synthetic Central protocol and ephemeral host fixture signer. Production signer, Docker/Maven preparation wrapper, snapshot deploy-plugin and hosted indexing are not exercised. SHA-256 is used for evidence; MD5/SHA-1 are compatibility metadata. |
 | OCI | Planned gzip OCI input passes the existing real authenticated registry, guarded HTTP publisher, independent digest readback and ORAS baseline; ordered/repeated layer references retained, digest pull and owned-resource cleanup checked | Synthetic image and local registry. No hosted ACL/TLS acceptance, private managed-runner startup or full-train image coverage. |
 
 Machine-readable evidence repeats `local_fixture_only: true`,
@@ -26,6 +26,25 @@ revision, pip versions, wheel hash, index/download events and installed behavior
 Other family records include exact archive/manifest/config/layer or coordinate
 hashes. Actual runtime/dependency versions are recorded; they are not a new
 production lock or tooling release.
+
+Maven preparation generates a one-day, test-only RSA signing identity in a short,
+private temporary `GNUPGHOME`. A small host fixture calls the existing
+`list_artifacts_to_sign` and `sign_artifacts_in_place` step functions. It never
+imports an operator key or executes the Docker/Maven wrapper. Only the public
+key is retained; the fixture's agent is explicitly stopped for that exact owned
+keyring before the directory is removed. No default keyring or HOME is changed.
+The public key, signed artifacts and detached signatures are all sealed in the
+immutable plan. Running/retrying validation never generates replacement keys or
+signatures; a partial/completed replay still requires a new plan directory.
+
+After upload, `gpgv` checks the independently downloaded artifact/signature pairs
+in another empty private homedir with only the planned public key. Exactly one
+primary signing key and exactly one valid signature from that fingerprint are
+accepted. Tampered artifacts/signatures, a wrong key (even when an ambient
+default keyring contains the correct key), extra public keys and extra detached
+signatures fail. The receipt records public-key/fingerprint, artifact/signature
+hashes and actual GnuPG versions. This proves fixture byte/signature consistency,
+not a production signing identity, trust decision or publication authorization.
 
 ## Replay
 
@@ -50,7 +69,8 @@ never disabled. Explicit loopback-fixture mode permits HTTP or HTTPS on
 This is local certificate/transport acceptance, not hosted service ACL, managed
 runner trust distribution, credential provisioning or production authorization.
 
-Provide Python with the pinned dependencies in the `four-family-rehearsal`
+Provide GnuPG (`gpg`, `gpgv`, `gpgconf`), Bash supporting the existing step
+functions, and Python with the pinned dependencies in the `four-family-rehearsal`
 pre-commit hook, plus the existing local Docker, ORAS 1.3.3, curl, jq, bash and
 standard fixture prerequisites. The SDK comes from a separate clean checkout of
 reviewed release-scripts `b95debb0b3310c4e4a86b8fa62e565b34af3683d`.

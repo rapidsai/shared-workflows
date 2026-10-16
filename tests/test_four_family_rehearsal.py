@@ -64,6 +64,16 @@ def test_real_four_family_plan_clients_retrieval_install_and_completion(
     assert "pip-simple-index" in python["events"]
     assert "pip-wheel-download" in python["events"]
     assert len(report["families"]["maven"]["artifact_sha256s"]) == 24
+    signed = report["families"]["maven"]["signatures"]
+    assert signed["verification"] == "gpgv-exact-planned-key"
+    assert len(signed["artifacts"]) == 4
+    assert signed["public_key_sha256"] == DRIVER.sha(
+        tmp_path / "maven/signer-public.asc"
+    )
+    assert all(
+        item["primary_signing_fingerprint"] == signed["primary_signing_fingerprint"]
+        for item in signed["artifacts"].values()
+    )
     oci = report["families"]["oci"]
     assert (
         oci["archive"]["transport_sha256"]

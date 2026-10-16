@@ -28,6 +28,10 @@ CLIENTS = (
     "ci/publication-rehearsal/conda_fixture.py",
     "ci/publication-rehearsal/conda_channel_install.py",
     "ci/publication-rehearsal/maven_fixture.py",
+    "ci/publication-rehearsal/maven_signatures.py",
+    "ci/publication-rehearsal/sign_maven_fixture.sh",
+    "ci/maven-publish/prepare_maven_bundle_steps.sh",
+    "ci/maven-publish/maven_utils.sh",
     "ci/publication-rehearsal/kitmaker_fixture.py",
     "ci/conda-publish/local_rehearsal.py",
     "ci/maven-publish/maven_central_publish.sh",
@@ -157,6 +161,10 @@ def prepare(root):
     conda.package(root / "conda")
     kitmaker.wheel(root / "python/fixture_one-26.12.0-py3-none-any.whl")
     maven.package_files(root / "maven")
+    signatures = load(
+        "local_maven_signatures", "ci/publication-rehearsal/maven_signatures.py"
+    )
+    signatures.prepare(root / "maven")
     oci.write_producer_shaped_single_platform_archive(
         root / "oci/input.tar.gz",
         architecture="amd64",
@@ -220,6 +228,7 @@ def validate(root, expected_sha256):
         "conda/conda-fixture-26.12.00-h0_0.conda",
         "python/fixture_one-26.12.0-py3-none-any.whl",
         "oci/input.tar.gz",
+        "maven/signer-public.asc",
     }
     expected_paths.update(
         "maven/signed/ai/rapids/example/26.12.0/example-26.12.0" + suffix
@@ -337,6 +346,9 @@ def conda_run(root, plan, *, conda_python=None, pixi=None):
 
 def maven_run(root, plan):
     fixture = load("unified_maven", "ci/publication-rehearsal/maven_fixture.py")
+    readback = root / "maven/readback"
+    readback.mkdir(mode=0o700)
+    downloaded = {}
     with fixture.service() as (origin, state):
         result, bundle = fixture.run(
             root / "maven", origin, auto_drop=False, use_prepared=True
@@ -348,12 +360,15 @@ def maven_run(root, plan):
             for path in state["uploads"]:
                 relative = path.removeprefix("/service/local/staging/deploy/maven2/")
                 expected = hashlib.sha256(archive.read(relative)).hexdigest()
+                destination = readback / str(len(downloaded))
+                downloaded[relative] = destination
                 hashes[relative] = fetch(
                     origin,
                     path,
                     expected,
                     auth="Bearer " + fixture.AUTH,
                     maximum_bytes=len(archive.read(relative)),
+                    destination=destination,
                 )
             originals = {
                 name.removeprefix("maven/signed/"): digest
@@ -382,6 +397,17 @@ def maven_run(root, plan):
                         raise RehearsalError(
                             "Maven client checksum metadata differs from artifact bytes"
                         )
+        signatures = load(
+            "unified_maven_signatures", "ci/publication-rehearsal/maven_signatures.py"
+        )
+        verified = signatures.verify(
+            root / "maven/signer-public.asc",
+            {
+                name: (downloaded[name], downloaded[name + ".asc"])
+                for name in originals
+                if not name.endswith(".asc")
+            },
+        )
         with requests.Session() as session:
             session.trust_env = False
             response = session.delete(
@@ -397,9 +423,10 @@ def maven_run(root, plan):
             "artifact_sha256s": hashes,
             "bundle_sha256": sha(bundle),
             "state": "VALIDATED-and-dropped",
+            "signatures": verified,
             "limits": [
                 "simulated Central service",
-                "synthetic asc bytes; signatures not verified",
+                "ephemeral host fixture signing; production signer/wrapper not exercised",
                 "snapshot deploy-plugin not exercised",
             ],
         }

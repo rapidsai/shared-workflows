@@ -41,6 +41,7 @@ def test_prepare_emits_the_exact_hash_bound_four_family_plan(tmp_path):
         "conda/conda-fixture-26.12.00-h0_0.conda",
         "python/fixture_one-26.12.0-py3-none-any.whl",
         "oci/input.tar.gz",
+        "maven/signer-public.asc",
         *{
             "maven/signed/ai/rapids/example/26.12.0/example-26.12.0" + suffix
             for suffix in (
