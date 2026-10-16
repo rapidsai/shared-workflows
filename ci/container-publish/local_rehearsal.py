@@ -992,7 +992,9 @@ def import_oci_archive(
     return inventory
 
 
-def rehearse(*, single_archive_input=None, single_archive_sha256=None):
+def rehearse(
+    *, single_archive_input=None, single_archive_sha256=None, run_payload=False
+):
     if (single_archive_input is None) != (single_archive_sha256 is None):
         raise ValueError("planned OCI input requires an independent transport digest")
     if single_archive_input is not None:
@@ -1557,6 +1559,39 @@ def rehearse(*, single_archive_input=None, single_archive_sha256=None):
                 registry_config,
                 oras_home,
             )
+            image_execution = None
+            if run_payload:
+                runnable = local_reference(
+                    endpoint
+                    + "/"
+                    + identifier
+                    + "/fixture-import@sha256:"
+                    + single_inventory["runnable_manifest_sha256"]
+                )
+                refs.append(runnable)
+                command(client + ["pull", "--platform=linux/amd64", runnable])
+                observed = command(
+                    client
+                    + [
+                        "run",
+                        "--rm",
+                        "--network=none",
+                        "--read-only",
+                        "--cap-drop=ALL",
+                        "--security-opt=no-new-privileges:true",
+                        "--platform=linux/amd64",
+                        runnable,
+                    ]
+                ).stdout.strip()
+                if observed != "rapids-dummy-container-26.12":
+                    raise ValueError("published OCI payload did not execute")
+                image_execution = {
+                    "manifest_sha256": single_inventory["runnable_manifest_sha256"],
+                    "platform": "linux/amd64",
+                    "output": observed,
+                    "network": "none",
+                    "read_only": True,
+                }
             imported_retry = import_oci_archive(
                 oras,
                 archive_path,
@@ -1631,6 +1666,8 @@ def rehearse(*, single_archive_input=None, single_archive_sha256=None):
                 command(client + ["version", "--format", "{{json .}}"]).stdout
             )
             native_arch = versions["Server"]["Arch"]
+            if image_execution is not None:
+                image_execution["docker_server_architecture"] = native_arch
             by_index = local_reference(endpoint + "/" + repo + "@" + digest)
             refs.append(by_index)
             command(client + ["pull", "--platform", "linux/" + native_arch, by_index])
@@ -1640,6 +1677,7 @@ def rehearse(*, single_archive_input=None, single_archive_sha256=None):
                 raise ValueError("identical manifest retry changed registry bytes")
             receipt = {
                 "local_contract_only": True,
+                "image_execution": image_execution,
                 "synthetic_images_only": True,
                 "registry_image": REGISTRY_IMAGE,
                 "oras_version": oras_version.strip(),

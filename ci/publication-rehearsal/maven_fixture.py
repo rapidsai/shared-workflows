@@ -34,6 +34,8 @@ def service(mode="success", redirect=None):
             self.send_response(status)
             if location is not None:
                 self.send_header("Location", location)
+            if status == 401 and self.path.startswith("/repository/"):
+                self.send_header("WWW-Authenticate", 'Basic realm="LocalFixture"')
             payload = raw if raw is not None else json.dumps(body or {}).encode()
             self.send_header("Content-Length", str(len(payload)))
             self.end_headers()
@@ -42,7 +44,11 @@ def service(mode="success", redirect=None):
         def _request(self):
             parts = urlsplit(self.path)
             query = parse_qs(parts.query)
-            expected_auth = ("Basic " if self.command == "PUT" else "Bearer ") + AUTH
+            expected_auth = (
+                "Basic "
+                if self.command == "PUT" or parts.path.startswith("/repository/")
+                else "Bearer "
+            ) + AUTH
             state["requests"].append(
                 (self.command, parts.path, query, self.headers.get("Authorization"))
             )
@@ -58,6 +64,15 @@ def service(mode="success", redirect=None):
                     200,
                     {"repositories": "invalid" if mode == "invalid-search" else None},
                 )
+            elif self.command == "GET" and parts.path.startswith("/repository/"):
+                coordinate = (
+                    "/service/local/staging/deploy/maven2/"
+                    + parts.path.removeprefix("/repository/")
+                )
+                if state["handed_off"] and coordinate in state["uploads"]:
+                    self._reply(200, raw=state["uploads"][coordinate])
+                else:
+                    self._reply(404, {"error": "dummy coordinate missing"})
             elif self.command == "GET" and parts.path in state["uploads"]:
                 self._reply(200, raw=state["uploads"][parts.path])
             elif parts.path == "/manual/search/repositories":

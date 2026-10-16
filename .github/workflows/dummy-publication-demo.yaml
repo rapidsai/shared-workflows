@@ -1,0 +1,45 @@
+---
+name: Dummy publication and install demo
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  demo:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Install local registry password tool
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y apache2-utils
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94
+        with:
+          pixi-version: v0.81.0
+          manifest-path: ci/publication-rehearsal/pixi.toml
+          locked: true
+          cache: false
+      - name: Publish, retrieve, install and run all four families
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_SCRIPTS_READ_TOKEN }}
+          DEMO_OUTPUT: ${{ runner.temp }}/dummy-publication
+        run: pixi run --locked --manifest-path ci/publication-rehearsal/pixi.toml demo --output "$DEMO_OUTPUT"
+      - name: Preserve receipts and exact dummy package bytes
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dummy-publication-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          retention-days: 7
+          path: |
+            ${{ runner.temp }}/dummy-publication/rehearsal/plan.json
+            ${{ runner.temp }}/dummy-publication/rehearsal/completion.json
+            ${{ runner.temp }}/dummy-publication/rehearsal/results/*.json
+            ${{ runner.temp }}/dummy-publication/rehearsal/conda/*.conda
+            ${{ runner.temp }}/dummy-publication/rehearsal/python/*.whl
+            ${{ runner.temp }}/dummy-publication/rehearsal/maven/signed/**
+            ${{ runner.temp }}/dummy-publication/rehearsal/maven/signer-public.asc
+            ${{ runner.temp }}/dummy-publication/rehearsal/oci/input.tar.gz

@@ -9,6 +9,7 @@ import io
 import importlib.util
 import json
 from pathlib import Path
+import re
 import tarfile
 import threading
 
@@ -32,7 +33,7 @@ def test_real_registry_docker_roundtrip_and_denials():
     assert report["wrong_digest_api"] == "MANIFEST_UNKNOWN/404"
     assert report["digest_pulls"] == "passed"
     assert report["identical_retry"] == "unchanged"
-    assert report["oras_version"].startswith("Version:    1.3.3")
+    assert re.search(r"(?m)^Version:\s+1\.3\.3(?:\+|\s|$)", report["oras_version"])
     assert report["oci_archive_sha256"]
     assert report["oci_source_index_digest"] == report["oci_import_index_digest"]
     assert report["oci_archive_platforms"] == ["linux/amd64", "linux/arm64"]

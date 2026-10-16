@@ -25,6 +25,9 @@ ROOT = Path(__file__).resolve().parents[2]
 KITMAKER_REVISION = "b95debb0b3310c4e4a86b8fa62e565b34af3683d"
 CLIENTS = (
     "ci/publication-rehearsal/run_local.py",
+    "ci/publication-rehearsal/usable_payloads.py",
+    "ci/publication-rehearsal/demo.py",
+    "ci/publication-rehearsal/fixtures/Main.java",
     "ci/publication-rehearsal/conda_fixture.py",
     "ci/publication-rehearsal/conda_channel_install.py",
     "ci/publication-rehearsal/maven_fixture.py",
@@ -93,7 +96,11 @@ def execute(argv, *, environment=None, timeout=90):
     if result.returncode:
         # Child output can contain auth, URLs or contact fields; never persist it.
         raise RehearsalError(
-            "local client failed with status " + str(result.returncode)
+            "local client failed with status "
+            + str(result.returncode)
+            + " ("
+            + Path(str(argv[0])).name
+            + ")"
         )
     return result.stdout
 
@@ -148,7 +155,7 @@ def private_root(path):
     return path
 
 
-def prepare(root):
+def prepare(root, *, usable_image=None):
     root = private_root(root)
     if any(root.iterdir()):
         raise RehearsalError("prepare requires an empty private directory")
@@ -163,10 +170,6 @@ def prepare(root):
     conda.package(root / "conda")
     kitmaker.wheel(root / "python/fixture_one-26.12.0-py3-none-any.whl")
     maven.package_files(root / "maven")
-    signatures = load(
-        "local_maven_signatures", "ci/publication-rehearsal/maven_signatures.py"
-    )
-    signatures.prepare(root / "maven")
     oci.write_producer_shaped_single_platform_archive(
         root / "oci/input.tar.gz",
         architecture="amd64",
@@ -174,6 +177,16 @@ def prepare(root):
         image_name="rapidsai/ci-conda",
         repeat_layer=True,
     )
+    if usable_image is not None:
+        payload = load(
+            "usable_payload_prepare", "ci/publication-rehearsal/usable_payloads.py"
+        )
+        payload.java_payload(root)
+        payload.image_payload(root, usable_image)
+    signatures = load(
+        "local_maven_signatures", "ci/publication-rehearsal/maven_signatures.py"
+    )
+    signatures.prepare(root / "maven")
     inputs = {
         str(path.relative_to(root)): sha(path)
         for path in root.rglob("*")
@@ -346,7 +359,7 @@ def conda_run(root, plan, *, conda_python=None, pixi=None):
         }
 
 
-def maven_run(root, plan):
+def maven_run(root, plan, *, maven_cache=None):
     fixture = load("unified_maven", "ci/publication-rehearsal/maven_fixture.py")
     readback = root / "maven/readback"
     readback.mkdir(mode=0o700)
@@ -410,6 +423,19 @@ def maven_run(root, plan):
                 if not name.endswith(".asc")
             },
         )
+        usability = None
+        if maven_cache is not None:
+            payload = load(
+                "usable_maven_resolver", "ci/publication-rehearsal/usable_payloads.py"
+            )
+            usability = payload.resolve_maven(
+                root,
+                origin,
+                maven_cache,
+                plan["inputs"][
+                    "maven/signed/ai/rapids/example/26.12.0/example-26.12.0.jar"
+                ],
+            )
         with requests.Session() as session:
             session.trust_env = False
             response = session.delete(
@@ -422,6 +448,7 @@ def maven_run(root, plan):
                 raise RehearsalError("Maven dummy deployment cleanup failed")
         return {
             "coordinate": "ai.rapids:example:26.12.0",
+            "usability": usability,
             "artifact_sha256s": hashes,
             "bundle_sha256": sha(bundle),
             "state": "VALIDATED-and-dropped",
@@ -563,7 +590,15 @@ def python_run(root, plan, checkout):
         }
 
 
-def run(root, expected_sha256, kitmaker_checkout, *, conda_python=None, pixi=None):
+def run(
+    root,
+    expected_sha256,
+    kitmaker_checkout,
+    *,
+    conda_python=None,
+    pixi=None,
+    maven_cache=None,
+):
     if (conda_python is None) != (pixi is None):
         raise RehearsalError("Conda install requires both explicit runtime tools")
     root = private_root(root)
@@ -592,7 +627,12 @@ def run(root, expected_sha256, kitmaker_checkout, *, conda_python=None, pixi=Non
             else conda_run(root, plan),
         ),
         ("python-kitmaker", lambda: python_run(root, plan, checkout)),
-        ("maven", lambda: maven_run(root, plan)),
+        (
+            "maven",
+            lambda: maven_run(root, plan, maven_cache=maven_cache)
+            if maven_cache
+            else maven_run(root, plan),
+        ),
     ):
         reports[family] = operation()
         write_once(results / (family + ".json"), reports[family])
@@ -601,9 +641,11 @@ def run(root, expected_sha256, kitmaker_checkout, *, conda_python=None, pixi=Non
     result = oci.rehearse(
         single_archive_input=root / "oci/input.tar.gz",
         single_archive_sha256=plan["inputs"]["oci/input.tar.gz"],
+        run_payload=maven_cache is not None,
     )
     reports["oci"] = {
         "archive": result["single_platform_archive"],
+        "image_execution": result.get("image_execution"),
         "guarded_transport": result["guarded_http_transport"],
         "oras_version": result["oras_version"],
         "cleanup_verified": result["cleanup_verified"],

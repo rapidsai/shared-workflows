@@ -161,3 +161,66 @@ Hosted service selection, live credentials/ACLs, downstream delivery, retained
 repository metadata, signatures, authorization and deployment acceptance remain
 separate work. This branch changes no production workflow, proof ref, Vault/IAM
 policy, hosted infrastructure or public publication destination.
+
+## One-command dummy publication and install demo
+
+For the operational demo, install Pixi 0.81.0 and provide a running local Docker
+Unix socket plus `htpasswd` (macOS supplies it; Linux package `apache2-utils`).
+The SDK source is private: provide an authenticated `gh` CLI with repository-read
+access, or pass a clean existing `--kitmaker-checkout`. Only source bootstrap
+uses that read credential; it is never forwarded to publishers or containers.
+From the repository root, choose a fresh output directory:
+
+```text
+pixi run --locked --manifest-path ci/publication-rehearsal/pixi.toml demo --output /tmp/dummy-publishing-demo
+```
+
+The committed Linux/macOS tool lock supplies Python, Anaconda client, real Conda
+indexing, Java/JDK, Maven, ORAS and signing tools. The driver checks out the exact
+reviewed Kitmaker SDK automatically, bootstraps Maven's pinned dependency plugin
+with read-only Maven Central requests, and pulls missing runtime/registry images.
+These are tool/source downloads, not public artifact publication. No production
+publisher credentials are requested or forwarded. The runtime source image is
+resolved to an immutable local image ID and recorded; its three actual Linux
+ELF files form the tiny runnable scratch image. Existing user images/builders
+are preserved; owned containers, network and demo image references are removed.
+
+All four publishing destinations are owned authenticated loopback services.
+The demo keeps the existing Conda/Python install checks and adds real Maven
+resolution of the uploaded JAR through an authenticated loopback-only repository,
+then invokes its Java main class. The Maven plugin cache cannot contain the
+synthetic coordinate, and a mirror blocks public artifact fallback during this
+consumption phase. The JAR, POM and source/doc JARs are real structured artifacts;
+the existing fixture signer signs them before immutable planning.
+
+For OCI, the planned archive is actually published, imported by ORAS, pulled by
+its exact manifest digest and run with network disabled, read-only filesystem,
+all capabilities dropped and no host mounts. The expected Java and container
+payload outputs are recorded alongside hashes. This demonstrates dependency-free
+fixture usability, not RAPIDS/GPU compatibility or managed-runner image startup.
+Kitmaker Portal/worker/private-index delivery remains explicitly simulated;
+actual pip installation/import is real. No hosted service or production signer
+is implied.
+
+`<output>/rehearsal/completion.json` is the sealed completion receipt, with exact
+source/input hashes in `plan.json` and per-family evidence in `results/`.
+Partial failures preserve finished evidence and never overwrite an earlier run.
+The command prints the completion path/SHA and plan SHA. For offline reuse of
+already downloaded prerequisites, `--kitmaker-checkout`, `--maven-cache`,
+`--runtime-image`, `--conda-python` and `--pixi` are explicit optional inputs;
+they do not change publication destinations.
+
+The manual `dummy-publication-demo.yaml` workflow runs that same command on an
+Ubuntu CPU runner and uploads only receipts and exact dummy input package bytes
+for seven days, including partial receipts on failure. It uses read-only checkout
+permissions, no publication secrets or cloud roles. Its private SDK bootstrap
+requires an explicitly configured `RELEASE_SCRIPTS_READ_TOKEN` with read-only
+access to release-scripts; this change does not create that secret or claim
+cross-repository access from the default GitHub token. A new workflow must be
+registered on the repository default branch before GitHub offers manual dispatch;
+this source branch does not claim a hosted run already occurred.
+
+New runtime regressions opt in with `OPER04_MAVEN_CACHE` (plus the locked Maven/JDK
+on PATH) and `OPER04_RUNTIME_IMAGE`; absent those explicit tools they skip while
+pure endpoint/cache/authentication checks always run. A successful standalone
+completion proves the full demo, rather than an optional-test skip count.
