@@ -64,9 +64,15 @@ permissions:
   contents: read
 
 jobs:
+  policy:
+    uses: ./.github/workflows/evaluate-build-policy.yaml
+    permissions: {}
+    with:
+      inputs-json: ${{ toJSON(inputs) }}
   maven-publish:
     name: maven publish
-    if: ${{ inputs.build_type != 'release-candidate' && github.event.inputs.build_type != 'release-candidate' && !(github.ref_type == 'branch' && startsWith(github.ref_name, 'release-test-')) && !startsWith(github.head_ref, 'release-test-') && !startsWith(inputs.branch, 'release-test-') && !startsWith(inputs.branch, 'refs/heads/release-test-') && github.ref != 'agent/release-catalog-canary' && github.ref != 'refs/heads/agent/release-catalog-canary' && github.head_ref != 'agent/release-catalog-canary' && github.head_ref != 'refs/heads/agent/release-catalog-canary' && inputs.branch != 'agent/release-catalog-canary' && inputs.branch != 'refs/heads/agent/release-catalog-canary' }}
+    needs: policy
+    if: ${{ needs.policy.outputs.allow-publication == 'true' }}
     environment: public-publication
     runs-on: linux-amd64-cpu4
     steps:

@@ -63,6 +63,11 @@ permissions:
   id-token: none
 
 jobs:
+  policy:
+    uses: ./.github/workflows/evaluate-build-policy.yaml
+    permissions: {}
+    with:
+      inputs-json: ${{ toJSON(inputs) }}
   compute-matrix:
     runs-on: ubuntu-latest
     outputs:
@@ -77,12 +82,12 @@ jobs:
           echo "matrix=${matrix}" >> "${GITHUB_OUTPUT}"
 
   publish-api-docs:
-    if: ${{ inputs.build_type != 'release-candidate' && github.event.inputs.build_type != 'release-candidate' && !(github.ref_type == 'branch' && startsWith(github.ref_name, 'release-test-')) && !startsWith(github.head_ref, 'release-test-') && !startsWith(inputs.branch, 'release-test-') && !startsWith(inputs.branch, 'refs/heads/release-test-') && github.ref != 'agent/release-catalog-canary' && github.ref != 'refs/heads/agent/release-catalog-canary' && github.head_ref != 'agent/release-catalog-canary' && github.head_ref != 'refs/heads/agent/release-catalog-canary' && inputs.branch != 'agent/release-catalog-canary' && inputs.branch != 'refs/heads/agent/release-catalog-canary' }}
+    if: ${{ needs.policy.outputs.allow-publication == 'true' }}
     environment: public-publication
     permissions:
       contents: read
       id-token: write
-    needs: compute-matrix
+    needs: [compute-matrix, policy]
     runs-on: ubuntu-latest
     container:
       image: ${{ inputs.container-image }} # zizmor: ignore[unpinned-images]
@@ -175,9 +180,9 @@ jobs:
           target-s3-key: ${{ matrix.project }}
 
   publish-versions-json:
-    if: ${{ inputs.build_type != 'release-candidate' && github.event.inputs.build_type != 'release-candidate' && !(github.ref_type == 'branch' && startsWith(github.ref_name, 'release-test-')) && !startsWith(github.head_ref, 'release-test-') && !startsWith(inputs.branch, 'release-test-') && !startsWith(inputs.branch, 'refs/heads/release-test-') && github.ref != 'agent/release-catalog-canary' && github.ref != 'refs/heads/agent/release-catalog-canary' && github.head_ref != 'agent/release-catalog-canary' && github.head_ref != 'refs/heads/agent/release-catalog-canary' && inputs.branch != 'agent/release-catalog-canary' && inputs.branch != 'refs/heads/agent/release-catalog-canary' }}
+    if: ${{ needs.policy.outputs.allow-publication == 'true' }}
     environment: public-publication
-    needs: compute-matrix
+    needs: [compute-matrix, policy]
     runs-on: ubuntu-latest
     container:
       image: ${{ inputs.container-image }} # zizmor: ignore[unpinned-images]

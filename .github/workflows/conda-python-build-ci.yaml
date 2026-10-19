@@ -1,0 +1,323 @@
+# Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+on:
+  workflow_call:
+    inputs:
+      build_type:
+        description: "One of: [branch, nightly, pull-request]"
+        required: true
+        type: string
+      branch:
+        description: |
+          Git branch the workflow run targets.
+          This is required even when 'sha' is provided because it is also used for organizing artifacts.
+        type: string
+      date:
+        description: "Date (YYYY-MM-DD) this run is for. Used to organize artifacts produced by nightly builds"
+        type: string
+      sha:
+        description: "Full git commit SHA to check out"
+        type: string
+      build-datetime:
+        description: |
+          date-time to be used in build strings.
+          Unlike input 'date' (set in the call to the calling workflow), this is computed at runtime
+          by the calling workflow.
+        default: null
+        required: false
+        type: string
+      repo:
+        description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
+        type: string
+      node_type:
+        description: |
+          Suffix, without leading '-', indicating the type of machine to run jobs on (e.g., 'cpu4' or 'gpu-l4-latest-1').
+          Runner labels are of the form '{operating_system}-{arch}-{node_type}'.
+          See https://github.com/nv-gha-runners/enterprise-runner-configuration/blob/main/docs/runner-groups.md for a list
+          of valid values.
+        type: string
+        default: "cpu8"
+      script:
+        type: string
+        required: true
+        description: "Shell code to be executed in a step. Ideally this should just invoke a script managed in the repo the workflow runs from, like 'ci/build_python.sh'."
+      upload-artifacts:
+        type: boolean
+        default: true
+        required: false
+        description: "One of [true, false], true if artifacts should be uploaded to GitHub's artifact store"
+      matrix_type:
+        description: "One or more comma-separated matrix types defined for this workflow's matrix in .github/actions/prepare-matrix/matrix.yaml, e.g. 'pull-request' or 'nightly'. Defaults to 'auto', which must be used alone and means 'choose a value based on what's provided via build_type'."
+        required: false
+        type: string
+        default: "auto"
+      matrix_filter:
+        description: |
+          jq expression which modifies the matrix.
+          For example, 'map(select(.ARCH == "amd64"))' to achieve "only run amd64 jobs".
+        type: string
+        default: "."
+      sccache-dist-request-timeout:
+        type: string
+        default: 7140
+        description: |
+          The maximum time (in seconds) the sccache client should wait for a distributed compilation to complete.
+      sccache-dist-token-secret-name:
+        type: string
+        required: false
+        description: |
+          The name of the secret that contains the token used to authenticate with the RAPIDS Build Engineering sccache-dist build cluster.
+      alternative-gh-token-secret-name:
+        type: string
+        required: false
+        description: |
+          If provided, should contain the name of a secret in the repo which holds a GitHub API token.
+          When this is non-empty, that secret's value is used in place of the default repo-level token
+          anywhere that environment variable GH_TOKEN is set. This is especially useful for downloading
+          artifacts from other private repos, which repo tokens do not have access to.
+      pure-conda:
+        required: false
+        type: string
+        default: "false"
+        description: |
+          "One of [true, false, cuda_major]. 'true' if the conda package is not
+          dependent on operating system, Python minor version, CPU architecture,
+          or CUDA version. 'cuda_major' if the package is not dependent on
+          operating system, Python minor version, or CPU architecture, but is
+          dependent on CUDA major version."
+      cache-paths:
+        type: string
+        required: false
+        default: ""
+        description: |
+          Newline-separated workspace-relative files or directories to persist with actions/cache.
+          Workspace-relative paths are required for cache saves from job containers. Must be provided
+          together with cache-key-prefix.
+      cache-key-prefix:
+        type: string
+        required: false
+        default: ""
+        description: |
+          Prefix for the actions/cache key for cache-paths. The workflow appends its matrix identity
+          so caches are not shared across incompatible runners or environments.
+      cache-key-files:
+        type: string
+        required: false
+        default: ""
+        description: |
+          Newline-separated tracked files or glob patterns to hash into the cache key. Use this for caches
+          that must be saved again when relevant source or dependency files change.
+      cache-key-matrix-fields:
+        type: string
+        required: false
+        default: |
+          CUDA_VER
+          PY_VER
+          ARCH
+          LINUX_VER
+        description: |
+          Newline-separated matrix fields that scope the caller cache key. Override only when the
+          cache is known to be independent of one of this workflow's default compatibility fields.
+      cache-environment:
+        type: string
+        required: false
+        default: ""
+        description: |
+          Newline-separated literal NAME=VALUE pairs exported before the caller script runs.
+          Use workspace-relative paths for directories managed by cache-paths.
+      cache-read-only:
+        type: boolean
+        required: false
+        default: false
+        description: |
+          Restore caller cache paths without saving them at job completion. Use this for
+          short-lived refs that should consume a cache maintained by a trusted ref.
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  actions: read
+  checks: none
+  contents: read
+  deployments: none
+  discussions: none
+  id-token: write
+  issues: none
+  packages: read
+  pages: none
+  pull-requests: read
+  repository-projects: none
+  security-events: none
+  statuses: none
+
+jobs:
+  policy:
+    uses: ./.github/workflows/evaluate-build-policy.yaml
+    permissions: {}
+    with:
+      inputs-json: ${{ toJSON(inputs) }}
+  compute-matrix:
+    uses: ./.github/workflows/compute-matrix.yaml
+    with:
+      build_type: ${{ inputs.build_type }}
+      matrix_name: conda-python-build
+      matrix_type: ${{ inputs.matrix_type }}
+      matrix_filter: ${{ inputs.matrix_filter }}
+      pure-conda: ${{ inputs.pure-conda }}
+  build:
+    if: ${{ needs.policy.outputs.run-ci == 'true' }}
+    name: ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}
+    needs: [compute-matrix, policy]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.compute-matrix.outputs.matrix) }}
+    runs-on: "linux-${{ matrix.ARCH }}-${{ inputs.node_type }}"
+    env:
+      RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
+    container:
+      image: rapidsai/ci-conda:26.12-cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}
+      env:
+        RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
+        RAPIDS_RELEASE_CANDIDATE: false
+        RAPIDS_DATETIME_STRING: ${{ inputs.build-datetime }}
+    steps:
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        if: ${{ needs.policy.outputs.allow-general-ci == 'true' }}
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-duration-seconds: 43200 # 12h
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.repo }}
+          ref: ${{ inputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup caller cache
+        if: ${{ needs.policy.outputs.caller-cache == 'true' }}
+        uses: rapidsai/shared-actions/setup-caller-cache@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        with:
+          cache-paths: ${{ inputs.cache-paths }}
+          cache-key-prefix: ${{ inputs.cache-key-prefix }}
+          cache-key-files: ${{ inputs.cache-key-files }}
+          cache-key-matrix-fields: ${{ inputs.cache-key-matrix-fields }}
+          cache-environment: ${{ inputs.cache-environment }}
+          cache-read-only: ${{ inputs.cache-read-only }}
+          matrix: ${{ toJSON(matrix) }}
+      - name: Standardize repository information
+        env:
+          RAPIDS_REPOSITORY: ${{ inputs.repo || github.repository }}
+          RAPIDS_REF_NAME: ${{ inputs.branch || github.ref_name }}
+          RAPIDS_NIGHTLY_DATE: ${{ inputs.date }}
+        run: |
+          {
+            echo "RAPIDS_REPOSITORY=${RAPIDS_REPOSITORY}"
+            echo "RAPIDS_SHA=$(git rev-parse HEAD)"
+            echo "RAPIDS_REF_NAME=${RAPIDS_REF_NAME}"
+            echo "RAPIDS_NIGHTLY_DATE=${RAPIDS_NIGHTLY_DATE}"
+          } >> "${GITHUB_ENV}"
+      - name: Telemetry setup
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
+          GH_TOKEN: ${{ github.token }}
+          SHARED_ACTIONS_REF: cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        with:
+          extra_attributes: "rapids.PACKAGER=conda,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
+      - name: Setup proxy cache
+        uses: nv-gha-runners/setup-proxy-cache@eadc57871cde0c92a223d0f486ab669a2360f978
+        continue-on-error: true
+        with:
+          enable-apt: true
+          enable-conda: true
+          enable-pip: true
+          enable-pypi-anaconda: true
+
+      - name: Setup sccache-dist
+        if: ${{ needs.policy.outputs.allow-general-ci == 'true' }}
+        uses: rapidsai/shared-actions/setup-sccache-dist@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        env:
+          AWS_REGION: "${{env.AWS_REGION}}"
+          AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
+          AWS_SECRET_ACCESS_KEY: "${{env.AWS_SECRET_ACCESS_KEY}}"
+        with:
+          log-file: "${{ env.RAPIDS_ARTIFACTS_DIR }}/sccache.log"
+          request-timeout: ${{ inputs.sccache-dist-request-timeout }}
+      # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
+      # checking '/rate_limit | jq .' should not itself count against any rate limits.
+      #
+      # gh CLI is pre-installed on Github-hosted runners, but may not be on self-hosted runners.
+      - name: Check GitHub API rate limits
+        run: |
+          if ! type gh >/dev/null; then
+              echo "'gh' CLI is not installed... skipping rate-limits check"
+          else
+              gh api /rate_limit | jq .
+          fi
+        env:
+          # NEEDS alternative-gh-token-secret_name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
+      - name: Python build
+        id: python-build
+        run: |
+          ulimit -n "$(ulimit -Hn)"
+          # shellcheck disable=SC1090
+          source "${INPUTS_SCRIPT}"
+
+          # Capture RAPIDS_PACKAGE_NAME if set by the build script
+          if [[ -n "${RAPIDS_PACKAGE_NAME:-}" ]]; then
+            echo "rapids-package-name=${RAPIDS_PACKAGE_NAME}" >> "${GITHUB_OUTPUT}"
+          fi
+        env:
+          # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
+          INPUTS_SCRIPT: ${{ inputs.script }}
+          BUILD_TYPE: ${{ inputs.build_type }}
+          # opt out of conda sharded repodata
+          #
+          # TODO: remove these when this is resolved: https://github.com/conda/infrastructure/issues/1286#issuecomment-4628580232
+          CONDA_PLUGINS_USE_SHARDED_REPODATA: false
+          MAMBA_USE_SHARDED_REPODATA: false
+          RATTLER_SHARDED: false
+      - name: Get Package Name and Location
+        if: ${{ inputs.upload-artifacts }}
+        env:
+          # Pass RAPIDS_PACKAGE_NAME from python-build step if available
+          RAPIDS_PACKAGE_NAME: ${{ steps.python-build.outputs.rapids-package-name }}
+        run: |
+          # Use RAPIDS_PACKAGE_NAME from build step if available, otherwise generate default
+          if [[ -n "${RAPIDS_PACKAGE_NAME:-}" ]]; then
+            echo "RAPIDS_PACKAGE_NAME=${RAPIDS_PACKAGE_NAME}" >> "${GITHUB_OUTPUT}"
+          else
+            echo "RAPIDS_PACKAGE_NAME=$(rapids-package-name conda_python)" >> "${GITHUB_OUTPUT}"
+          fi
+          echo "CONDA_OUTPUT_DIR=${RAPIDS_CONDA_BLD_OUTPUT_DIR}" >> "${GITHUB_OUTPUT}"
+        id: package-name
+      - name: Show files to be uploaded
+        if: ${{ inputs.upload-artifacts }}
+        env:
+          CONDA_OUTPUT_DIR: ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
+        run: |
+          echo "Contents of directory to be uploaded:"
+          ls -R "${CONDA_OUTPUT_DIR}"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ inputs.upload-artifacts }}
+        with:
+          if-no-files-found: 'error'
+          name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
+          path: ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
+
+      - name: Upload additional artifacts
+        if: ${{ !cancelled() }}
+        run: rapids-upload-artifacts-dir "cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}"
+      - name: Telemetry upload attributes
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
+          GH_TOKEN: ${{ github.token }}
+          SHARED_ACTIONS_REF: cea935cc5e25ec216756d0e2676c3cd32717aa4e

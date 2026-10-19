@@ -114,6 +114,52 @@ See the
 for the companion layout, configuration schema, examples, and evidence
 semantics.
 
+### Build mode dispatch
+
+Keep calling `conda-cpp-build.yaml`, `conda-python-build.yaml`,
+`wheels-build.yaml`, or `custom-job.yaml`. These entry points validate inputs
+and select a `-ci.yaml` or `-candidate.yaml` implementation at the same workflow
+revision. Branch, nightly, and pull-request builds share the CI implementation;
+release candidates use the candidate implementation. The implementation files
+are internal; callers should use the existing entry points.
+
+The split keeps candidate version selection, dependency preparation, producer
+credentials, and private catalog uploads together, so reviewers can follow the
+candidate path without tracing build-mode conditions through ordinary CI.
+Candidate workflows cannot assume the general CI role or enable its distributed
+compiler cache. CI workflows retain the dispatch-event and release-test ref
+guards on that role. Shared setup still lives in pinned actions; the workflow
+files own execution order and permissions.
+
+`evaluate-build-policy` evaluates routing, CI credential eligibility, publication
+eligibility, image-preflight opt-in, and caller-cache opt-in. Workflows compare
+its named boolean outputs instead of repeating compound expressions. The
+`evaluate-build-policy.yaml` reusable workflow evaluates job-level decisions on
+an unprivileged host before the selected build or protected publication job
+starts. The action comes from the workflow's own revision; consumer source
+checkout and caller secrets are not needed to evaluate these rules.
+
+`select-candidate-matrix` separately checks preflight completion and selects the
+final C++ candidate matrix. Both actions use standalone shell scripts, so their
+decision cases are tested directly and checked by ShellCheck.
+
+The entry points retain their input names, types, and defaults. Candidate-only
+options must retain their defaults on CI builds; non-default candidate options
+and unsupported build types fail validation before either implementation runs.
+Secrets are forwarded explicitly at the additional reusable-workflow boundary.
+Custom candidate documentation and artifact options still control their own
+steps within the candidate implementation.
+
+The extra reusable-workflow call adds a level to displayed job/check names.
+Required checks or automation that matches complete job names must be reviewed
+when adopting this revision. Validate this mapping in hosted CI before cutover;
+the offline checks do not establish hosted check names or OIDC authorization.
+
+For C++ candidates, host preparation selects one final matrix with explicit
+container references. Empty image-preflight inputs preserve the existing tagged
+image; an opted-in preflight must succeed and produce both a matrix and document
+hash. Failed or incomplete validation never falls back to tagged images.
+
 ### Candidate C++ digest-image opt-in
 
 `conda-cpp-build.yaml` accepts an optional pre-start CI-image preflight for

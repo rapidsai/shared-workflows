@@ -21,13 +21,14 @@ paths:
       # actionlint's current context type schema does not yet include these GitHub properties.
       - 'property "workflow_repository" is not defined in object type'
       - 'property "workflow_sha" is not defined in object type'
-  .github/workflows/conda-cpp-build.yaml:
+  .github/workflows/conda-cpp-build-candidate.yaml:
+    ignore:
+      - 'specifying action "\$/.github/actions/select-candidate-matrix" in invalid format because ref is missing. available formats are "{owner}/{repo}@{ref}" or "{owner}/{repo}/{path}@{ref}"'
+      - 'specifying action "\$/.github/actions/select-candidate-version" in invalid format because ref is missing. available formats are "{owner}/{repo}@{ref}" or "{owner}/{repo}/{path}@{ref}"'
+  .github/workflows/conda-python-build-candidate.yaml:
     ignore:
       - 'specifying action "\$/.github/actions/select-candidate-version" in invalid format because ref is missing. available formats are "{owner}/{repo}@{ref}" or "{owner}/{repo}/{path}@{ref}"'
-  .github/workflows/conda-python-build.yaml:
-    ignore:
-      - 'specifying action "\$/.github/actions/select-candidate-version" in invalid format because ref is missing. available formats are "{owner}/{repo}@{ref}" or "{owner}/{repo}/{path}@{ref}"'
-  .github/workflows/wheels-build.yaml:
+  .github/workflows/wheels-build-candidate.yaml:
     ignore:
       - 'specifying action "\$/.github/actions/select-candidate-version" in invalid format because ref is missing. available formats are "{owner}/{repo}@{ref}" or "{owner}/{repo}/{path}@{ref}"'
   .github/workflows/conda-python-tests.yaml:
@@ -42,3 +43,6 @@ paths:
       # source). actionlint's type schema appears to be out of date.
       - 'property "workflow_repository" is not defined in object type'
       - 'property "workflow_sha" is not defined in object type'
+  .github/workflows/evaluate-build-policy.yaml:
+    ignore:
+      - 'specifying action "\$/.github/actions/evaluate-build-policy" in invalid format because ref is missing. available formats are "{owner}/{repo}@{ref}" or "{owner}/{repo}/{path}@{ref}"'

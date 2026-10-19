@@ -1,0 +1,53 @@
+# Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+on:
+  workflow_call:
+    inputs:
+      inputs-json:
+        required: true
+        type: string
+      build-type:
+        default: ''
+        type: string
+      custom-job:
+        default: false
+        type: boolean
+      validate-inputs:
+        default: false
+        type: boolean
+      candidate-defaults-json:
+        default: '{}'
+        type: string
+    outputs:
+      run-ci:
+        value: ${{ jobs.policy.outputs.run-ci }}
+      run-candidate:
+        value: ${{ jobs.policy.outputs.run-candidate }}
+      allow-general-ci:
+        value: ${{ jobs.policy.outputs.allow-general-ci }}
+      allow-publication:
+        value: ${{ jobs.policy.outputs.allow-publication }}
+      image-preflight:
+        value: ${{ jobs.policy.outputs.image-preflight }}
+      caller-cache:
+        value: ${{ jobs.policy.outputs.caller-cache }}
+permissions: {}
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    outputs:
+      run-ci: ${{ steps.policy.outputs.run-ci }}
+      run-candidate: ${{ steps.policy.outputs.run-candidate }}
+      allow-general-ci: ${{ steps.policy.outputs.allow-general-ci }}
+      allow-publication: ${{ steps.policy.outputs.allow-publication }}
+      image-preflight: ${{ steps.policy.outputs.image-preflight }}
+      caller-cache: ${{ steps.policy.outputs.caller-cache }}
+    steps:
+      - name: Evaluate policy from this workflow's reviewed revision
+        id: policy
+        uses: $/.github/actions/evaluate-build-policy
+        with:
+          inputs-json: ${{ inputs.inputs-json }}
+          build-type: ${{ inputs.build-type }}
+          custom-job: ${{ inputs.custom-job }}
+          validate-inputs: ${{ inputs.validate-inputs }}
+          candidate-defaults-json: ${{ inputs.candidate-defaults-json }}

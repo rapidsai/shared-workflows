@@ -4,10 +4,10 @@ set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 workflows=(
-  conda-cpp-build.yaml
-  conda-python-build.yaml
-  wheels-build.yaml
-  custom-job.yaml
+  conda-cpp-build-candidate.yaml
+  conda-python-build-candidate.yaml
+  wheels-build-candidate.yaml
+  custom-job-candidate.yaml
 )
 # The GitHub expression is intentionally a literal assertion value.
 # shellcheck disable=SC2016
@@ -35,10 +35,10 @@ for workflow in "${workflows[@]}"; do
 done
 
 candidate_action_paths=(
-  "${root}/.github/workflows/conda-cpp-build.yaml"
-  "${root}/.github/workflows/conda-python-build.yaml"
-  "${root}/.github/workflows/wheels-build.yaml"
-  "${root}/.github/workflows/custom-job.yaml"
+  "${root}/.github/workflows/conda-cpp-build-candidate.yaml"
+  "${root}/.github/workflows/conda-python-build-candidate.yaml"
+  "${root}/.github/workflows/wheels-build-candidate.yaml"
+  "${root}/.github/workflows/custom-job-candidate.yaml"
   "${root}/.github/workflows/compute-matrix.yaml"
   "${root}/.github/actions/prepare-matrix-dispatch/action.yaml"
 )
@@ -65,41 +65,28 @@ if [[ "$(printf '%s\n' "${pins}" | wc -l | tr -d ' ')" != 1 ]] ||
   echo "candidate implementation actions must share one full commit SHA; found: ${pins}" >&2
   exit 1
 fi
-cpp_build="${root}/.github/workflows/conda-cpp-build.yaml"
-legacy_image_condition="if: \${{ inputs.build_type == 'release-candidate' && inputs.candidate-image-preflight-json == '' }}"
-if [[ "$(rg -c 'uses: rapidsai/shared-actions/release-candidate-dependencies@aa27f344e33b176945146e5a4218a182d72e1688' "${cpp_build}")" != 1 ]] ||
+cpp_build="${root}/.github/workflows/conda-cpp-build-candidate.yaml"
+legacy_image_condition="if: \${{ inputs.candidate-image-preflight-json == '' }}"
+if ! rg -Fq "${legacy_image_condition}" "${cpp_build}" ||
   ! rg -Fq 'runtime-image-reference: ${{ matrix.candidate_image_reference }}' "${cpp_build}" ||
   ! rg -Fq 'ref: c74836a849551cc1f2c3afbfe88d808d6aa3acdc' "${cpp_build}" ||
-  ! rg -Fq "${legacy_image_condition}" "${cpp_build}" ||
-  ! rg -Fq 'needs: [compute-matrix, candidate-image-preflight]' "${cpp_build}" ||
-  ! rg -Fq 'inputs.candidate-image-preflight-json !=' "${cpp_build}" ||
-  ! rg -Fq 'needs.candidate-image-preflight.outputs.matrix' "${cpp_build}" ||
-  ! rg -Fq 'needs.compute-matrix.outputs.matrix' "${cpp_build}" ||
-  ! rg -Fq 'inputs.candidate-image-preflight-json ==' "${cpp_build}" ||
-  ! rg -Fq 'matrix.candidate_image_reference) ||' "${cpp_build}" ||
-  ! rg -Fq "needs.candidate-image-preflight.outputs.matrix != ''" "${cpp_build}" ||
-  ! rg -Fq "needs.candidate-image-preflight.outputs.preflight-document-sha256 != ''" "${cpp_build}" ||
-  ! rg -Fq "needs.candidate-image-preflight.result == 'skipped'" "${cpp_build}" ||
-  ! rg -Fq 'candidate image preflight bytes differ from the pre-start validated document' "${cpp_build}" ||
-  ! rg -Fq 'image: >-' "${cpp_build}" ||
-  ! rg -Fq 'matrix.candidate_image_reference) ||' "${cpp_build}" ||
-  ! rg -Fq "inputs.candidate-image-consumer-id == ''" "${cpp_build}"; then
+  ! rg -Fq 'candidate image preflight bytes differ from the pre-start validated document' "${cpp_build}"; then
   echo "C++ candidate image opt-in must retain the legacy action and bind the reviewed digest path" >&2
   exit 1
 fi
 
-for workflow in conda-cpp-build.yaml conda-python-build.yaml wheels-build.yaml; do
-  path="${root}/.github/workflows/${workflow}"
-  if ! rg -Fq "if: \${{ inputs.upload-artifacts && inputs.build_type != 'release-candidate' }}" "${path}"; then
-    echo "${workflow} must not upload public GitHub artifacts for candidates" >&2
+for workflow in conda-cpp-build conda-python-build wheels-build; do
+  if rg -Fq 'uses: actions/upload-artifact@' "${root}/.github/workflows/${workflow}-candidate.yaml" ||
+    ! rg -Fq 'if: ${{ inputs.upload-artifacts }}' "${root}/.github/workflows/${workflow}-ci.yaml"; then
+    echo "${workflow} must upload public GitHub package artifacts only in CI mode" >&2
     exit 1
   fi
 done
 
 declare -A candidate_version_families=(
-  [conda-cpp-build.yaml]=conda
-  [conda-python-build.yaml]=conda
-  [wheels-build.yaml]=wheel
+  [conda-cpp-build-candidate.yaml]=conda
+  [conda-python-build-candidate.yaml]=conda
+  [wheels-build-candidate.yaml]=wheel
 )
 for workflow in "${!candidate_version_families[@]}"; do
   path="${root}/.github/workflows/${workflow}"
@@ -114,7 +101,7 @@ for workflow in "${!candidate_version_families[@]}"; do
     exit 1
   fi
 done
-for workflow in conda-python-build.yaml wheels-build.yaml; do
+for workflow in conda-python-build-candidate.yaml wheels-build-candidate.yaml; do
   path="${root}/.github/workflows/${workflow}"
   if ! rg -Fq 'export SETUPTOOLS_SCM_PRETEND_VERSION="${RAPIDS_RELEASE_CANDIDATE_UNIT_VERSION}"' "${path}"; then
     echo "${workflow} must pass the frozen version to its source build only" >&2
@@ -124,9 +111,9 @@ done
 bash "${root}/tests/select-candidate-version.sh"
 
 declare -A candidate_catalog_directories=(
-  [conda-cpp-build.yaml]=.release-candidate-artifacts/conda
-  [conda-python-build.yaml]=.release-candidate-artifacts/conda
-  [wheels-build.yaml]=.release-candidate-artifacts/wheels
+  [conda-cpp-build-candidate.yaml]=.release-candidate-artifacts/conda
+  [conda-python-build-candidate.yaml]=.release-candidate-artifacts/conda
+  [wheels-build-candidate.yaml]=.release-candidate-artifacts/wheels
 )
 for workflow in "${!candidate_catalog_directories[@]}"; do
   path="${root}/.github/workflows/${workflow}"
@@ -145,14 +132,14 @@ for workflow in "${!candidate_catalog_directories[@]}"; do
   fi
 done
 
-custom="${root}/.github/workflows/custom-job.yaml"
+custom="${root}/.github/workflows/custom-job-candidate.yaml"
 rg -Fq "steps.candidate-context.outputs.custom-mode == 'artifact'" "${custom}"
-rg -Fq "inputs.script != 'ci/build_docs.sh' || inputs.candidate-docs" "${custom}"
+rg -Fq "custom-job: true" "${root}/.github/workflows/custom-job.yaml"
 if rg -Fq 'name: Restore build credentials' "${custom}"; then
-  echo "custom-job.yaml must not restore the general CI role for candidate scripts" >&2
+  echo "custom-job-candidate.yaml must not restore the general CI role for candidate scripts" >&2
   exit 1
 fi
-rg -Fq "inputs.build_type == 'release-candidate' && inputs.release-catalog-config != ''" "${custom}"
+rg -Fq "inputs.release-catalog-config != ''" "${custom}"
 rg -Fq 'candidate-dependency-family:' "${custom}"
 rg -Fq 'candidate-skip-github-artifact-upload:' "${custom}"
 rg -Fq 'inputs.candidate-skip-github-artifact-upload &&' "${custom}"
@@ -167,7 +154,7 @@ rg -Fq 'RAPIDS_DOCS_DIR="${DOCS_DIRECTORY}" rapids-upload-docs' "${custom}"
 rg -Fq 'RAPIDS_DOCS_PUBLISH:' "${custom}"
 rg -Fq "inputs.candidate-docs && 'false'" "${custom}"
 
-for workflow in conda-cpp-build.yaml conda-python-build.yaml wheels-build.yaml custom-job.yaml; do
+for workflow in conda-cpp-build-candidate.yaml conda-python-build-candidate.yaml wheels-build-candidate.yaml custom-job-candidate.yaml; do
   path="${root}/.github/workflows/${workflow}"
   telemetry_steps="$(rg -c 'uses: rapidsai/shared-actions/telemetry-dispatch-(setup|stash-job-artifacts)@' "${path}")"
   telemetry_pins="$(rg -c 'SHARED_ACTIONS_REF: cea935cc5e25ec216756d0e2676c3cd32717aa4e' "${path}")"
@@ -181,20 +168,14 @@ for workflow in conda-cpp-build.yaml conda-python-build.yaml wheels-build.yaml c
     echo "${workflow} candidate context must run the private boundary audit" >&2
     exit 1
   fi
-  role_line="$(rg -n -F 'role-to-assume: ${{ vars.AWS_ROLE_ARN }}' "${path}" | cut -d: -f1)"
-  role_guard="$(sed -n "$((role_line - 3)),$((role_line - 1))p" "${path}")"
-  if ! rg -Fq "inputs.build_type != 'release-candidate' && github.event.inputs.build_type != 'release-candidate'" <<<"${role_guard}" ||
-    ! rg -Fq "startsWith(github.ref_name, 'release-test-')" <<<"${role_guard}" ||
-    ! rg -Fq "startsWith(github.head_ref, 'release-test-')" <<<"${role_guard}"; then
-    echo "${workflow} general CI role must be unavailable for candidate and release-test refs" >&2
+  ci_path="${path%-candidate.yaml}-ci.yaml"
+  if rg -Fq 'role-to-assume: ${{ vars.AWS_ROLE_ARN }}' "${path}" ||
+    rg -Fq 'name: Setup sccache-dist' "${path}" ||
+    ! rg -Fq "if: \${{ needs.policy.outputs.allow-general-ci == 'true' }}" "${ci_path}"; then
+    echo "${workflow} must keep general CI credentials behind evaluated policy" >&2
     exit 1
   fi
-  if rg -Fq 'name: Restore build credentials' "${path}" ||
-    ! rg -n -A2 'name: Setup sccache-dist' "${path}" |
-      rg -Fq "if: \${{ inputs.build_type != 'release-candidate' && github.event.inputs.build_type != 'release-candidate' && !(github.ref_type == 'branch' && startsWith(github.ref_name, 'release-test-')) && !startsWith(github.head_ref, 'release-test-') }}"; then
-    echo "${workflow} must not restore the general role or enable sccache for candidates" >&2
-    exit 1
-  fi
+
 done
 
 for workflow in conda-cpp-tests.yaml conda-python-tests.yaml wheels-test.yaml conda-cpp-post-build-checks.yaml; do
@@ -226,45 +207,12 @@ declare -A expected_public_guards=(
 )
 for workflow in "${!expected_public_guards[@]}"; do
   path="${root}/.github/workflows/${workflow}"
-  if ! rg -Fq "inputs.build_type != 'release-candidate'" "${path}" ||
-    ! rg -Fq "github.event.inputs.build_type != 'release-candidate'" "${path}"; then
-    echo "${workflow} must reject candidate mode from both caller input and dispatch event" >&2
+  guard="if: \${{ needs.policy.outputs.allow-publication == 'true' }}"
+  if [[ "$(rg -Fc "${guard}" "${path}")" -ne "${expected_public_guards[${workflow}]}" ]] ||
+    ! rg -Fq 'uses: ./.github/workflows/evaluate-build-policy.yaml' "${path}"; then
+    echo "${workflow} publisher jobs must depend on evaluated publication policy" >&2
     exit 1
   fi
-  if ! rg -Fq "startsWith(github.ref_name, 'release-test-')" "${path}" ||
-    ! rg -Fq "startsWith(github.head_ref, 'release-test-')" "${path}"; then
-    echo "${workflow} must suppress public publishing on release-test branches and PR heads" >&2
-    exit 1
-  fi
-  if ! rg -Fq "startsWith(inputs.branch, 'release-test-')" "${path}" ||
-    ! rg -Fq "startsWith(inputs.branch, 'refs/heads/release-test-')" "${path}"; then
-    echo "${workflow} must suppress publishing when the caller branch input names a release-test ref" >&2
-    exit 1
-  fi
-
-  mapfile -t publisher_conditions < <(
-    rg -F 'if:' "${path}" | rg -F "github.ref != 'agent/release-catalog-canary'"
-  )
-  if [[ "${#publisher_conditions[@]}" -ne "${expected_public_guards[${workflow}]}" ]]; then
-    echo "${workflow} has ${#publisher_conditions[@]} publisher jobs guarded against the canary ref; expected ${expected_public_guards[${workflow}]}" >&2
-    exit 1
-  fi
-  for publisher_condition in "${publisher_conditions[@]}"; do
-    for ref_check in \
-      "github.ref != 'refs/heads/agent/release-catalog-canary'" \
-      "github.head_ref != 'agent/release-catalog-canary'" \
-      "github.head_ref != 'refs/heads/agent/release-catalog-canary'"; do
-      if ! rg -Fq "${ref_check}" <<<"${publisher_condition}"; then
-        echo "${workflow} publisher condition is missing canary ref check: ${ref_check}" >&2
-        exit 1
-      fi
-    done
-    if ! rg -Fq "inputs.branch != 'agent/release-catalog-canary'" <<<"${publisher_condition}" ||
-      ! rg -Fq "inputs.branch != 'refs/heads/agent/release-catalog-canary'" <<<"${publisher_condition}"; then
-      echo "${workflow} publisher condition is missing caller branch input canary checks" >&2
-      exit 1
-    fi
-  done
 done
 
 for workflow in conda-upload-packages.yaml wheels-publish.yaml publish-api-docs.yaml maven-publish.yaml; do
@@ -310,13 +258,5 @@ if rg -Fq 'role-to-assume: ${{ vars.AWS_ROLE_ARN }}' "${root}/.github/workflows/
   exit 1
 fi
 
-for workflow in conda-upload-packages.yaml wheels-publish.yaml publish-api-docs.yaml maven-publish.yaml; do
-  path="${root}/.github/workflows/${workflow}"
-  if ! rg -Fq "startsWith(inputs.branch, 'release-test-')" "${path}" ||
-    ! rg -Fq "startsWith(inputs.branch, 'refs/heads/release-test-')" "${path}"; then
-    echo "${workflow} must guard its caller-supplied branch input" >&2
-    exit 1
-  fi
-done
 
 echo "Candidate workflow contracts passed."

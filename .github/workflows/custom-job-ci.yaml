@@ -1,0 +1,262 @@
+# Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+on:
+  workflow_call:
+    inputs:
+      build_type:
+        description: "One of: [branch, nightly, pull-request]"
+        required: true
+        type: string
+      branch:
+        description: |
+          Git branch the workflow run targets.
+          This is required even when 'sha' is provided because it is also used for organizing artifacts.
+        type: string
+      date:
+        description: "Date (YYYY-MM-DD) this run is for. Used to organize artifacts produced by nightly builds"
+        type: string
+      sha:
+        description: "Full git commit SHA to check out"
+        type: string
+      build-datetime:
+        description: |
+          date-time to be used in build strings.
+          Unlike input 'date' (set in the call to the calling workflow), this is computed at runtime
+          by the calling workflow.
+        default: null
+        required: false
+        type: string
+      repo:
+        description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
+        type: string
+      arch:
+        description: "One of [amd64, arm64]. CPU architecture to run on."
+        type: string
+        default: "amd64"
+      node_type:
+        description: |
+          Suffix, without leading '-', indicating the type of machine to run jobs on (e.g., 'cpu4' or 'gpu-l4-latest-1').
+          Runner labels are of the form '{operating_system}-{arch}-{node_type}'.
+          See https://github.com/nv-gha-runners/enterprise-runner-configuration/blob/main/docs/runner-groups.md for a list
+          of valid values.
+        type: string
+        default: "cpu8"
+      container_image:
+        description: "Container image URI"
+        type: string
+        default: "rapidsai/ci-conda:26.12-latest"
+      container-options:
+        description: |
+          Command-line arguments passed to 'docker run' when starting the container this workflow runs in.
+          This should be provided as a single string to be inlined into 'docker run', not an array.
+          For example, '--quiet --ulimit nofile=2048'.
+        required: false
+        type: string
+        default: "-e _NOOP"
+      script:
+        required: false
+        type: string
+        description: "Shell code to be executed in a step. Ideally this should just invoke a script managed in the repo the workflow runs from, like 'ci/test_java.sh'."
+      file_to_upload:
+        description: |
+          Path to file(s) to be uploaded as a CI artifact.
+          If a directory is provided, all files in it will be bundled into a zip archive.
+          See 'path' input at https://github.com/actions/upload-artifact?tab=readme-ov-file#inputs
+        type: string
+        default: "gh-status.json"
+      artifact-name:
+        description: |
+          Identifier for the GitHub Actions artifact created by uploading ``file_to_upload``.
+          See 'name' input at https://github.com/actions/upload-artifact?tab=readme-ov-file#inputs
+        type: string
+        default: "result"
+      continue-on-error:
+        description: |
+          If false (the default), treat job failures as workflow failures.
+          If true, job failures do not result in workflow failures (useful for implementing optional CI workflows).
+          See https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idcontinue-on-error
+        type: boolean
+        required: false
+        default: false
+      build_workflow_name:
+        description: |
+          Name of a workflow file that produced artifacts to be downloaded in this run.
+          If not set (the default), artifact-handling scripts use RAPIDS-conventional defaults (like "build.yaml" when "build_type == nightly").
+        required: false
+        type: string
+      sccache-dist-request-timeout:
+        type: string
+        default: 7140
+        description: |
+          The maximum time (in seconds) the sccache client should wait for a distributed compilation to complete.
+      sccache-dist-token-secret-name:
+        type: string
+        required: false
+        description: |
+          The name of the secret that contains the token used to authenticate with the RAPIDS Build Engineering sccache-dist build cluster.
+      alternative-gh-token-secret-name:
+        type: string
+        required: false
+        description: |
+          If provided, should contain the name of a secret in the repo which holds a GitHub API token.
+          When this is non-empty, that secret's value is used in place of the default repo-level token
+          anywhere that environment variable GH_TOKEN is set. This is especially useful for downloading
+          artifacts from other private repos, which repo tokens do not have access to.
+      requires_license_builder:
+        description: "Whether to ensure license builder scripts are provided in 'tools/'"
+        default: false
+        type: boolean
+        required: false
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  actions: read
+  checks: none
+  contents: read
+  deployments: none
+  discussions: none
+  id-token: write
+  issues: none
+  packages: read
+  pages: none
+  pull-requests: read
+  repository-projects: none
+  security-events: none
+  statuses: none
+
+jobs:
+  policy:
+    uses: ./.github/workflows/evaluate-build-policy.yaml
+    permissions: {}
+    with:
+      inputs-json: ${{ toJSON(inputs) }}
+      custom-job: true
+  build:
+    needs: policy
+    if: ${{ needs.policy.outputs.run-ci == 'true' }}
+    strategy:
+      fail-fast: false
+    runs-on: "linux-${{ inputs.arch }}-${{ inputs.node_type }}"
+    continue-on-error: ${{ inputs.continue-on-error }}
+    env:
+      RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
+    container:
+      image: ${{ inputs.container_image }} # zizmor: ignore[unpinned-images]
+      options: ${{ inputs.container-options }}
+      env:
+        NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }}
+        RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
+        RAPIDS_RELEASE_CANDIDATE: false
+        RAPIDS_DATETIME_STRING: ${{ inputs.build-datetime }}
+    steps:
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        if: ${{ needs.policy.outputs.allow-general-ci == 'true' }}
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-duration-seconds: 43200 # 12h
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.repo }}
+          ref: ${{ inputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Telemetry setup
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
+          GH_TOKEN: ${{ github.token }}
+          SHARED_ACTIONS_REF: cea935cc5e25ec216756d0e2676c3cd32717aa4e
+      - name: Setup proxy cache
+        uses: nv-gha-runners/setup-proxy-cache@eadc57871cde0c92a223d0f486ab669a2360f978
+        continue-on-error: true
+        with:
+          enable-apt: true
+          enable-conda: true
+          enable-pip: true
+          enable-pypi-anaconda: true
+      - name: Get PR Info
+        if: startsWith(github.ref_name, 'pull-request/')
+        id: get-pr-info
+        uses: nv-gha-runners/get-pr-info@090577647b8ddc4e06e809e264f7881650ecdccf
+      - name: Add PR Info
+        if: startsWith(github.ref_name, 'pull-request/')
+        run: | # zizmor: ignore[template-injection]
+          echo "RAPIDS_BASE_BRANCH=${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}" >> "${GITHUB_ENV}"
+      - name: Standardize repository information
+        uses: rapidsai/shared-actions/rapids-github-info@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        with:
+          repo: ${{ inputs.repo }}
+          branch: ${{ inputs.branch }}
+          date: ${{ inputs.date }}
+          sha: ${{ inputs.sha }}
+          build_workflow_name: ${{ inputs.build_workflow_name }}
+      - name: Setup sccache-dist
+        if: ${{ needs.policy.outputs.allow-general-ci == 'true' }}
+        uses: rapidsai/shared-actions/setup-sccache-dist@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        env:
+          AWS_REGION: "${{env.AWS_REGION}}"
+          AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
+          AWS_SECRET_ACCESS_KEY: "${{env.AWS_SECRET_ACCESS_KEY}}"
+        with:
+          log-file: "${{ env.RAPIDS_ARTIFACTS_DIR }}/sccache.log"
+          request-timeout: ${{ inputs.sccache-dist-request-timeout }}
+      # Per the docs at https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28#get-rate-limit-status-for-the-authenticated-user,
+      # checking '/rate_limit | jq .' should not itself count against any rate limits.
+      #
+      # gh CLI is pre-installed on Github-hosted runners, but may not be on self-hosted runners.
+      - name: Check GitHub API rate limits
+        run: |
+          if ! type gh >/dev/null; then
+              echo "'gh' CLI is not installed... skipping rate-limits check"
+          else
+              gh api /rate_limit | jq .
+          fi
+        env:
+          # NEEDS alternative-gh-token-secret_name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
+      - name: Get RAPIDS License Builder
+        if: ${{ inputs.requires_license_builder }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: "rapidsai/spdx-license-builder"
+          ref: "refs/heads/main"
+          path: "./tool/"
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Run script
+        run: |
+          ulimit -n "$(ulimit -Hn)"
+          $INPUTS_SCRIPT
+        env:
+          # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
+          INPUTS_SCRIPT: ${{ inputs.script }}
+          # opt out of conda sharded repodata
+          #
+          # TODO: remove these when this is resolved: https://github.com/conda/infrastructure/issues/1286#issuecomment-4628580232
+          CONDA_PLUGINS_USE_SHARDED_REPODATA: false
+          MAMBA_USE_SHARDED_REPODATA: false
+          RATTLER_SHARDED: false
+          RAPIDS_DOCS_PUBLISH: 'true'
+      - name: Upload file to GitHub Artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.file_to_upload }}
+          if-no-files-found: ignore
+      - name: Upload additional artifacts
+        if: ${{ !cancelled() }}
+        run: rapids-upload-artifacts-dir "custom-job-$(arch)"
+      - name: Telemetry upload attributes
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        continue-on-error: true
+        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
+        env:
+          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
+          GH_TOKEN: ${{ github.token }}
+          SHARED_ACTIONS_REF: cea935cc5e25ec216756d0e2676c3cd32717aa4e

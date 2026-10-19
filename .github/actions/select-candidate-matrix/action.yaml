@@ -1,0 +1,40 @@
+# Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+name: Select candidate build matrix
+description: Select validated digest images or legacy tags, failing closed on incomplete preflight.
+inputs:
+  preflight-requested:
+    required: true
+    description: Whether any candidate image preflight input was supplied.
+  preflight-result:
+    required: true
+    description: Preflight job result.
+  preflight-matrix:
+    default: ''
+    description: Matrix emitted by successful image preflight validation.
+  preflight-sha256:
+    default: ''
+    description: Document hash emitted by successful image preflight validation.
+  legacy-matrix:
+    required: true
+    description: Computed matrix used only when preflight was not requested.
+outputs:
+  matrix:
+    description: Selected build matrix with explicit container references.
+    value: ${{ steps.select.outputs.matrix }}
+  preflight-document-sha256:
+    description: Validated preflight document hash, empty on the legacy path.
+    value: ${{ steps.select.outputs.preflight-document-sha256 }}
+runs:
+  using: composite
+  steps:
+    - name: Select matrix without fallback on failed preflight
+      id: select
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        PREFLIGHT_REQUESTED: ${{ inputs.preflight-requested }}
+        PREFLIGHT_RESULT: ${{ inputs.preflight-result }}
+        PREFLIGHT_MATRIX: ${{ inputs.preflight-matrix }}
+        PREFLIGHT_SHA256: ${{ inputs.preflight-sha256 }}
+        LEGACY_MATRIX: ${{ inputs.legacy-matrix }}
+      run: bash "${ACTION_PATH}/select.sh"
