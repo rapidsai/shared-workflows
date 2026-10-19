@@ -117,37 +117,24 @@ on:
         description: "Canonical SHA-256 of the release train; required for release-candidate builds."
         type: string
         default: ""
-    secrets:
-      script-env-secret-1-key:
-        description: |
-          Name of an environment variable in the environment where 'inputs.script' is run.
-          Variable's value will be set to the value passed as 'secrets.script-env-secret-1-value'.
+      script-env-secret-1-name:
+        type: string
         required: false
-      script-env-secret-1-value:
         description: |
-          Secret value.
-          Will be available via an environment variable named by 'secrets.script-env-secret-1-key'.
+          Name of a secret available to this workflow (e.g. via 'secrets: inherit').
+          Its value is exported to the environment where 'inputs.script' is run, under the same name.
+      script-env-secret-2-name:
+        type: string
         required: false
-      script-env-secret-2-key:
         description: |
-          Name of an environment variable in the environment where 'inputs.script' is run.
-          Variable's value will be set to the value passed as 'secrets.script-env-secret-2-value'.
+          Name of a secret available to this workflow (e.g. via 'secrets: inherit').
+          Its value is exported to the environment where 'inputs.script' is run, under the same name.
+      script-env-secret-3-name:
+        type: string
         required: false
-      script-env-secret-2-value:
         description: |
-          Secret value.
-          Will be available via an environment variable named by 'secrets.script-env-secret-2-key'.
-        required: false
-      script-env-secret-3-key:
-        description: |
-          Name of an environment variable in the environment where 'inputs.script' is run.
-          Variable's value will be set to the value passed as 'secrets.script-env-secret-3-value'.
-        required: false
-      script-env-secret-3-value:
-        description: |
-          Secret value.
-          Will be available via an environment variable named by 'secrets.script-env-secret-3-key'.
-        required: false
+          Name of a secret available to this workflow (e.g. via 'secrets: inherit').
+          Its value is exported to the environment where 'inputs.script' is run, under the same name.
 
 defaults:
   run:
@@ -263,20 +250,31 @@ jobs:
       - name: Set secrets in script env
         run: |
           set_env_var() {
-            local input_prefix="script-env-secret-$1"
-            local key_str=$2
-            local val_str=$3
-            if test -n "${val_str}"; then
-              if ! test -n "${key_str}"; then
-                echo "ERROR: '${input_prefix}-value' non-empty but '${input_prefix}-key' is empty. Set '${input_prefix}-key'."
+            local input_name="script-env-secret-$1-name"
+            local name=$2
+            local value=$3
+            if test -n "${name}"; then
+              if ! [[ "${name}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+                echo "ERROR: '${input_name}' must be a valid environment variable name."
                 exit 1
               fi
-              echo "${key_str}=${val_str}" >> "${GITHUB_ENV}"
+              if ! test -n "${value}"; then
+                echo "ERROR: secret '${name}' from '${input_name}' is empty or not passed to this workflow."
+                exit 1
+              fi
+              echo "${name}=${value}" >> "${GITHUB_ENV}"
             fi
           }
-          set_env_var '1' '${{ secrets.script-env-secret-1-key }}' '${{ secrets.script-env-secret-1-value }}'
-          set_env_var '2' '${{ secrets.script-env-secret-2-key }}' '${{ secrets.script-env-secret-2-value }}'
-          set_env_var '3' '${{ secrets.script-env-secret-3-key }}' '${{ secrets.script-env-secret-3-value }}'
+          set_env_var '1' "${SECRET_1_NAME}" "${SECRET_1_VALUE}"
+          set_env_var '2' "${SECRET_2_NAME}" "${SECRET_2_VALUE}"
+          set_env_var '3' "${SECRET_3_NAME}" "${SECRET_3_VALUE}"
+        env:
+          SECRET_1_NAME: ${{ inputs.script-env-secret-1-name }}
+          SECRET_1_VALUE: ${{ inputs.script-env-secret-1-name && secrets[inputs.script-env-secret-1-name] || '' }} # zizmor: ignore[overprovisioned-secrets]
+          SECRET_2_NAME: ${{ inputs.script-env-secret-2-name }}
+          SECRET_2_VALUE: ${{ inputs.script-env-secret-2-name && secrets[inputs.script-env-secret-2-name] || '' }} # zizmor: ignore[overprovisioned-secrets]
+          SECRET_3_NAME: ${{ inputs.script-env-secret-3-name }}
+          SECRET_3_VALUE: ${{ inputs.script-env-secret-3-name && secrets[inputs.script-env-secret-3-name] || '' }} # zizmor: ignore[overprovisioned-secrets]
       - name: Run script
         run: |
           ulimit -n "$(ulimit -Hn)"
