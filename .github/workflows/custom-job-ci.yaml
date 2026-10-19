@@ -182,13 +182,13 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
           # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
           GH_TOKEN: ${{ github.token }}
-          SHARED_ACTIONS_REF: cea935cc5e25ec216756d0e2676c3cd32717aa4e
+          SHARED_ACTIONS_REF: 10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
       - name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@eadc57871cde0c92a223d0f486ab669a2360f978
         continue-on-error: true
@@ -206,7 +206,7 @@ jobs:
         run: | # zizmor: ignore[template-injection]
           echo "RAPIDS_BASE_BRANCH=${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}" >> "${GITHUB_ENV}"
       - name: Standardize repository information
-        uses: rapidsai/shared-actions/rapids-github-info@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        uses: rapidsai/shared-actions/rapids-github-info@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
@@ -215,7 +215,7 @@ jobs:
           build_workflow_name: ${{ inputs.build_workflow_name }}
       - name: Setup sccache-dist
         if: ${{ needs.policy.outputs.allow-general-ci == 'true' }}
-        uses: rapidsai/shared-actions/setup-sccache-dist@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        uses: rapidsai/shared-actions/setup-sccache-dist@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         env:
           AWS_REGION: "${{env.AWS_REGION}}"
           AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
@@ -301,10 +301,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: rapids-upload-artifacts-dir "custom-job-$(arch)"
       - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
           # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
           GH_TOKEN: ${{ github.token }}
-          SHARED_ACTIONS_REF: cea935cc5e25ec216756d0e2676c3cd32717aa4e
+          SHARED_ACTIONS_REF: 10a2bb85aa2032447995b7c22ccf9c43a0dc74d0

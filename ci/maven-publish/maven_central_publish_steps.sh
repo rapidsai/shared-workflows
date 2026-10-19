@@ -301,4 +301,3 @@ portal_drop_deployment() {
     "${CENTRAL_PORTAL_URL}/api/v1/publisher/deployment/${deployment_id}" \
     >/dev/null
 }
-

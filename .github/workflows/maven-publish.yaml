@@ -63,16 +63,6 @@ on:
         required: false
         type: string
         default: ''
-    secrets:
-      GPG_PRIVATE_KEY:
-        description: Armored GPG private key used to sign every artifact at upload.
-        required: true
-      GPG_PASSPHRASE:
-        description: Passphrase for GPG_PRIVATE_KEY.
-        required: true
-      MAVEN_DEPLOY_TOKEN:
-        description: Auth token paired with vars.MAVEN_DEPLOY_USERNAME.
-        required: true
 
 defaults:
   run:
@@ -198,7 +188,7 @@ jobs:
           VERSION: ${{ steps.prepare.outputs.VERSION }}
           DOCS_PROJECT: ${{ inputs.docs-project }}
           SOURCE_GIT_SHA: ${{ inputs.source-git-sha || github.sha }}
-          MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME || secrets.MAVEN_DEPLOY_USERNAME }}
+          MAVEN_DEPLOY_USERNAME: ${{ secrets.MAVEN_DEPLOY_USERNAME }}
           MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
 
       - name: Write completed-publication receipt
@@ -246,7 +236,7 @@ jobs:
           GROUP_ID: ${{ steps.prepare.outputs.GROUP_ID }}
           ARTIFACT_ID: ${{ steps.prepare.outputs.ARTIFACT_ID }}
           VERSION: ${{ steps.prepare.outputs.VERSION }}
-          MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME || secrets.MAVEN_DEPLOY_USERNAME }}
+          MAVEN_DEPLOY_USERNAME: ${{ secrets.MAVEN_DEPLOY_USERNAME }}
           MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
 
       - name: Retain signed Maven Central bundle

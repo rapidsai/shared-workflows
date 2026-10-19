@@ -29,6 +29,14 @@ shopt -s nocasematch
 candidate=false
 [[ "${build_type}" != release-candidate ]] || candidate=true
 
+if [[ "${candidate}" == true ]] && jq -e '
+  [."script-env-secret-1-name", ."script-env-secret-2-name", ."script-env-secret-3-name"]
+  | any(. != null and . != "")
+' <<<"${inputs}" >/dev/null; then
+  echo "Script environment secrets are available only to normal CI builds" >&2
+  exit 1
+fi
+
 # Keep the dispatch-event and ref checks independent of the caller's build type.
 allow_general_ci=true
 if [[ "${candidate}" == true || "${DISPATCH_BUILD_TYPE}" == release-candidate ]]; then

@@ -23,6 +23,8 @@ done
 
 cp "${SCRIPT_DIR}/mock_central_curl.sh" "${MOCK_BIN}/curl"
 chmod +x "${MOCK_BIN}/curl"
+printf '#!/usr/bin/env bash\nexit 0\n' > "${MOCK_BIN}/sleep"
+chmod +x "${MOCK_BIN}/sleep"
 
 export PATH="${MOCK_BIN}:${PATH}"
 export GITHUB_OUTPUT MOCK_STATE_DIR

@@ -154,6 +154,24 @@ on:
         description: "Python version used to resolve candidate Conda dependencies for a documentation job."
         type: string
         default: ""
+      script-env-secret-1-name:
+        type: string
+        required: false
+        description: |
+          Name of a secret available to this workflow (e.g. via 'secrets: inherit').
+          Its value is exported to the environment where 'inputs.script' is run, under the same name.
+      script-env-secret-2-name:
+        type: string
+        required: false
+        description: |
+          Name of a secret available to this workflow (e.g. via 'secrets: inherit').
+          Its value is exported to the environment where 'inputs.script' is run, under the same name.
+      script-env-secret-3-name:
+        type: string
+        required: false
+        description: |
+          Name of a secret available to this workflow (e.g. via 'secrets: inherit').
+          Its value is exported to the environment where 'inputs.script' is run, under the same name.
 
 permissions:
   actions: read

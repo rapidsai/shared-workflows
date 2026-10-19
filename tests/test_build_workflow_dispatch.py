@@ -480,3 +480,37 @@ def test_matrix_preparation_blocks_container_start_and_binds_document():
         verify["env"]["EXPECTED_DOCUMENT_SHA256"]
         == "${{ needs.prepare-build-matrix.outputs.preflight-document-sha256 }}"
     )
+
+
+@pytest.mark.parametrize("index", [1, 2, 3])
+def test_custom_script_secrets_are_forwarded_only_to_normal_ci(index, tmp_path):
+    name = f"script-env-secret-{index}-name"
+    wrapper = load("custom-job")
+    assert name in inputs(wrapper)
+    assert wrapper["jobs"]["ci"]["with"][name] == "${{ inputs." + name + " }}"
+    assert name not in wrapper["jobs"]["candidate"]["with"]
+    step = validation_step(wrapper)
+    values = {
+        **default_values(wrapper),
+        "build_type": "release-candidate",
+        name: "TEST_CREDENTIAL",
+    }
+    result, _ = run_step(
+        step, {**step["env"], "BUILD_INPUTS_JSON": json.dumps(values)}, tmp_path
+    )
+    assert result.returncode != 0
+    assert "only to normal CI" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "family", ["conda-cpp-build", "conda-python-build", "wheels-build"]
+)
+def test_normal_build_uploads_keep_upstream_compression_policy(family):
+    jobs = load(family + "-ci")["jobs"]
+    uploads = [
+        step
+        for job in jobs.values()
+        for step in job.get("steps", [])
+        if step.get("uses", "").startswith("actions/upload-artifact@")
+    ]
+    assert any(step.get("with", {}).get("compression-level") == 0 for step in uploads)

@@ -189,14 +189,14 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: rapidsai/shared-workflows
-          ref: c74836a849551cc1f2c3afbfe88d808d6aa3acdc
+          ref: 06f322f73489d5b98935d92fd7971a888a56dba1
           path: .build06-shared-workflows
           persist-credentials: false
       - name: Check out the reviewed BuildInput validator
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: rapidsai/shared-actions
-          ref: aa27f344e33b176945146e5a4218a182d72e1688
+          ref: 10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
           path: .build06-shared-actions
           persist-credentials: false
       - name: Validate the caller-supplied image preflight before build startup
@@ -272,7 +272,7 @@ jobs:
           persist-credentials: false
       - name: Setup caller cache
         if: ${{ needs.policy.outputs.caller-cache == 'true' }}
-        uses: rapidsai/shared-actions/setup-caller-cache@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        uses: rapidsai/shared-actions/setup-caller-cache@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         with:
           cache-paths: ${{ inputs.cache-paths }}
           cache-key-prefix: ${{ inputs.cache-key-prefix }}
@@ -306,13 +306,13 @@ jobs:
       # This has to be AFTER the checkout step. It creates a telemetry-artifacts directory,
       # and the checkout step would destroy it.
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
           # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
           GH_TOKEN: ${{ github.token }}
-          SHARED_ACTIONS_REF: cea935cc5e25ec216756d0e2676c3cd32717aa4e
+          SHARED_ACTIONS_REF: 10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         with:
           extra_attributes: "rapids.PACKAGER=conda,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
 
@@ -326,7 +326,7 @@ jobs:
       - name: Resolve controller-bound candidate metadata
         id: candidate-context
         if: ${{ inputs.candidate-train-sha256 == '' }}
-        uses: rapidsai/shared-actions/release-candidate-context@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        uses: rapidsai/shared-actions/release-candidate-context@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         with:
           source-sha: ${{ env.RAPIDS_SHA }}
           audit-boundary: 'true'
@@ -339,7 +339,7 @@ jobs:
           source-sha: ${{ env.RAPIDS_SHA }}
       - name: Prepare candidate dependencies and build policy
         if: ${{ inputs.candidate-image-preflight-json == '' }}
-        uses: rapidsai/shared-actions/release-candidate-dependencies@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        uses: rapidsai/shared-actions/release-candidate-dependencies@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
           prepare-conda-channel: 'true'
@@ -363,7 +363,7 @@ jobs:
           fi
       - name: Bind pre-start image selection into candidate build input
         if: ${{ inputs.candidate-image-preflight-json != '' }}
-        uses: rapidsai/shared-actions/release-candidate-dependencies@aa27f344e33b176945146e5a4218a182d72e1688
+        uses: rapidsai/shared-actions/release-candidate-dependencies@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
           prepare-conda-channel: 'true'
@@ -453,7 +453,7 @@ jobs:
           role-duration-seconds: 3600 # 1h, the producer role's maximum session duration
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}
       - name: Create Conda release catalog companion
-        uses: rapidsai/shared-actions/release-catalog-dispatch@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        uses: rapidsai/shared-actions/release-catalog-dispatch@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         with:
           config: >-
             {
@@ -467,10 +467,10 @@ jobs:
           candidate-matrix-cuda-version: ${{ matrix.CUDA_VER }}
           candidate-matrix-python-version: ${{ matrix.PY_VER }}
       - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
           # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
           GH_TOKEN: ${{ github.token }}
-          SHARED_ACTIONS_REF: cea935cc5e25ec216756d0e2676c3cd32717aa4e
+          SHARED_ACTIONS_REF: 10a2bb85aa2032447995b7c22ccf9c43a0dc74d0

@@ -59,7 +59,7 @@ fi
 bash "${root}/tests/prepare-matrix-dispatch-pins.sh"
 
 pins="$(rg -o 'uses: rapidsai/shared-actions/(release-candidate-[^@[:space:]]+|release-catalog-dispatch)@[[:alnum:]]+' "${root}/.github/workflows" \
-  | grep -v '@aa27f344e33b176945146e5a4218a182d72e1688$' | sed 's/.*@//' | sort -u)"
+  | sed 's/.*@//' | sort -u)"
 if [[ "$(printf '%s\n' "${pins}" | wc -l | tr -d ' ')" != 1 ]] ||
   [[ ! "${pins}" =~ ^[0-9a-f]{40}$ ]]; then
   echo "candidate implementation actions must share one full commit SHA; found: ${pins}" >&2
@@ -69,7 +69,7 @@ cpp_build="${root}/.github/workflows/conda-cpp-build-candidate.yaml"
 legacy_image_condition="if: \${{ inputs.candidate-image-preflight-json == '' }}"
 if ! rg -Fq "${legacy_image_condition}" "${cpp_build}" ||
   ! rg -Fq 'runtime-image-reference: ${{ matrix.candidate_image_reference }}' "${cpp_build}" ||
-  ! rg -Fq 'ref: c74836a849551cc1f2c3afbfe88d808d6aa3acdc' "${cpp_build}" ||
+  ! rg -Fq 'ref: 06f322f73489d5b98935d92fd7971a888a56dba1' "${cpp_build}" ||
   ! rg -Fq 'candidate image preflight bytes differ from the pre-start validated document' "${cpp_build}"; then
   echo "C++ candidate image opt-in must retain the legacy action and bind the reviewed digest path" >&2
   exit 1
@@ -157,12 +157,12 @@ rg -Fq "inputs.candidate-docs && 'false'" "${custom}"
 for workflow in conda-cpp-build-candidate.yaml conda-python-build-candidate.yaml wheels-build-candidate.yaml custom-job-candidate.yaml; do
   path="${root}/.github/workflows/${workflow}"
   telemetry_steps="$(rg -c 'uses: rapidsai/shared-actions/telemetry-dispatch-(setup|stash-job-artifacts)@' "${path}")"
-  telemetry_pins="$(rg -c 'SHARED_ACTIONS_REF: cea935cc5e25ec216756d0e2676c3cd32717aa4e' "${path}")"
+  telemetry_pins="$(rg -c 'SHARED_ACTIONS_REF: 10a2bb85aa2032447995b7c22ccf9c43a0dc74d0' "${path}")"
   if [[ "${telemetry_steps}" != 2 || "${telemetry_pins}" != 2 ]]; then
     echo "${workflow} telemetry runtime checkout must use the same pinned shared-actions revision" >&2
     exit 1
   fi
-  context_steps="$(rg -c 'uses: rapidsai/shared-actions/release-candidate-context@cea935cc5e25ec216756d0e2676c3cd32717aa4e' "${path}")"
+  context_steps="$(rg -c 'uses: rapidsai/shared-actions/release-candidate-context@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0' "${path}")"
   boundary_audits="$(rg -c "audit-boundary: 'true'" "${path}")"
   if [[ "${context_steps}" != 1 || "${boundary_audits}" != 1 ]]; then
     echo "${workflow} candidate context must run the private boundary audit" >&2

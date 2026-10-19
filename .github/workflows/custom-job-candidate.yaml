@@ -233,7 +233,7 @@ jobs:
       - name: Resolve controller-bound candidate metadata
         id: candidate-context
         if: ${{ inputs.candidate-train-sha256 == '' }}
-        uses: rapidsai/shared-actions/release-candidate-context@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        uses: rapidsai/shared-actions/release-candidate-context@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         with:
           source-sha: ${{ inputs.sha || github.sha }}
           script: ${{ inputs.script }}
@@ -250,13 +250,13 @@ jobs:
         if: ${{ !inputs.candidate-docs }}
         run: echo "${GITHUB_WORKSPACE}/candidate-gha-tools/tools" >> "${GITHUB_PATH}"
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
           # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
           GH_TOKEN: ${{ github.token }}
-          SHARED_ACTIONS_REF: cea935cc5e25ec216756d0e2676c3cd32717aa4e
+          SHARED_ACTIONS_REF: 10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
       - name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@eadc57871cde0c92a223d0f486ab669a2360f978
         continue-on-error: true
@@ -274,7 +274,7 @@ jobs:
         run: | # zizmor: ignore[template-injection]
           echo "RAPIDS_BASE_BRANCH=${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}" >> "${GITHUB_ENV}"
       - name: Standardize repository information
-        uses: rapidsai/shared-actions/rapids-github-info@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        uses: rapidsai/shared-actions/rapids-github-info@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
@@ -290,7 +290,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}
       - name: Prepare candidate dependencies and build policy
         if: ${{ (inputs.candidate-docs || inputs.candidate-dependency-family != '') }}
-        uses: rapidsai/shared-actions/release-candidate-dependencies@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        uses: rapidsai/shared-actions/release-candidate-dependencies@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
           prepare-conda-channel: ${{ inputs.candidate-prepare-conda-channel || inputs.candidate-docs }}
@@ -320,7 +320,7 @@ jobs:
           persist-credentials: false
       - name: Stage candidate documentation privately
         if: ${{ inputs.candidate-docs }}
-        uses: rapidsai/shared-actions/release-candidate-docs@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        uses: rapidsai/shared-actions/release-candidate-docs@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
       - name: Set up uv for candidate documentation
@@ -372,7 +372,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}
       - name: Create release catalog companion
         if: ${{ inputs.release-catalog-config != '' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        uses: rapidsai/shared-actions/release-catalog-dispatch@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         with:
           config: ${{ inputs.release-catalog-config }}
           source-artifact-name: ${{ inputs.candidate-artifact-name || inputs.artifact-name }}
@@ -382,10 +382,10 @@ jobs:
           candidate-matrix-cuda-version: ${{ inputs.candidate-cuda-version }}
           candidate-matrix-python-version: ${{ inputs.candidate-python-version }}
       - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@cea935cc5e25ec216756d0e2676c3cd32717aa4e
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
           # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
           GH_TOKEN: ${{ github.token }}
-          SHARED_ACTIONS_REF: cea935cc5e25ec216756d0e2676c3cd32717aa4e
+          SHARED_ACTIONS_REF: 10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
