@@ -72,6 +72,12 @@ MATRIX="$(
 echo "${MATRIX}" | jq
 ```
 
+### Package artifacts
+
+Conda C++ and Python build artifacts and wheel build artifacts are uploaded without
+additional Zlib compression because the packages are already compressed. Compression of
+the packages themselves is controlled by each project's build scripts.
+
 ### Secrets
 
 Some workflows support passing in arbitrary secrets and making them available as environment variables for the `script:` input.

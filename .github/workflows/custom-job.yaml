@@ -217,6 +217,9 @@ jobs:
       sccache-dist-token-secret-name: ${{ inputs.sccache-dist-token-secret-name }}
       alternative-gh-token-secret-name: ${{ inputs.alternative-gh-token-secret-name }}
       requires_license_builder: ${{ inputs.requires_license_builder }}
+      script-env-secret-1-name: ${{ inputs.script-env-secret-1-name }}
+      script-env-secret-2-name: ${{ inputs.script-env-secret-2-name }}
+      script-env-secret-3-name: ${{ inputs.script-env-secret-3-name }}
   candidate:
     needs: validate
     if: ${{ needs.validate.outputs.run-candidate == 'true' }}
