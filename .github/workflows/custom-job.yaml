@@ -164,13 +164,6 @@ jobs:
           ref: ${{ inputs.sha }}
           fetch-depth: 0
           persist-credentials: true
-      - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
-          GH_TOKEN: ${{ github.token }}
       - name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@main
         continue-on-error: true
@@ -268,10 +261,3 @@ jobs:
       - name: Upload additional artifacts
         if: ${{ !cancelled() && inputs.build_type != 'release-candidate' }}
         run: rapids-upload-artifacts-dir "custom-job-$(arch)"
-      - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
-          GH_TOKEN: ${{ github.token }}
