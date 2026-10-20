@@ -263,19 +263,15 @@ jobs:
       - name: Set secrets in script env
         run: |
           set_env_var() {
-            local input_name="script-env-secret-$1-key"
-            local name=$2
-            local value=$3
-            if test -n "${name}"; then
-              if ! [[ "${name}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
-                echo "ERROR: '${input_name}' must be a valid environment variable name."
+            local input_prefix="script-env-secret-$1"
+            local key_str=$2
+            local val_str=$3
+            if test -n "${val_str}"; then
+              if ! test -n "${key_str}"; then
+                echo "ERROR: '${input_prefix}-value' non-empty but '${input_prefix}-key' is empty. Set '${input_prefix}-key'."
                 exit 1
               fi
-              if ! test -n "${value}"; then
-                echo "ERROR: secret value for '${name}' (from '${input_name}') is empty or not passed to this workflow."
-                exit 1
-              fi
-              echo "${name}=${value}" >> "${GITHUB_ENV}"
+              echo "${key_str}=${val_str}" >> "${GITHUB_ENV}"
             fi
           }
           set_env_var '1' "${SECRET_1_NAME}" "${SECRET_1_VALUE}"
