@@ -117,6 +117,7 @@ docs-preview:
 ```
 
 Do not add `docs-preview` to the `needs:` of `pr-builder`; the link is informational and should never block merges.
+Instead, add `docs-preview` to the `ignored_pr_jobs` input of the `checks` job, so `rapids-check-pr-job-dependencies` doesn't flag it as missing from `pr-builder`.
 
 ### Release catalog
 
