@@ -99,6 +99,25 @@ wheel-tests:
 
 Values passed through `secrets:` are redacted everywhere in the GitHub UI, including in logs, and in most cases are replaced with `***`.
 
+### Docs preview status
+
+`custom-job.yaml` exposes a `docs-preview-urls` output: a JSON object mapping each docs project to its PR preview URL, written by `rapids-upload-docs` (gha-tools) on pull-request builds.
+`docs-preview-status.yaml` reads that output and posts a commit status on the PR head commit, with a **Details** link to the docs preview.
+
+```yaml
+docs-preview:
+  needs: [docs-build]
+  if: needs.docs-build.result == 'success'
+  permissions:
+    statuses: write
+  uses: rapidsai/shared-workflows/.github/workflows/docs-preview-status.yaml@main
+  with:
+    docs-preview-urls: ${{ needs.docs-build.outputs.docs-preview-urls }}
+    # docs-project: <name>   # only if the main docs project dir differs from the repo name
+```
+
+Do not add `docs-preview` to the `needs:` of `pr-builder`; the link is informational and should never block merges.
+
 ### Release catalog
 
 We add additional metadata files to our builds to help track what dependencies
