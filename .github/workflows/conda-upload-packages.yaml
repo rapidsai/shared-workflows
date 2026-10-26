@@ -86,6 +86,8 @@ jobs:
         continue-on-error: true
         with:
           enable-apt: true
+          enable-conda: true
+          enable-pip: true
 
       - name: Install tools
         run: |

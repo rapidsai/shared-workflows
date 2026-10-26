@@ -117,6 +117,37 @@ on:
         description: "Canonical SHA-256 of the release train; required for release-candidate builds."
         type: string
         default: ""
+    secrets:
+      script-env-secret-1-key:
+        description: |
+          Name of an environment variable in the environment where 'inputs.script' is run.
+          Variable's value will be set to the value passed as 'secrets.script-env-secret-1-value'.
+        required: false
+      script-env-secret-1-value:
+        description: |
+          Secret value.
+          Will be available via an environment variable named by 'secrets.script-env-secret-1-key'.
+        required: false
+      script-env-secret-2-key:
+        description: |
+          Name of an environment variable in the environment where 'inputs.script' is run.
+          Variable's value will be set to the value passed as 'secrets.script-env-secret-2-value'.
+        required: false
+      script-env-secret-2-value:
+        description: |
+          Secret value.
+          Will be available via an environment variable named by 'secrets.script-env-secret-2-key'.
+        required: false
+      script-env-secret-3-key:
+        description: |
+          Name of an environment variable in the environment where 'inputs.script' is run.
+          Variable's value will be set to the value passed as 'secrets.script-env-secret-3-value'.
+        required: false
+      script-env-secret-3-value:
+        description: |
+          Secret value.
+          Will be available via an environment variable named by 'secrets.script-env-secret-3-key'.
+        required: false
 
 defaults:
   run:
@@ -176,6 +207,9 @@ jobs:
         continue-on-error: true
         with:
           enable-apt: true
+          enable-conda: true
+          enable-pip: true
+          enable-pypi-anaconda: true
       - name: Get PR Info
         if: startsWith(github.ref_name, 'pull-request/')
         id: get-pr-info
@@ -225,6 +259,31 @@ jobs:
           path: "./tool/"
           fetch-depth: 0
           persist-credentials: false
+      # cannot put possibly-null things as keys in the 'env:' mapping, so need to process these in a script
+      - name: Set secrets in script env
+        run: |
+          set_env_var() {
+            local input_prefix="script-env-secret-$1"
+            local key_str=$2
+            local val_str=$3
+            if test -n "${val_str}"; then
+              if ! test -n "${key_str}"; then
+                echo "ERROR: '${input_prefix}-value' non-empty but '${input_prefix}-key' is empty. Set '${input_prefix}-key'."
+                exit 1
+              fi
+              echo "${key_str}=${val_str}" >> "${GITHUB_ENV}"
+            fi
+          }
+          set_env_var '1' "${SECRET_1_NAME}" "${SECRET_1_VALUE}"
+          set_env_var '2' "${SECRET_2_NAME}" "${SECRET_2_VALUE}"
+          set_env_var '3' "${SECRET_3_NAME}" "${SECRET_3_VALUE}"
+        env:
+          SECRET_1_NAME: ${{ secrets.script-env-secret-1-key }}
+          SECRET_1_VALUE: ${{ secrets.script-env-secret-1-value }}
+          SECRET_2_NAME: ${{ secrets.script-env-secret-2-key }}
+          SECRET_2_VALUE: ${{ secrets.script-env-secret-2-value }}
+          SECRET_3_NAME: ${{ secrets.script-env-secret-3-key }}
+          SECRET_3_VALUE: ${{ secrets.script-env-secret-3-value }}
       - name: Run script
         run: |
           ulimit -n "$(ulimit -Hn)"
@@ -241,7 +300,7 @@ jobs:
           RATTLER_SHARDED: false
       - name: Upload file to GitHub Artifact
         if: ${{ inputs.build_type != 'release-candidate' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ inputs.artifact-name }}
           path: ${{ inputs.file_to_upload }}

@@ -92,6 +92,8 @@ jobs:
         continue-on-error: true
         with:
           enable-apt: true
+          enable-pip: true
+          enable-pypi-anaconda: true
 
       - name: Install tools
         run: |

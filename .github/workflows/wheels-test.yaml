@@ -22,7 +22,7 @@ on:
         required: true
         type: string
       matrix_type:
-        description: "One or more comma-separated values from: [auto, nightly, pull-request]. 'auto' must be used alone and means 'choose a value based on what's provided via build_type'."
+        description: "One or more comma-separated matrix types defined for this workflow's matrix in .github/actions/prepare-matrix/matrix.yaml, e.g. 'pull-request' or 'nightly'. Defaults to 'auto', which must be used alone and means 'choose a value based on what's provided via build_type'."
         required: false
         type: string
         default: "auto"
@@ -205,6 +205,7 @@ jobs:
   test:
     name: ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}, ${{ matrix.GPU }}, ${{ matrix.DRIVER }}-driver, ${{ matrix.DEPENDENCIES }}-deps
     needs: compute-matrix
+    timeout-minutes: 120
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
       RAPIDS_DEPENDENCIES: ${{ matrix.DEPENDENCIES }}
@@ -273,6 +274,8 @@ jobs:
         continue-on-error: true
         with:
           enable-apt: true
+          enable-pip: true
+          enable-pypi-anaconda: true
 
       # Install latest rapidsai/sccache client and configure sccache-dist
       - name: Setup sccache-dist

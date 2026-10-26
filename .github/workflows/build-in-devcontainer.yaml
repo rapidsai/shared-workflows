@@ -147,7 +147,7 @@ jobs:
           role-duration-seconds: 43200 # 12h
 
       - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
 
@@ -156,6 +156,9 @@ jobs:
         continue-on-error: true
         with:
           enable-apt: true
+          enable-conda: true
+          enable-pip: true
+          enable-pypi-anaconda: true
 
       - name: Run build in devcontainer
         uses: devcontainers/ci@513af61f4de4f75d37e4438f184ba4358f0fc1ca # v0.3.1900000450
@@ -214,7 +217,7 @@ jobs:
 
       - if: ${{ !cancelled() }}
         name: Upload sccache logs
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sccache-client-logs-${{ env.BUILD_SLUG }}-${{ env.ARTIFACT_SLUG }}
           path: repo/sccache*.log

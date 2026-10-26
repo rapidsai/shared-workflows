@@ -48,6 +48,11 @@ on:
         description: "Canonical SHA-256 of the release train; required for release-candidate builds."
         type: string
         default: ""
+      matrix_type:
+        description: "One or more comma-separated matrix types defined for this workflow's matrix in .github/actions/prepare-matrix/matrix.yaml, e.g. 'pull-request' or 'nightly'. Defaults to 'auto', which must be used alone and means 'choose a value based on what's provided via build_type'."
+        required: false
+        type: string
+        default: "auto"
       matrix_filter:
         description: |
           jq expression which modifies the matrix.
@@ -145,6 +150,7 @@ jobs:
     with:
       build_type: ${{ inputs.build_type }}
       matrix_name: conda-cpp-build
+      matrix_type: ${{ inputs.matrix_type }}
       matrix_filter: ${{ inputs.matrix_filter }}
   build:
     name: ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}
@@ -202,6 +208,9 @@ jobs:
         continue-on-error: true
         with:
           enable-apt: true
+          enable-conda: true
+          enable-pip: true
+          enable-pypi-anaconda: true
 
       # This has to be AFTER the checkout step. It creates a telemetry-artifacts directory,
       # and the checkout step would destroy it.
@@ -282,12 +291,13 @@ jobs:
         run: |
           echo "Contents of directory to be uploaded:"
           ls -R "${CONDA_OUTPUT_DIR}"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ inputs.upload-artifacts && inputs.build_type != 'release-candidate' }}
         with:
           if-no-files-found: 'error'
           name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
           path: ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
+          compression-level: 0
 
       - name: Configure release-candidate store credentials
         if: ${{ inputs.build_type == 'release-candidate' }}
