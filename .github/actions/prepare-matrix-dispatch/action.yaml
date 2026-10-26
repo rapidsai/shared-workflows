@@ -26,4 +26,4 @@ runs:
         persist-credentials: false
     - id: prepare-matrix
       name: Prepare Build Matrix
-      uses: ./shared-workflows/.github/actions/prepare-matrix
+      uses: $/shared-workflows/.github/actions/prepare-matrix
