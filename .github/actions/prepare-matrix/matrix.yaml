@@ -33,7 +33,7 @@ conda-cpp-tests:
     - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.0.3', LINUX_VER: 'rockylinux8', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
   cuda-13-4-pr:
     # amd64
-    - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+    - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '13.4.3', LINUX_VER: 'ubuntu26.04', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
     # arm64
     # (empty - no latest-CUDA jobs in PR matrix)
   nightly:
