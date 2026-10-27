@@ -196,7 +196,7 @@ permissions:
 
 jobs:
   compute-matrix:
-    uses: ./.github/workflows/compute-matrix.yaml
+    uses: $/.github/workflows/compute-matrix.yaml
     with:
       build_type: ${{ inputs.build_type }}
       matrix_name: wheels-test
