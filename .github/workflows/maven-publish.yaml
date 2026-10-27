@@ -81,8 +81,7 @@ jobs:
       - name: Determine publish destination
         id: destination
         run: |
-          # TEMPORARY: Force the Maven Central path for end-to-end testing.
-          if true; then
+          if rapids-is-release-build; then
             echo "is_release=true" >> "${GITHUB_OUTPUT}"
           else
             echo "is_release=false" >> "${GITHUB_OUTPUT}"
