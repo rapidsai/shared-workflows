@@ -71,7 +71,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@1403582b10649dcfd6fd6478eec743dddad8cc6d
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
@@ -130,7 +130,7 @@ jobs:
             python ./tool/detect.py "${RAPIDS_EXTRACTED_DIR}"/lib
           fi
       - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@1403582b10649dcfd6fd6478eec743dddad8cc6d
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:

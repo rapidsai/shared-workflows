@@ -167,7 +167,7 @@ jobs:
       # This has to be AFTER the checkout step. It creates a telemetry-artifacts directory,
       # and the checkout step would destroy it.
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@1403582b10649dcfd6fd6478eec743dddad8cc6d
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         with:
@@ -177,7 +177,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Standardize repository information
-        uses: rapidsai/shared-actions/rapids-github-info@main
+        uses: rapidsai/shared-actions/rapids-github-info@1403582b10649dcfd6fd6478eec743dddad8cc6d
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
@@ -193,7 +193,7 @@ jobs:
 
       # Install latest rapidsai/sccache client and configure sccache-dist
       - name: Setup sccache-dist
-        uses: rapidsai/shared-actions/setup-sccache-dist@main
+        uses: rapidsai/shared-actions/setup-sccache-dist@1403582b10649dcfd6fd6478eec743dddad8cc6d
         env:
           AWS_REGION: "${{env.AWS_REGION}}"
           AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
@@ -256,7 +256,7 @@ jobs:
         if: "!cancelled()"
         run: rapids-upload-artifacts-dir "cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)"
       - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@1403582b10649dcfd6fd6478eec743dddad8cc6d
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
