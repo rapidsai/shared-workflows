@@ -110,7 +110,7 @@ jobs:
       # This provides an initial set of metadata tags. Jobs are free to add to the RAPIDS_JOB_ATTRIBUTES
       # environment variable as they see fit - but remember to export the variable to ${GITHUB_ENV}
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@1403582b10649dcfd6fd6478eec743dddad8cc6d
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
@@ -222,7 +222,7 @@ jobs:
 
       - if: ${{ always() && vars.TELEMETRY_ENABLED == 'true' }}
         name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@1403582b10649dcfd6fd6478eec743dddad8cc6d
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
