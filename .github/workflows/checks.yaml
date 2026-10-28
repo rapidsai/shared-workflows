@@ -73,12 +73,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: true
-      - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
       - name: Get PR Info
         if: ${{ inputs.base-branch == '' }}
         id: get-pr-info
@@ -127,13 +121,6 @@ jobs:
             echo "ERROR: Expected latest tag to be '$expected_version', got '$actual_version'; did you accidentally merge 'main' into a release-bound PR?"
             exit 1
           fi
-      - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-
   check-style:
     if: ${{ inputs.enable_check_style }}
     runs-on: ubuntu-latest
@@ -146,12 +133,6 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: true
-      - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
       - name: Get PR Info
         if: ${{ inputs.base-branch == '' }}
         id: get-pr-info
@@ -173,9 +154,3 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RAPIDS_BASE_BRANCH: ${{ inputs.base-branch || fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
-      - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}

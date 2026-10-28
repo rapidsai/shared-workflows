@@ -107,17 +107,6 @@ jobs:
           path: repo
           persist-credentials: true
 
-      # This provides an initial set of metadata tags. Jobs are free to add to the RAPIDS_JOB_ATTRIBUTES
-      # environment variable as they see fit - but remember to export the variable to ${GITHUB_ENV}
-      - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        with:
-          extra_attributes: "rapids.PACKAGER=${{ matrix.PACKAGER }},rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.ARCH=${{ matrix.ARCH }}"
-
       - name: Setup job env
         env:
           ARCH: ${{ matrix.ARCH }}
@@ -181,11 +170,6 @@ jobs:
             AWS_SESSION_TOKEN=${{ env.AWS_SESSION_TOKEN }}
             AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
             RAPIDS_AUX_SECRET_1=${{ inputs.rapids-aux-secret-1 != '' && secrets[inputs.rapids-aux-secret-1] || '' }}
-            TRACEPARENT=${{ env.TRACEPARENT }}
-            OTEL_SERVICE_NAME=${{ env.OTEL_SERVICE_NAME }}
-            OTEL_EXPORTER_OTLP_ENDPOINT=${{ env.OTEL_EXPORTER_OTLP_ENDPOINT }}
-            OTEL_EXPORTER_OTLP_PROTOCOL=${{ env.OTEL_EXPORTER_OTLP_PROTOCOL }}
-            OTEL_RESOURCE_ATTRIBUTES=${{ env.OTEL_RESOURCE_ATTRIBUTES }}
             ${{ inputs.env }}
           runCmd: |
             set -euo pipefail;
@@ -212,7 +196,6 @@ jobs:
             rapids-make-${PYTHON_PACKAGE_MANAGER}-env || :;
 
             cd ~/"${REPOSITORY}";
-            mkdir -p telemetry-artifacts;
             ${{ inputs.build_command }}
 
       - if: ${{ !cancelled() }}
@@ -222,10 +205,3 @@ jobs:
           name: sccache-client-logs-${{ env.BUILD_SLUG }}-${{ env.ARTIFACT_SLUG }}
           path: repo/sccache*.log
           compression-level: 9
-
-      - if: ${{ always() && vars.TELEMETRY_ENABLED == 'true' }}
-        name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
