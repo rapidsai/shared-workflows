@@ -180,7 +180,7 @@ jobs:
           persist-credentials: true
 
       - name: Standardize repository information
-        uses: rapidsai/shared-actions/rapids-github-info@1403582b10649dcfd6fd6478eec743dddad8cc6d
+        uses: rapidsai/shared-actions/rapids-github-info@release/26.10
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
@@ -191,7 +191,7 @@ jobs:
       # This has to be AFTER the checkout step. It creates a telemetry-artifacts directory,
       # and the checkout step would destroy it.
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@1403582b10649dcfd6fd6478eec743dddad8cc6d
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@release/26.10
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
@@ -208,7 +208,7 @@ jobs:
 
       # Install latest rapidsai/sccache client and configure sccache-dist
       - name: Setup sccache-dist
-        uses: rapidsai/shared-actions/setup-sccache-dist@1403582b10649dcfd6fd6478eec743dddad8cc6d
+        uses: rapidsai/shared-actions/setup-sccache-dist@release/26.10
         env:
           AWS_REGION: "${{env.AWS_REGION}}"
           AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
@@ -283,7 +283,7 @@ jobs:
         if: "!cancelled()"
         run: rapids-upload-artifacts-dir "cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}"
       - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@1403582b10649dcfd6fd6478eec743dddad8cc6d
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@release/26.10
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:

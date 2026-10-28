@@ -166,7 +166,7 @@ jobs:
           persist-credentials: false
 
       - name: Standardize repository information
-        uses: rapidsai/shared-actions/rapids-github-info@1403582b10649dcfd6fd6478eec743dddad8cc6d
+        uses: rapidsai/shared-actions/rapids-github-info@release/26.10
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
@@ -199,7 +199,7 @@ jobs:
           enable-apt: true
 
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@1403582b10649dcfd6fd6478eec743dddad8cc6d
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@release/26.10
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
@@ -210,7 +210,7 @@ jobs:
 
       # Install latest rapidsai/sccache client and configure sccache-dist
       - name: Setup sccache-dist
-        uses: rapidsai/shared-actions/setup-sccache-dist@1403582b10649dcfd6fd6478eec743dddad8cc6d
+        uses: rapidsai/shared-actions/setup-sccache-dist@release/26.10
         env:
           AWS_REGION: "${{env.AWS_REGION}}"
           AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
@@ -306,5 +306,5 @@ jobs:
         env:
           # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
           GH_TOKEN: ${{ github.token }}
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@1403582b10649dcfd6fd6478eec743dddad8cc6d
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@release/26.10
         continue-on-error: true

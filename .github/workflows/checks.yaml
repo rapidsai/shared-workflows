@@ -59,7 +59,7 @@ jobs:
         with:
           persist-credentials: true
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@1403582b10649dcfd6fd6478eec743dddad8cc6d
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@release/26.10
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
@@ -80,7 +80,7 @@ jobs:
       - name: Check changed files
         id: changed-files
         if: ${{ inputs.enable_check_version_files_changed }}
-        uses: rapidsai/shared-actions/changed-files@1403582b10649dcfd6fd6478eec743dddad8cc6d
+        uses: rapidsai/shared-actions/changed-files@release/26.10
         with:
           files_yaml: |
             version_files:
@@ -112,7 +112,7 @@ jobs:
             exit 1
           fi
       - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@1403582b10649dcfd6fd6478eec743dddad8cc6d
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@release/26.10
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
@@ -131,7 +131,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@1403582b10649dcfd6fd6478eec743dddad8cc6d
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@release/26.10
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
@@ -149,7 +149,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
       - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@1403582b10649dcfd6fd6478eec743dddad8cc6d
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@release/26.10
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
