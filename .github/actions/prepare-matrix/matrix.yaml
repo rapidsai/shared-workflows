@@ -107,6 +107,11 @@ conda-python-tests:
     # (empty - no latest-CUDA jobs in PR matrix)
     # arm64
     - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '13.4.3', LINUX_VER: 'ubuntu26.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+  python-3-15-pr:
+    # amd64
+    - { ARCH: 'amd64', PY_VER: '3.15', CUDA_VER: '12.9.2', LINUX_VER: 'ubuntu24.04', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+    # arm64
+    - { ARCH: 'arm64', PY_VER: '3.15', CUDA_VER: '13.4.3', LINUX_VER: 'ubuntu26.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
   nightly:
     # amd64
     - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8', GPU: 'l4',         DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
@@ -131,6 +136,11 @@ conda-python-tests:
     # arm64
     - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.4.3', LINUX_VER: 'rockylinux8', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
     - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.4.3', LINUX_VER: 'ubuntu26.04', GPU: 'gb300',      DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+  python-3-15-nightly:
+    # amd64
+    - { ARCH: 'amd64', PY_VER: '3.15', CUDA_VER: '13.4.3', LINUX_VER: 'ubuntu26.04', GPU: 'h100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+    # arm64
+    - { ARCH: 'arm64', PY_VER: '3.15', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
 
 docs-build:
   pull-request: &docs_build
@@ -150,6 +160,9 @@ docs-build:
     - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '13.4.3', LINUX_VER: 'ubuntu26.04', GPU: 'rtxpro6000', DRIVER: 'latest' }
   nightly: *docs_build
   cuda-13-4-nightly: *docs_cu_13_4_pr
+  python-3-15-pr: &docs_py_3_15_pr
+    - { ARCH: 'amd64', PY_VER: '3.15', CUDA_VER: '13.4.3', LINUX_VER: 'ubuntu26.04', GPU: 'rtxpro6000', DRIVER: 'latest' }
+  python-3-15-nightly: *docs_py_3_15_pr
 
 wheels-build:
   pull-request: &wheels_build
@@ -198,6 +211,11 @@ wheels-test:
     - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '13.4.3', LINUX_VER: 'ubuntu24.04', GPU: 'h100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
     # arm64
     - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '13.4.3', LINUX_VER: 'ubuntu26.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+  python-3-15-pr: &wheels_test_py_3_15_pr
+    # amd64
+    - { ARCH: 'amd64', PY_VER: '3.15', CUDA_VER: '13.4.3', LINUX_VER: 'ubuntu24.04', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+    # arm64
+    - { ARCH: 'arm64', PY_VER: '3.15', CUDA_VER: '12.9.2', LINUX_VER: 'ubuntu26.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
   nightly:
     # amd64
     - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'v100',       DRIVER: 'earliest', DEPENDENCIES: 'latest' }
@@ -219,5 +237,6 @@ wheels-test:
     - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '13.4.3', LINUX_VER: 'ubuntu26.04', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
     # arm64
     - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.4.3', LINUX_VER: 'ubuntu26.04', GPU: 'gb300',      DRIVER: 'latest',   DEPENDENCIES: 'latest' }
+  python-3-15-nightly: *wheels_test_py_3_15_pr
 
 # yamllint enable rule:commas
