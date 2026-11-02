@@ -126,7 +126,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       # Must pin to Python <3.13, cmake-format is broken, see https://github.com/python/cpython/issues/140797
-      image: rapidsai/ci-conda:26.12-cuda13.3.0-ubuntu24.04-py3.12 # zizmor: ignore[unpinned-images]
+      image: rapidsai/ci-conda:26.12-cuda13.4.3-ubuntu24.04-py3.12 # zizmor: ignore[unpinned-images]
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
