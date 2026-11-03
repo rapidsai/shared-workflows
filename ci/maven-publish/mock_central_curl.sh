@@ -20,6 +20,12 @@ done
 status=200
 body=""
 case "${url}" in
+  *publisher/upload*)
+    printf '%s\n' "${url}" >> "${MOCK_STATE_DIR}/uploads.log"
+    status=201
+    body=00000000-0000-0000-0000-000000000001
+    if [[ ${FAIL_UPLOAD:-false} == true ]]; then status=500; fi
+    ;;
   *manual/search/repositories*state=open*)
     if [[ ${PREEXISTING_OPEN:-false} == true || -f ${MOCK_STATE_DIR}/uploaded ]]; then
       body='{"repositories":[{"key":"repo-key","state":"open","portal_deployment_id":"","warnings":[]}]}'

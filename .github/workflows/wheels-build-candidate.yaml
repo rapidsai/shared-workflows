@@ -183,13 +183,13 @@ permissions:
 
 jobs:
   policy:
-    uses: ./.github/workflows/evaluate-build-policy.yaml
+    uses: $/.github/workflows/evaluate-build-policy.yaml
     permissions: {}
     with:
       inputs-json: ${{ toJSON(inputs) }}
       build-type: release-candidate
   compute-matrix:
-    uses: ./.github/workflows/compute-matrix.yaml
+    uses: $/.github/workflows/compute-matrix.yaml
     with:
       build_type: release-candidate
       matrix_name: wheels-build
@@ -223,7 +223,7 @@ jobs:
           persist-credentials: false
       - name: Setup caller cache
         if: ${{ needs.policy.outputs.caller-cache == 'true' }}
-        uses: rapidsai/shared-actions/setup-caller-cache@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
+        uses: rapidsai/shared-actions/setup-caller-cache@1dd81e7f3c7dd183f30ae2dbf1e0c3b1122674b8
         with:
           cache-paths: ${{ inputs.cache-paths }}
           cache-key-prefix: ${{ inputs.cache-key-prefix }}
@@ -234,7 +234,7 @@ jobs:
           matrix: ${{ toJSON(matrix) }}
 
       - name: Standardize repository information
-        uses: rapidsai/shared-actions/rapids-github-info@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
+        uses: rapidsai/shared-actions/rapids-github-info@1dd81e7f3c7dd183f30ae2dbf1e0c3b1122674b8
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
@@ -269,17 +269,6 @@ jobs:
           enable-pip: true
           enable-pypi-anaconda: true
 
-      - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
-          GH_TOKEN: ${{ github.token }}
-          SHARED_ACTIONS_REF: 10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
-        with:
-          extra_attributes: "rapids.PACKAGER=wheel,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
-
       - name: Configure candidate dependency store credentials
         uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6.2.2
         with:
@@ -290,7 +279,7 @@ jobs:
       - name: Resolve controller-bound candidate metadata
         id: candidate-context
         if: ${{ inputs.candidate-train-sha256 == '' }}
-        uses: rapidsai/shared-actions/release-candidate-context@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
+        uses: rapidsai/shared-actions/release-candidate-context@1dd81e7f3c7dd183f30ae2dbf1e0c3b1122674b8
         with:
           source-sha: ${{ env.RAPIDS_SHA }}
           audit-boundary: 'true'
@@ -302,7 +291,7 @@ jobs:
           repository: ${{ inputs.repo || github.repository }}
           source-sha: ${{ env.RAPIDS_SHA }}
       - name: Prepare candidate dependencies and build policy
-        uses: rapidsai/shared-actions/release-candidate-dependencies@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
+        uses: rapidsai/shared-actions/release-candidate-dependencies@1dd81e7f3c7dd183f30ae2dbf1e0c3b1122674b8
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
           artifact-family: wheel
@@ -407,7 +396,7 @@ jobs:
           role-duration-seconds: 3600 # 1h, the producer role's maximum session duration
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}
       - name: Create wheel release catalog companion
-        uses: rapidsai/shared-actions/release-catalog-dispatch@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
+        uses: rapidsai/shared-actions/release-catalog-dispatch@1dd81e7f3c7dd183f30ae2dbf1e0c3b1122674b8
         with:
           config: >-
             {
@@ -420,12 +409,3 @@ jobs:
           candidate-matrix-arch: ${{ matrix.ARCH }}
           candidate-matrix-cuda-version: ${{ matrix.CUDA_VER }}
           candidate-matrix-python-version: ${{ matrix.PY_VER }}
-
-      - name: Telemetry upload attributes
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
-          GH_TOKEN: ${{ github.token }}
-          SHARED_ACTIONS_REF: 10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
-        continue-on-error: true

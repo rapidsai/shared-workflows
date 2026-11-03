@@ -90,6 +90,25 @@ staging_drop_repository() {
     >/dev/null
 }
 
+portal_upload_bundle() {
+  local zip_path=$1 name=$2 publishing_type=$3
+  local body_file status url
+  url="${CENTRAL_PORTAL_URL}/api/v1/publisher/upload?publishingType=${publishing_type}&name=$(printf %s "${name}" | jq -sRr @uri)"
+  body_file=$(mktemp)
+  status=$(curl -sS --connect-timeout 15 --max-time 120 --retry 0 \
+    -H "Authorization: Bearer $(_portal_auth)" \
+    --form "bundle=@${zip_path};type=application/octet-stream" \
+    -X POST -o "${body_file}" -w '%{http_code}' "${url}") \
+    || status="transport-error"
+  if [[ ${status} != 201 ]]; then
+    _sonatype_error_log POST "${url}" "${status}" "${body_file}" >&2
+    rm -f "${body_file}"
+    return 1
+  fi
+  tr -d '[:space:]' < "${body_file}"
+  rm -f "${body_file}"
+}
+
 portal_get_status() {
   local deployment_id=$1
   _sonatype_call POST \

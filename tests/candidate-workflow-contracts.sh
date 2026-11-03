@@ -69,7 +69,7 @@ cpp_build="${root}/.github/workflows/conda-cpp-build-candidate.yaml"
 legacy_image_condition="if: \${{ inputs.candidate-image-preflight-json == '' }}"
 if ! rg -Fq "${legacy_image_condition}" "${cpp_build}" ||
   ! rg -Fq 'runtime-image-reference: ${{ matrix.candidate_image_reference }}' "${cpp_build}" ||
-  ! rg -Fq 'ref: 06f322f73489d5b98935d92fd7971a888a56dba1' "${cpp_build}" ||
+  ! rg -Fq 'ref: ${{ job.workflow_sha }}' "${cpp_build}" ||
   ! rg -Fq 'candidate image preflight bytes differ from the pre-start validated document' "${cpp_build}"; then
   echo "C++ candidate image opt-in must retain the legacy action and bind the reviewed digest path" >&2
   exit 1
@@ -156,13 +156,11 @@ rg -Fq "inputs.candidate-docs && 'false'" "${custom}"
 
 for workflow in conda-cpp-build-candidate.yaml conda-python-build-candidate.yaml wheels-build-candidate.yaml custom-job-candidate.yaml; do
   path="${root}/.github/workflows/${workflow}"
-  telemetry_steps="$(rg -c 'uses: rapidsai/shared-actions/telemetry-dispatch-(setup|stash-job-artifacts)@' "${path}")"
-  telemetry_pins="$(rg -c 'SHARED_ACTIONS_REF: 10a2bb85aa2032447995b7c22ccf9c43a0dc74d0' "${path}")"
-  if [[ "${telemetry_steps}" != 2 || "${telemetry_pins}" != 2 ]]; then
-    echo "${workflow} telemetry runtime checkout must use the same pinned shared-actions revision" >&2
+  if rg -q 'uses: rapidsai/shared-actions/telemetry-' "${path}"; then
+    echo "${workflow} must preserve main's telemetry retirement" >&2
     exit 1
   fi
-  context_steps="$(rg -c 'uses: rapidsai/shared-actions/release-candidate-context@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0' "${path}")"
+  context_steps="$(rg -c 'uses: rapidsai/shared-actions/release-candidate-context@1dd81e7f3c7dd183f30ae2dbf1e0c3b1122674b8' "${path}")"
   boundary_audits="$(rg -c "audit-boundary: 'true'" "${path}")"
   if [[ "${context_steps}" != 1 || "${boundary_audits}" != 1 ]]; then
     echo "${workflow} candidate context must run the private boundary audit" >&2
@@ -209,7 +207,7 @@ for workflow in "${!expected_public_guards[@]}"; do
   path="${root}/.github/workflows/${workflow}"
   guard="if: \${{ needs.policy.outputs.allow-publication == 'true' }}"
   if [[ "$(rg -Fc "${guard}" "${path}")" -ne "${expected_public_guards[${workflow}]}" ]] ||
-    ! rg -Fq 'uses: ./.github/workflows/evaluate-build-policy.yaml' "${path}"; then
+    ! rg -Fq 'uses: $/.github/workflows/evaluate-build-policy.yaml' "${path}"; then
     echo "${workflow} publisher jobs must depend on evaluated publication policy" >&2
     exit 1
   fi
@@ -239,9 +237,8 @@ if ! rg -Fq 'Deprecated compatibility input; PyPI publishing is handled by Kitma
 fi
 
 maven_workflow="${root}/.github/workflows/maven-publish.yaml"
-if [[ $(rg -Fc 'MAVEN_DEPLOY_USERNAME: ${{ secrets.MAVEN_DEPLOY_USERNAME }}' "${maven_workflow}") -ne 2 ]] ||
-  rg -Fq 'MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME }}' "${maven_workflow}"; then
-  echo "maven-publish.yaml must read the deploy username from protected environment secrets for both destinations" >&2
+if [[ $(rg -Fc 'MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME || secrets.MAVEN_DEPLOY_USERNAME }}' "${maven_workflow}") -ne 2 ]]; then
+  echo "maven-publish.yaml must support the current username variable and protected-environment legacy fallback" >&2
   exit 1
 fi
 

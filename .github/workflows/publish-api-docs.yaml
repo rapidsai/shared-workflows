@@ -64,7 +64,7 @@ permissions:
 
 jobs:
   policy:
-    uses: ./.github/workflows/evaluate-build-policy.yaml
+    uses: $/.github/workflows/evaluate-build-policy.yaml
     permissions: {}
     with:
       inputs-json: ${{ toJSON(inputs) }}

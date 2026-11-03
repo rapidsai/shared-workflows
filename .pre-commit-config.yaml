@@ -45,12 +45,12 @@ repos:
       - id: codespell
         additional_dependencies: [tomli]
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.11.0.1
+    rev: v0.11.0.1-1
     hooks:
       - id: shellcheck
         files: ^(\.github/actions/(select-candidate-version/select|evaluate-build-policy/evaluate|select-candidate-matrix/select)\.sh|ci/maven-publish/.*\.sh|ci/publication-rehearsal/sign_maven_fixture\.sh|tests/(candidate-workflow-contracts|select-candidate-version)\.sh)$
   - repo: https://github.com/rapidsai/pre-commit-hooks
-    rev: v1.6.1
+    rev: v1.7.0
     hooks:
       - id: verify-copyright
   - repo: https://github.com/adrienverge/yamllint
@@ -59,7 +59,7 @@ repos:
       - id: yamllint
         additional_dependencies: [pyyaml]
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: v1.29.0
+    rev: v1.31.1
     hooks:
       - id: zizmor
         exclude: |

@@ -27,7 +27,7 @@ on:
 
 jobs:
   build:
-    uses: ./.github/workflows/build-devcontainer.yaml
+    uses: $/.github/workflows/build-devcontainer.yaml
     permissions:
       packages: write
     strategy:

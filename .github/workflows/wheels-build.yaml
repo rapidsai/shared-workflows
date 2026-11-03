@@ -183,7 +183,7 @@ permissions:
 
 jobs:
   validate:
-    uses: ./.github/workflows/evaluate-build-policy.yaml
+    uses: $/.github/workflows/evaluate-build-policy.yaml
     permissions: {}
     with:
       inputs-json: ${{ toJSON(inputs) }}
@@ -195,7 +195,7 @@ jobs:
   ci:
     needs: validate
     if: ${{ needs.validate.outputs.run-ci == 'true' }}
-    uses: ./.github/workflows/wheels-build-ci.yaml
+    uses: $/.github/workflows/wheels-build-ci.yaml
     secrets: inherit # zizmor: ignore[secrets-inherit]
     with:
       branch: ${{ inputs.branch }}
@@ -228,8 +228,7 @@ jobs:
   candidate:
     needs: validate
     if: ${{ needs.validate.outputs.run-candidate == 'true' }}
-    uses: ./.github/workflows/wheels-build-candidate.yaml
-    secrets: inherit # zizmor: ignore[secrets-inherit]
+    uses: $/.github/workflows/wheels-build-candidate.yaml
     with:
       branch: ${{ inputs.branch }}
       date: ${{ inputs.date }}

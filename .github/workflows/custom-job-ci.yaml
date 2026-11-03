@@ -125,6 +125,38 @@ on:
           Name of a secret available to this workflow (e.g. via 'secrets: inherit').
           Its value is exported to the environment where 'inputs.script' is run, under the same name.
 
+    secrets:
+      script-env-secret-1-key:
+        description: |
+          Name of an environment variable in the environment where 'inputs.script' is run.
+          Variable's value will be set to the value passed as 'secrets.script-env-secret-1-value'.
+        required: false
+      script-env-secret-1-value:
+        description: |
+          Secret value.
+          Will be available via an environment variable named by 'secrets.script-env-secret-1-key'.
+        required: false
+      script-env-secret-2-key:
+        description: |
+          Name of an environment variable in the environment where 'inputs.script' is run.
+          Variable's value will be set to the value passed as 'secrets.script-env-secret-2-value'.
+        required: false
+      script-env-secret-2-value:
+        description: |
+          Secret value.
+          Will be available via an environment variable named by 'secrets.script-env-secret-2-key'.
+        required: false
+      script-env-secret-3-key:
+        description: |
+          Name of an environment variable in the environment where 'inputs.script' is run.
+          Variable's value will be set to the value passed as 'secrets.script-env-secret-3-value'.
+        required: false
+      script-env-secret-3-value:
+        description: |
+          Secret value.
+          Will be available via an environment variable named by 'secrets.script-env-secret-3-key'.
+        required: false
+
 defaults:
   run:
     shell: bash
@@ -146,7 +178,7 @@ permissions:
 
 jobs:
   policy:
-    uses: ./.github/workflows/evaluate-build-policy.yaml
+    uses: $/.github/workflows/evaluate-build-policy.yaml
     permissions: {}
     with:
       inputs-json: ${{ toJSON(inputs) }}
@@ -181,14 +213,6 @@ jobs:
           ref: ${{ inputs.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
-          GH_TOKEN: ${{ github.token }}
-          SHARED_ACTIONS_REF: 10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
       - name: Setup proxy cache
         uses: nv-gha-runners/setup-proxy-cache@eadc57871cde0c92a223d0f486ab669a2360f978
         continue-on-error: true
@@ -206,7 +230,7 @@ jobs:
         run: | # zizmor: ignore[template-injection]
           echo "RAPIDS_BASE_BRANCH=${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}" >> "${GITHUB_ENV}"
       - name: Standardize repository information
-        uses: rapidsai/shared-actions/rapids-github-info@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
+        uses: rapidsai/shared-actions/rapids-github-info@1dd81e7f3c7dd183f30ae2dbf1e0c3b1122674b8
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
@@ -215,7 +239,7 @@ jobs:
           build_workflow_name: ${{ inputs.build_workflow_name }}
       - name: Setup sccache-dist
         if: ${{ needs.policy.outputs.allow-general-ci == 'true' }}
-        uses: rapidsai/shared-actions/setup-sccache-dist@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
+        uses: rapidsai/shared-actions/setup-sccache-dist@1dd81e7f3c7dd183f30ae2dbf1e0c3b1122674b8
         env:
           AWS_REGION: "${{env.AWS_REGION}}"
           AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
@@ -270,12 +294,12 @@ jobs:
           set_env_var '2' "${SECRET_2_NAME}" "${SECRET_2_VALUE}"
           set_env_var '3' "${SECRET_3_NAME}" "${SECRET_3_VALUE}"
         env:
-          SECRET_1_NAME: ${{ inputs.script-env-secret-1-name }}
-          SECRET_1_VALUE: ${{ inputs.script-env-secret-1-name && secrets[inputs.script-env-secret-1-name] || '' }} # zizmor: ignore[overprovisioned-secrets]
-          SECRET_2_NAME: ${{ inputs.script-env-secret-2-name }}
-          SECRET_2_VALUE: ${{ inputs.script-env-secret-2-name && secrets[inputs.script-env-secret-2-name] || '' }} # zizmor: ignore[overprovisioned-secrets]
-          SECRET_3_NAME: ${{ inputs.script-env-secret-3-name }}
-          SECRET_3_VALUE: ${{ inputs.script-env-secret-3-name && secrets[inputs.script-env-secret-3-name] || '' }} # zizmor: ignore[overprovisioned-secrets]
+          SECRET_1_NAME: ${{ secrets.script-env-secret-1-key || inputs.script-env-secret-1-name }}
+          SECRET_1_VALUE: ${{ secrets.script-env-secret-1-value || (inputs.script-env-secret-1-name && secrets[inputs.script-env-secret-1-name]) || '' }} # zizmor: ignore[overprovisioned-secrets]
+          SECRET_2_NAME: ${{ secrets.script-env-secret-2-key || inputs.script-env-secret-2-name }}
+          SECRET_2_VALUE: ${{ secrets.script-env-secret-2-value || (inputs.script-env-secret-2-name && secrets[inputs.script-env-secret-2-name]) || '' }} # zizmor: ignore[overprovisioned-secrets]
+          SECRET_3_NAME: ${{ secrets.script-env-secret-3-key || inputs.script-env-secret-3-name }}
+          SECRET_3_VALUE: ${{ secrets.script-env-secret-3-value || (inputs.script-env-secret-3-name && secrets[inputs.script-env-secret-3-name]) || '' }} # zizmor: ignore[overprovisioned-secrets]
       - name: Run script
         run: |
           ulimit -n "$(ulimit -Hn)"
@@ -300,11 +324,3 @@ jobs:
       - name: Upload additional artifacts
         if: ${{ !cancelled() }}
         run: rapids-upload-artifacts-dir "custom-job-$(arch)"
-      - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
-          GH_TOKEN: ${{ github.token }}
-          SHARED_ACTIONS_REF: 10a2bb85aa2032447995b7c22ccf9c43a0dc74d0

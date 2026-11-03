@@ -181,7 +181,7 @@ def test_each_optional_field_independently_activates_decision(
 def test_publication_policy_precedes_protected_environment(name, publishers):
     workflow = load(name)
     policy = workflow["jobs"]["policy"]
-    assert policy["uses"] == "./.github/workflows/evaluate-build-policy.yaml"
+    assert policy["uses"] == "$/.github/workflows/evaluate-build-policy.yaml"
     assert policy["permissions"] == {}
     assert "secrets" not in policy
     assert policy["with"]["inputs-json"] == "${{ toJSON(inputs) }}"
@@ -285,8 +285,11 @@ def test_dispatch_preserves_input_contracts_and_permissions(family):
         child = load(f"{family}-{mode}")
         assert call["needs"] == "validate"
         assert call["if"] == f"${{{{ needs.validate.outputs.run-{mode} == 'true' }}}}"
-        assert call["uses"] == f"./.github/workflows/{family}-{mode}.yaml"
-        assert call["secrets"] == "inherit"
+        assert call["uses"] == f"$/.github/workflows/{family}-{mode}.yaml"
+        if mode == "ci":
+            assert call["secrets"] == "inherit"
+        else:
+            assert "secrets" not in call
         assert child["permissions"] == wrapper["permissions"]
         assert set(call["with"]) == set(inputs(child))
         for key, spec in inputs(child).items():
@@ -319,7 +322,7 @@ def test_candidate_and_ci_authorities_are_separate(family):
     for workflow in (ci, candidate):
         assert (
             workflow["jobs"]["policy"]["uses"]
-            == "./.github/workflows/evaluate-build-policy.yaml"
+            == "$/.github/workflows/evaluate-build-policy.yaml"
         )
         assert workflow["jobs"]["policy"]["permissions"] == {}
         needs = workflow["jobs"]["build"]["needs"]
@@ -514,3 +517,14 @@ def test_normal_build_uploads_keep_upstream_compression_policy(family):
         if step.get("uses", "").startswith("actions/upload-artifact@")
     ]
     assert any(step.get("with", {}).get("compression-level") == 0 for step in uploads)
+
+
+@pytest.mark.parametrize("index", [1, 2, 3])
+def test_current_explicit_script_secrets_remain_in_normal_ci(index):
+    wrapper = load("custom-job")
+    child = load("custom-job-ci")
+    for suffix in ("key", "value"):
+        name = f"script-env-secret-{index}-{suffix}"
+        assert name in wrapper[True]["workflow_call"]["secrets"]
+        assert name in child[True]["workflow_call"]["secrets"]
+    assert "secrets" not in wrapper["jobs"]["candidate"]

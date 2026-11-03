@@ -25,10 +25,6 @@ java-publish:
     actions: read
     contents: read
   uses: rapidsai/shared-workflows/.github/workflows/maven-publish.yaml@main
-  secrets:
-    GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-    GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-    MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
   with:
     artifact-name: cudf_java_maven_repo
     source-git-sha: ${{ github.sha }}
@@ -36,9 +32,13 @@ java-publish:
 ```
 
 Configure `vars.MAVEN_DEPLOY_USERNAME` with the Sonatype token username.
+The protected `public-publication` environment supplies GPG and Maven token
+secrets; callers do not forward publisher credentials into build workflows.
 Set `docs-project` for projects registered with the docs dispatcher; omit it for
-publication without docs. Use `profile-id` when Sonatype's verified namespace
-differs from the Maven group. Release publication is automatic: callers must omit
+publication without docs. Production uploads use the Publisher API ZIP endpoint
+as `USER_MANAGED`, retain the deployment ID, verify coordinates, and request
+publication automatically after release authorization. `profile-id` remains
+compatible with the loopback OSSRH rehearsal only. Callers must omit
 the removed `stage-for-maven-central-publish` and `publish-to-maven-central` inputs.
 
 ## Completed-publication receipt

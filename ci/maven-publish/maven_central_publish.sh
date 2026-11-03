@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Creates a deployment bundle from a signed Maven repository tree, uploads its
-# files through Sonatype's OSSRH staging compatibility API, and polls the
+# ZIP through the Central Publisher API, and polls the
 # Publisher Portal until the release is PUBLISHED. A retained deployment receipt
 # allows an interrupted publication to resume without another upload.
 
@@ -273,7 +273,9 @@ BUNDLE_DIR="${WORK_DIR}/bundle"
 BUNDLE_ARTIFACT_DIR="${BUNDLE_DIR}/$(maven_group_path "${GROUP_ID}")/${ARTIFACT_ID}/${VERSION}"
 mkdir -p "${BUNDLE_DIR}"
 
-require_no_open_staging_repository
+if [[ -n ${LOCAL_CONTRACT_BASE_URL} ]]; then
+  require_no_open_staging_repository
+fi
 copy_bundle "${INPUT_DIR}" "${BUNDLE_DIR}"
 require_bundle_contents "${BUNDLE_ARTIFACT_DIR}"
 generate_bundle_checksums "${BUNDLE_ARTIFACT_DIR}"
@@ -283,12 +285,21 @@ create_bundle_zip "${BUNDLE_ZIP}" "${BUNDLE_DIR}"
 mv "${BUNDLE_ZIP}" "${OUTPUT_BUNDLE}"
 
 DEPLOYMENT_ID=""
-upload_tree_to_staging "${BUNDLE_DIR}"
-find_open_staging_repository
-echo "Handing staging repository to the Publisher Portal"
-staging_handoff_repository "${STAGING_REPOSITORY_KEY}"
-wait_for_portal_handoff "${STAGING_REPOSITORY_KEY}"
-STAGING_HANDED_OFF="true"
+if [[ -n ${LOCAL_CONTRACT_BASE_URL} ]]; then
+  upload_tree_to_staging "${BUNDLE_DIR}"
+  find_open_staging_repository
+  echo "Handing staging repository to the Publisher Portal"
+  staging_handoff_repository "${STAGING_REPOSITORY_KEY}"
+  wait_for_portal_handoff "${STAGING_REPOSITORY_KEY}"
+  STAGING_HANDED_OFF="true"
+else
+  # USER_MANAGED allows coordinate verification and a durable recovery receipt
+  # before the release-authorized publish request. Uploads are never retried.
+  DEPLOYMENT_ID=$(portal_upload_bundle "${OUTPUT_BUNDLE}" "${GROUP_ID}:${ARTIFACT_ID}:${VERSION}" USER_MANAGED)
+  if [[ ! ${DEPLOYMENT_ID} =~ ^[A-Za-z0-9-]+$ ]]; then
+    fatal "Publisher Portal returned an invalid deployment id"
+  fi
+fi
 if [[ -n ${DEPLOYMENT_RECEIPT} ]]; then
   jq -n --arg deployment "${DEPLOYMENT_ID}" --arg group "${GROUP_ID}" \
     --arg artifact "${ARTIFACT_ID}" --arg version "${VERSION}" \

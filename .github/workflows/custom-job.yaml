@@ -173,6 +173,38 @@ on:
           Name of a secret available to this workflow (e.g. via 'secrets: inherit').
           Its value is exported to the environment where 'inputs.script' is run, under the same name.
 
+    secrets:
+      script-env-secret-1-key:
+        description: |
+          Name of an environment variable in the environment where 'inputs.script' is run.
+          Variable's value will be set to the value passed as 'secrets.script-env-secret-1-value'.
+        required: false
+      script-env-secret-1-value:
+        description: |
+          Secret value.
+          Will be available via an environment variable named by 'secrets.script-env-secret-1-key'.
+        required: false
+      script-env-secret-2-key:
+        description: |
+          Name of an environment variable in the environment where 'inputs.script' is run.
+          Variable's value will be set to the value passed as 'secrets.script-env-secret-2-value'.
+        required: false
+      script-env-secret-2-value:
+        description: |
+          Secret value.
+          Will be available via an environment variable named by 'secrets.script-env-secret-2-key'.
+        required: false
+      script-env-secret-3-key:
+        description: |
+          Name of an environment variable in the environment where 'inputs.script' is run.
+          Variable's value will be set to the value passed as 'secrets.script-env-secret-3-value'.
+        required: false
+      script-env-secret-3-value:
+        description: |
+          Secret value.
+          Will be available via an environment variable named by 'secrets.script-env-secret-3-key'.
+        required: false
+
 permissions:
   actions: read
   checks: none
@@ -190,7 +222,7 @@ permissions:
 
 jobs:
   validate:
-    uses: ./.github/workflows/evaluate-build-policy.yaml
+    uses: $/.github/workflows/evaluate-build-policy.yaml
     permissions: {}
     with:
       inputs-json: ${{ toJSON(inputs) }}
@@ -213,7 +245,7 @@ jobs:
   ci:
     needs: validate
     if: ${{ needs.validate.outputs.run-ci == 'true' }}
-    uses: ./.github/workflows/custom-job-ci.yaml
+    uses: $/.github/workflows/custom-job-ci.yaml
     secrets: inherit # zizmor: ignore[secrets-inherit]
     with:
       build_type: ${{ inputs.build_type }}
@@ -241,8 +273,7 @@ jobs:
   candidate:
     needs: validate
     if: ${{ needs.validate.outputs.run-candidate == 'true' }}
-    uses: ./.github/workflows/custom-job-candidate.yaml
-    secrets: inherit # zizmor: ignore[secrets-inherit]
+    uses: $/.github/workflows/custom-job-candidate.yaml
     with:
       branch: ${{ inputs.branch }}
       date: ${{ inputs.date }}

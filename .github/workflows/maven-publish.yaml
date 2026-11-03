@@ -5,7 +5,7 @@
 # file is GPG-signed. The destination is chosen inside this workflow with
 # `rapids-is-release-build`:
 #   - release build (vYY.MM.PP tag) -> Maven Central via the Sonatype Central
-#     Publisher Portal (OSSRH staging, validation, automatic publication).
+#     Publisher API (bundle upload, validation, authorized automatic publication).
 #   - non-release build (nightly, branch push) -> Sonatype snapshot repository
 #     (direct HTTP PUT, immediately available, no staging or portal step).
 name: Maven publish
@@ -74,7 +74,7 @@ permissions:
 
 jobs:
   policy:
-    uses: ./.github/workflows/evaluate-build-policy.yaml
+    uses: $/.github/workflows/evaluate-build-policy.yaml
     permissions: {}
     with:
       inputs-json: ${{ toJSON(inputs) }}
@@ -188,7 +188,7 @@ jobs:
           VERSION: ${{ steps.prepare.outputs.VERSION }}
           DOCS_PROJECT: ${{ inputs.docs-project }}
           SOURCE_GIT_SHA: ${{ inputs.source-git-sha || github.sha }}
-          MAVEN_DEPLOY_USERNAME: ${{ secrets.MAVEN_DEPLOY_USERNAME }}
+          MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME || secrets.MAVEN_DEPLOY_USERNAME }}
           MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
 
       - name: Write completed-publication receipt
@@ -236,7 +236,7 @@ jobs:
           GROUP_ID: ${{ steps.prepare.outputs.GROUP_ID }}
           ARTIFACT_ID: ${{ steps.prepare.outputs.ARTIFACT_ID }}
           VERSION: ${{ steps.prepare.outputs.VERSION }}
-          MAVEN_DEPLOY_USERNAME: ${{ secrets.MAVEN_DEPLOY_USERNAME }}
+          MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME || secrets.MAVEN_DEPLOY_USERNAME }}
           MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
 
       - name: Retain signed Maven Central bundle

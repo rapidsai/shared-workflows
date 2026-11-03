@@ -42,32 +42,15 @@ OUTPUT_BUNDLE="${TEST_ROOT}/central-bundle.zip"
 
 unzip -tq "${OUTPUT_BUNDLE}" >/dev/null
 unzip -l "${OUTPUT_BUNDLE}" | grep -F 'example-26.08.0.jar.asc.sha1'
-grep -Fx 'STAGING_REPOSITORY_KEY=repo-key' "${GITHUB_OUTPUT}"
 grep -Fx 'DEPLOYMENT_ID=00000000-0000-0000-0000-000000000001' "${GITHUB_OUTPUT}"
-[[ $(wc -l < "${MOCK_STATE_DIR}/uploads.log") -eq 24 ]]
-grep -F '/ai/rapids/example/26.08.0/example-26.08.0.jar.asc.sha1' "${MOCK_STATE_DIR}/uploads.log"
-grep -F 'manual/upload/repository/repo-key?publishing_type=portal_api' \
-  "${MOCK_STATE_DIR}/curl.log"
-if grep -Fq 'api/v1/publisher/upload' "${MOCK_STATE_DIR}/curl.log"; then
-  echo "bundle upload endpoint must not be used" >&2
+[[ $(wc -l < "${MOCK_STATE_DIR}/uploads.log") -eq 1 ]]
+grep -F 'publisher/upload?publishingType=USER_MANAGED' "${MOCK_STATE_DIR}/curl.log"
+if grep -Fq 'manual/upload/repository' "${MOCK_STATE_DIR}/curl.log"; then
+  echo "production must use the Publisher API bundle upload" >&2
   exit 1
 fi
 [[ -f ${MOCK_STATE_DIR}/publish-requested && ! -f ${MOCK_STATE_DIR}/portal-dropped ]]
 [[ ! -f ${MOCK_STATE_DIR}/staging-dropped ]]
-
-rm -f "${MOCK_STATE_DIR}"/*
-export PREEXISTING_OPEN=true
-if "${SCRIPT_DIR}/maven_central_publish.sh" \
-  --input "${TEST_ROOT}/signed" \
-  --group-id ai.rapids \
-  --artifact-id example \
-  --version 26.08.0 \
-  --output-bundle "${TEST_ROOT}/blocked-bundle.zip"; then
-  echo "a pre-existing open staging repository must block publication" >&2
-  exit 1
-fi
-[[ ! -e ${MOCK_STATE_DIR}/uploads.log ]]
-[[ ! -e ${MOCK_STATE_DIR}/staging-dropped ]]
 
 rm -f "${MOCK_STATE_DIR}"/*
 export PREEXISTING_OPEN=false
@@ -81,7 +64,7 @@ if "${SCRIPT_DIR}/maven_central_publish.sh" \
   echo "an upload failure must fail publication" >&2
   exit 1
 fi
-[[ -f ${MOCK_STATE_DIR}/staging-dropped ]]
+[[ ! -f ${MOCK_STATE_DIR}/staging-dropped && ! -f ${MOCK_STATE_DIR}/portal-dropped ]]
 
 export FAIL_UPLOAD=false
 export GITHUB_REF=refs/tags/v26.08.00
