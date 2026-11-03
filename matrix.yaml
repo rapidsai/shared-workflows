@@ -15,7 +15,6 @@ conda-cpp-build:
   cuda-13-4-pr: *conda_cpp_build
   nightly: *conda_cpp_build
   cuda-13-4-nightly: *conda_cpp_build
-  null-matrix:
 
 conda-cpp-tests:
   pull-request:
