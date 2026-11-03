@@ -9,9 +9,16 @@ config-variables:
   - AWS_REGION
   - AWS_ROLE_ARN
   - MAVEN_DEPLOY_USERNAME
-  - TELEMETRY_ENABLED
 
 paths:
+  .github/workflows/*.yaml:
+    ignore:
+      # https://github.com/rhysd/actionlint/issues/711
+      - 'reusable workflow call "\$/.+" at "uses" is not following the format'
+  .github/workflows/compute-matrix.yaml:
+    ignore:
+      # https://github.com/rhysd/actionlint/issues/711
+      - 'specifying action "\$/.github/actions/prepare-matrix-dispatch" in invalid format because ref is missing. available formats are "{owner}/{repo}@{ref}" or "{owner}/{repo}/{path}@{ref}"'
   .github/workflows/conda-python-tests.yaml:
     ignore:
       # ${{ secrets.CODECOV_TOKEN }} is valid if a secret like that exists in the calling repo,

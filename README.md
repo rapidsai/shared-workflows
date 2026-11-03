@@ -31,7 +31,7 @@ Not all projects need that, so they sometimes invoke the workflow like this:
 ```yaml
 wheel-build-nx-cugraph:
   secrets: inherit
-  uses: rapidsai/shared-workflows/.github/workflows/wheels-build.yaml@release/26.10
+  uses: rapidsai/shared-workflows/.github/workflows/wheels-build.yaml@main
   with:
     build_type: pull-request
     script: ci/build_wheel_nx-cugraph.sh
@@ -51,17 +51,13 @@ export MATRIX_FILTER='map(select(.ARCH == "amd64")) | group_by(.CUDA_VER|split("
 
 export MATRIX="
 # amd64
-- { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8' }
 - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8' }
 - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8' }
-- { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '13.0.2', LINUX_VER: 'rockylinux8' }
 - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '13.0.2', LINUX_VER: 'rockylinux8' }
 - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '13.0.2', LINUX_VER: 'rockylinux8' }
 # arm64
-- { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8' }
 - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8' }
 - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '12.9.1', LINUX_VER: 'rockylinux8' }
-- { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '13.0.2', LINUX_VER: 'rockylinux8' }
 - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '13.0.2', LINUX_VER: 'rockylinux8' }
 - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '13.0.2', LINUX_VER: 'rockylinux8' }
 "
@@ -73,6 +69,12 @@ MATRIX="$(
 
 echo "${MATRIX}" | jq
 ```
+
+### Package artifacts
+
+Conda C++ and Python build artifacts and wheel build artifacts are uploaded without
+additional Zlib compression because the packages are already compressed. Compression of
+the packages themselves is controlled by each project's build scripts.
 
 ### Secrets
 
@@ -87,7 +89,7 @@ You could do something like the following:
 
 ```yaml
 wheel-tests:
-  uses: rapidsai/shared-workflows/.github/workflows/wheels-test.yaml@release/26.10
+  uses: rapidsai/shared-workflows/.github/workflows/wheels-test.yaml@main
   with:
     script: ci/test_wheel.sh
   secrets:
@@ -96,3 +98,22 @@ wheel-tests:
 ```
 
 Values passed through `secrets:` are redacted everywhere in the GitHub UI, including in logs, and in most cases are replaced with `***`.
+
+### Release catalog
+
+We add additional metadata files to our builds to help track what dependencies
+were present at build time (a Software Bill of Materials, SBoM), as well as
+keeping track of artifacts as we prepare for releases. The standard Conda and
+wheel builders do this automatically and upload an additional
+`release-catalog-<artifact-name>` GitHub Actions artifact for every package
+bundle.
+
+`custom-job.yaml` can be used to produce artifacts, but the generation of extra
+metadata files are opt-in, not automatic. Supplying a non-empty
+`release-catalog-config` causes the job to upload the additional
+release catalog companion; leaving it empty uploads only the original artifact.
+
+See the
+[`shared-actions` release catalog documentation](https://github.com/rapidsai/shared-actions/tree/main/release-catalog)
+for the companion layout, configuration schema, examples, and evidence
+semantics.

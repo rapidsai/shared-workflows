@@ -6,6 +6,20 @@ on:
         default: "dependencies.yaml"
         required: false
         type: string
+      base-branch:
+        description: |
+          Base branch for checks that need one. When omitted, infer it from the pull request.
+          Set this for a non-PR invocation such as a push to the default branch.
+        default: ""
+        required: false
+        type: string
+      pre-commit-cache-read-only:
+        description: |
+          Restore the pre-commit cache without saving it at job completion. Use this on
+          short-lived workflow refs that should consume a cache maintained by a trusted ref.
+        default: false
+        required: false
+        type: boolean
       enable_check_size:
         description: "Whether to enable the size checker"
         default: true
@@ -48,23 +62,19 @@ defaults:
 
 jobs:
   other-checks:
+    if: ${{ inputs.enable_check_size || inputs.enable_check_pr_job_dependencies || inputs.enable_check_version_files_changed || inputs.enable_check_version_against_tag }}
     runs-on: ubuntu-latest
     container:
-      image: rapidsai/ci-conda:26.10-latest # zizmor: ignore[unpinned-images]
+      image: rapidsai/ci-conda:26.12-latest # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: true
-      - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
       - name: Get PR Info
+        if: ${{ inputs.base-branch == '' }}
         id: get-pr-info
         uses: nv-gha-runners/get-pr-info@main
       - name: Identify burndown version PR
@@ -86,7 +96,7 @@ jobs:
         if: ${{ inputs.enable_check_size }}
         run: rapids-size-checker
         env:
-          RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
+          RAPIDS_BASE_BRANCH: ${{ inputs.base-branch || fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
       - name: Check workflow file dependencies
         if: ${{ inputs.enable_check_pr_job_dependencies }}
         run: rapids-check-pr-job-dependencies "${IGNORED_JOBS}"
@@ -112,7 +122,7 @@ jobs:
           VERSION_FILES_CHANGED: ${{ (inputs.enable_check_version_files_changed && fromJSON(steps.changed-files.outputs.changed_file_groups).version_files) || 'false' }}
       - name: Fetch tags
         if: ${{ inputs.enable_check_version_against_tag }}
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0 # https://github.com/actions/checkout/issues/1471
@@ -126,35 +136,31 @@ jobs:
             echo "ERROR: Expected latest tag to be '$expected_version', got '$actual_version'; did you accidentally merge 'main' into a release-bound PR?"
             exit 1
           fi
-      - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-
   check-style:
     if: ${{ inputs.enable_check_style }}
     runs-on: ubuntu-latest
     container:
       # Must pin to Python <3.13, cmake-format is broken, see https://github.com/python/cpython/issues/140797
-      image: rapidsai/ci-conda:26.10-cuda13.3.0-ubuntu24.04-py3.12 # zizmor: ignore[unpinned-images]
+      image: rapidsai/ci-conda:26.12-cuda13.4.3-ubuntu24.04-py3.12 # zizmor: ignore[unpinned-images]
     steps:
       - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: true
-      - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
       - name: Get PR Info
+        if: ${{ inputs.base-branch == '' }}
         id: get-pr-info
         uses: nv-gha-runners/get-pr-info@main
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Restore pre-commit cache
+        if: ${{ inputs.pre-commit-cache-read-only }}
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-0|${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: Cache pre-commit
+        if: ${{ !inputs.pre-commit-cache-read-only }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-0|${{ hashFiles('.pre-commit-config.yaml') }}
@@ -162,10 +168,4 @@ jobs:
         run: ci/check_style.sh
         env:
           GH_TOKEN: ${{ github.token }}
-          RAPIDS_BASE_BRANCH: ${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
-      - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
+          RAPIDS_BASE_BRANCH: ${{ inputs.base-branch || fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}

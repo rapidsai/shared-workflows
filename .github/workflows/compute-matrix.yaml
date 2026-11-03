@@ -2,7 +2,7 @@ on:
   workflow_call:
     inputs:
       build_type:
-        description: "One of: [branch, nightly, pull-request]"
+        description: "One of: [branch, nightly, pull-request, release-candidate]"
         required: true
         type: string
       matrix_name:
@@ -10,7 +10,7 @@ on:
         required: true
         type: string
       matrix_type:
-        description: "One of: [auto, nightly, pull-request]. 'auto' means 'choose a value based on what's provided via build_type'."
+        description: "One or more comma-separated matrix types defined for this workflow's matrix in .github/actions/prepare-matrix/matrix.yaml, e.g. 'pull-request' or 'nightly'. Defaults to 'auto', which must be used alone and means 'choose a value based on what's provided via build_type'."
         required: false
         type: string
         default: "auto"
@@ -50,166 +50,24 @@ jobs:
     steps:
       - name: Prepare Build Matrix
         id: prepare-matrix
-        run: |
-          # please keep the matrices sorted in ascending order by the following:
-          #
-          #     [ARCH, PY_VER, CUDA_VER, LINUX_VER, GPU, DRIVER, DEPENDENCIES]
-          #
-          export MATRIX="
-          conda-cpp-build:
-            pull-request: &conda_cpp_build
-              # amd64
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
-              # arm64
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
-            nightly: *conda_cpp_build
-
-          conda-cpp-tests:
-            pull-request:
-              # amd64
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8', GPU: 'v100',       DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '13.0.3', LINUX_VER: 'ubuntu24.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '12.9.2', LINUX_VER: 'ubuntu22.04', GPU: 'h100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'h100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              # arm64
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.0.3', LINUX_VER: 'rockylinux8', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-            nightly:
-              # amd64
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8', GPU: 'l4',         DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.9.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '13.0.3', LINUX_VER: 'rockylinux8', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8', GPU: 'v100',       DRIVER: 'earliest', DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'h100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '12.9.2', LINUX_VER: 'ubuntu24.04', GPU: 'h100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              # arm64
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
-              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '13.0.3', LINUX_VER: 'rockylinux8', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '12.9.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'gb300',      DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-
-          conda-python-build:
-            pull-request: &conda_python_build
-              # amd64
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
-              # arm64
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
-            nightly: *conda_python_build
-
-          conda-python-tests:
-            pull-request:
-              # amd64
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8', GPU: 'l4',         DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '13.0.3', LINUX_VER: 'ubuntu24.04', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '12.9.2', LINUX_VER: 'ubuntu22.04', GPU: 'h100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'h100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              # arm64
-              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '13.0.3', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-            nightly:
-              # amd64
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8', GPU: 'l4',         DRIVER: 'earliest', DEPENDENCIES: 'oldest' }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.9.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '13.0.3', LINUX_VER: 'rockylinux8', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.2.2', LINUX_VER: 'rockylinux8', GPU: 'v100',       DRIVER: 'earliest', DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.9.2', LINUX_VER: 'ubuntu24.04', GPU: 'h100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'h100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              # arm64
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
-              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.9.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '13.0.3', LINUX_VER: 'rockylinux8', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'gb300',      DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-
-          wheels-build:
-            pull-request: &wheels_build
-              # amd64
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
-              # arm64
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'arm64', PY_VER: '3.13', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
-              - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8' }
-            nightly: *wheels_build
-
-          wheels-test:
-            pull-request:
-              # amd64
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.9.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '13.0.3', LINUX_VER: 'ubuntu24.04', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '13.3.0', LINUX_VER: 'rockylinux8', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '12.9.2', LINUX_VER: 'ubuntu24.04', GPU: 'h100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              # arm64
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '13.0.3', LINUX_VER: 'rockylinux8', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-            nightly:
-              # amd64
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'v100',       DRIVER: 'earliest', DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
-              - { ARCH: 'amd64', PY_VER: '3.11', CUDA_VER: '12.9.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'earliest', DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '12.9.2', LINUX_VER: 'ubuntu24.04', GPU: 'h100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.12', CUDA_VER: '13.0.3', LINUX_VER: 'ubuntu24.04', GPU: 'h100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.13', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'h100',       DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'amd64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'rtxpro6000', DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              # arm64
-              - { ARCH: 'arm64', PY_VER: '3.11', CUDA_VER: '12.9.2', LINUX_VER: 'rockylinux8', GPU: 'a100',       DRIVER: 'latest',   DEPENDENCIES: 'oldest' }
-              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '12.2.2', LINUX_VER: 'ubuntu22.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.12', CUDA_VER: '13.0.3', LINUX_VER: 'ubuntu24.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'l4',         DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-              - { ARCH: 'arm64', PY_VER: '3.14', CUDA_VER: '13.3.0', LINUX_VER: 'ubuntu26.04', GPU: 'gb300',      DRIVER: 'latest',   DEPENDENCIES: 'latest' }
-          "
-          (echo -n 'matrix='; yq -n -o json 'env(MATRIX)' | jq -c .) >> "$GITHUB_OUTPUT"
+        uses: $/.github/actions/prepare-matrix-dispatch
+        with:
+          action-repo: ${{ github.action_repository }}
+          action-ref: ${{ github.action_ref }}
       - name: Validate Inputs
         env:
           MATRIX: ${{ steps.prepare-matrix.outputs.matrix }}
         run: |
-          if [[ "$BUILD_TYPE" != "branch" ]] && [[ "$BUILD_TYPE" != "nightly" ]] && [[ "$BUILD_TYPE" != "pull-request" ]]; then
-              echo "::error::Invalid build_type! Must be one of 'branch', 'nightly', or 'pull-request'."
-              exit 1
-          fi
-          if [[ "$MATRIX_TYPE" != "auto" ]] && [[ "$MATRIX_TYPE" != "nightly" ]] && [[ "$MATRIX_TYPE" != "pull-request" ]]; then
-              echo "::error::Invalid matrix_type! Must be one of 'auto', 'nightly', or 'pull-request'."
+          if [[ "$BUILD_TYPE" != "branch" ]] && [[ "$BUILD_TYPE" != "nightly" ]] && [[ "$BUILD_TYPE" != "pull-request" ]] && [[ "$BUILD_TYPE" != "release-candidate" ]]; then
+              echo "::error::Invalid build_type! Must be one of 'branch', 'nightly', 'pull-request', or 'release-candidate'."
               exit 1
           fi
           if ! jq -n -e '$ENV.MATRIX | fromjson | has($ENV.MATRIX_NAME)'; then
               echo "::error::Invalid matrix_name! Must be one of '$(jq -n -r "\$ENV.MATRIX | fromjson | keys | join(\"', '\")")'."
+              exit 1
+          fi
+          if [[ "$MATRIX_TYPE" != "auto" ]] && ! jq -n -e '($ENV.MATRIX | fromjson)[$ENV.MATRIX_NAME] as $matrix | $ENV.MATRIX_TYPE | split(",") | length > 0 and all(. as $matrix_type | $matrix | has($matrix_type))'; then
+              echo "::error::Invalid matrix_type! Must be 'auto' or a comma-separated list of matrix types defined for '${MATRIX_NAME}': $(jq -n -r '($ENV.MATRIX | fromjson)[$ENV.MATRIX_NAME] | keys | join(", ")')."
               exit 1
           fi
       - name: Compute Build Matrix
@@ -224,14 +82,15 @@ jobs:
 
           # only overwrite MATRIX_TYPE if it was set to 'auto'
           if [[ "${MATRIX_TYPE}" == "auto" ]]; then
-            if [[ "${BUILD_TYPE}" == "branch" ]]; then
+            if [[ "${BUILD_TYPE}" == "branch" || "${BUILD_TYPE}" == "release-candidate" ]]; then
               # Use the nightly matrix for branch tests
               MATRIX_TYPE="nightly"
             else
               MATRIX_TYPE="${BUILD_TYPE}"
             fi
           fi
-          export MATRIX_TYPE
+          MATRIX_TYPES="$(jq -cn --arg matrix_types "${MATRIX_TYPE}" '$matrix_types | split(",")')"
+          export MATRIX_TYPES
 
           # When pure-wheel is true and matrix_filter is default, override to build one wheel per CUDA version with amd64 and the latest PY_VER
           if [ "${PURE_WHEEL}" = "true" ] && [ "${MATRIX_FILTER}" = "." ]; then
@@ -246,7 +105,20 @@ jobs:
           fi
 
           if ! MATRIX="$(
-            jq -n -c "\$ENV.MATRIX | fromjson | .[\$ENV.MATRIX_NAME].[\$ENV.MATRIX_TYPE] | ${MATRIX_FILTER} | if (. | length) > 0 then {include: .} else \"\" | halt_error(1) end"
+            jq -n -c "
+              \$ENV.MATRIX | fromjson as \$matrix
+              | [
+                  \$ENV.MATRIX_TYPES | fromjson
+                  | .[] as \$matrix_type
+                  | (\$matrix[\$ENV.MATRIX_NAME][\$matrix_type] // [])[]
+                ]
+              | reduce .[] as \$entry (
+                  [];
+                  if index(\$entry) == null then . + [\$entry] else . end
+                )
+              | ${MATRIX_FILTER}
+              | if (. | length) > 0 then {include: .} else \"\" | halt_error(1) end
+            "
           )"; then
             echo "::error::Empty matrix"
             exit 1

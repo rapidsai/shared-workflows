@@ -12,6 +12,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "${SCRIPT_DIR}/prepare_maven_bundle_steps.sh"
 # shellcheck disable=SC1091
 . "${SCRIPT_DIR}/maven_central_publish_steps.sh"
+# shellcheck disable=SC1091
+. "${SCRIPT_DIR}/maven_snapshot_publish_steps.sh"
 
 fail() {
   echo "FAIL: $*" >&2
@@ -61,6 +63,11 @@ remove_generated_sidecars "${TEST_ROOT}/bundle"
 require_maven_coordinates ai.rapids cudf 26.08.0
 if (require_maven_coordinates 'ai.rapids\nBAD=1' cudf 26.08.0) >/dev/null 2>&1; then
   fail "invalid coordinates must be rejected"
+fi
+
+require_snapshot_version 26.12.0-SNAPSHOT
+if (require_snapshot_version 26.08.0) >/dev/null 2>&1; then
+  fail "require_snapshot_version must reject a release version"
 fi
 
 echo "Maven publish step tests passed"

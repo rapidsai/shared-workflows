@@ -41,8 +41,7 @@ printf 'stale checksum\n' > "${ARTIFACT_DIR}/example-26.08.0.jar.sha1"
 export GPG_PRIVATE_KEY GPG_PASSPHRASE GITHUB_OUTPUT
 "${SCRIPT_DIR}/prepare_maven_bundle.sh" \
   --input "${INPUT_DIR}" \
-  --output "${OUTPUT_DIR}" \
-  --publication-type rc
+  --output "${OUTPUT_DIR}"
 
 SIGNED_DIR="${OUTPUT_DIR}/ai/rapids/example/26.08.0"
 for artifact in \
