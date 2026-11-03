@@ -19,6 +19,7 @@ Test matrices span multiple dimensions:
 - **Driver Version** (`DRIVER`): `earliest`, `latest`
 - **Linux Distribution** (`LINUX_VER`): `rockylinux8`, `ubuntu22.04`, `ubuntu24.04`
 - **Dependencies** (`DEPENDENCIES`): `oldest`, `latest`
+- **Operating System** (`OS`, optional): `linux` (default), `wsl`
 
 ## Two-Tier Matrix Strategy
 
