@@ -110,7 +110,7 @@ jobs:
               | [
                   \$ENV.MATRIX_TYPES | fromjson
                   | .[] as \$matrix_type
-                  | (\$matrix[\$ENV.MATRIX_NAME][\$matrix_type] // [])[]
+                  | \$matrix[\$ENV.MATRIX_NAME][\$matrix_type][]
                 ]
               | reduce .[] as \$entry (
                   [];
