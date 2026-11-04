@@ -1,0 +1,59 @@
+on:
+  workflow_call:
+    inputs:
+      docs-preview-urls:
+        description: "JSON object {project: url}, typically needs.docs-build.outputs.docs-preview-urls"
+        type: string
+        required: true
+      docs-project:
+        description: "Which project's URL to link. Defaults to the repository name."
+        type: string
+        required: false
+        default: ""
+      sha:
+        description: "Commit to attach the status to. Defaults to github.sha."
+        type: string
+        required: false
+        default: ""
+      context:
+        description: "Name of the status shown in the PR checks box."
+        type: string
+        required: false
+        default: "docs-preview"
+
+defaults:
+  run:
+    shell: bash
+
+permissions: {}
+
+jobs:
+  post-status:
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      - name: Post docs preview commit status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ inputs.sha || github.sha }}
+          URLS: ${{ inputs.docs-preview-urls }}
+          PROJECT: ${{ inputs.docs-project }}
+          CONTEXT: ${{ inputs.context }}
+        run: |
+          set -euo pipefail
+          project="${PROJECT:-${REPO##*/}}"
+          urls="${URLS:-}"
+          [[ -n "${urls}" ]] || urls='{}'
+          url=$(jq -r --arg p "${project}" '.[$p] // empty' <<< "${urls}")
+          if [[ -z "${url}" ]]; then
+            echo "::warning::No docs preview URL for project '${project}'. Available: $(jq -r 'keys | join(", ")' <<< "${urls}")"
+            exit 0
+          fi
+          gh api --method POST "repos/${REPO}/statuses/${SHA}" \
+            -f state=success \
+            -f context="${CONTEXT}" \
+            -f description="${project} docs preview (NVIDIA VPN required)" \
+            -f target_url="${url}"
+          echo "- [${project} docs preview](${url})" >> "${GITHUB_STEP_SUMMARY}"
