@@ -3,6 +3,7 @@ self-hosted-runner:
   labels:
     - linux-amd64-*
     - linux-arm64-*
+    - wsl-amd64-*
 
 # Avoid warnings about referencing things in ${{ vars.* }} statements.
 config-variables:
