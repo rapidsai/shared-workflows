@@ -217,7 +217,9 @@ jobs:
     continue-on-error: ${{ inputs.continue-on-error }}
     container:
       image: "rapidsai/citestwheel:26.12-cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}"
-      options: ${{ inputs.container-options }}
+      # NCCL's non-cuMem path (see the WSL NCCL step) needs ~68 MB of /dev/shm, more than Docker's 64 MB default.
+      # container-options comes last so callers can override the size.
+      options: ${{ matrix.OS == 'wsl' && format('--shm-size=1g {0}', inputs.container-options) || inputs.container-options }}
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
@@ -227,6 +229,13 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           role-duration-seconds: 43200 # 12h
+
+      # pytorch/pytorch#192330: WSL drivers before R615 advertise GPUDirect RDMA with CUDA VMM,
+      # so NCCL's cuMem allocations fail cuMemSetAccess with CUDA error 999.
+      - name: Disable NCCL cuMem on WSL
+        if: matrix.OS == 'wsl'
+        run: echo "NCCL_CUMEM_ENABLE=0" >> "${GITHUB_ENV}"
+
       - name: Run nvidia-smi to make sure GPU is working
         run: nvidia-smi
 
