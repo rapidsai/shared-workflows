@@ -32,3 +32,13 @@ paths:
       # source). actionlint's type schema appears to be out of date.
       - 'property "workflow_repository" is not defined in object type'
       - 'property "workflow_sha" is not defined in object type'
+  .github/workflows/conda-cpp-tests.yaml:
+    ignore:
+      # See maven-publish.yaml above.
+      - 'property "workflow_repository" is not defined in object type'
+      - 'property "workflow_sha" is not defined in object type'
+  .github/workflows/wheels-test.yaml:
+    ignore:
+      # See maven-publish.yaml above.
+      - 'property "workflow_repository" is not defined in object type'
+      - 'property "workflow_sha" is not defined in object type'
