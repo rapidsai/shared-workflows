@@ -223,7 +223,7 @@ jobs:
           persist-credentials: false
       - name: Setup caller cache
         if: ${{ needs.policy.outputs.caller-cache == 'true' }}
-        uses: rapidsai/shared-actions/setup-caller-cache@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
+        uses: rapidsai/shared-actions/setup-caller-cache@5381edb5bd40dd1e8a76c6fac1c2842247f860bf
         with:
           cache-paths: ${{ inputs.cache-paths }}
           cache-key-prefix: ${{ inputs.cache-key-prefix }}
@@ -234,7 +234,7 @@ jobs:
           matrix: ${{ toJSON(matrix) }}
 
       - name: Standardize repository information
-        uses: rapidsai/shared-actions/rapids-github-info@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
+        uses: rapidsai/shared-actions/rapids-github-info@5381edb5bd40dd1e8a76c6fac1c2842247f860bf
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
@@ -270,13 +270,13 @@ jobs:
           enable-pypi-anaconda: true
 
       - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
+        uses: rapidsai/shared-actions/telemetry-dispatch-setup@5381edb5bd40dd1e8a76c6fac1c2842247f860bf
         continue-on-error: true
         if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
         env:
           # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
           GH_TOKEN: ${{ github.token }}
-          SHARED_ACTIONS_REF: 10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
+          SHARED_ACTIONS_REF: 5381edb5bd40dd1e8a76c6fac1c2842247f860bf
         with:
           extra_attributes: "rapids.PACKAGER=wheel,rapids.CUDA_VER=${{ matrix.CUDA_VER }},rapids.PY_VER=${{ matrix.PY_VER }},rapids.ARCH=${{ matrix.ARCH }},rapids.LINUX_VER=${{ matrix.LINUX_VER }}"
 
@@ -290,7 +290,7 @@ jobs:
       - name: Resolve controller-bound candidate metadata
         id: candidate-context
         if: ${{ inputs.candidate-train-sha256 == '' }}
-        uses: rapidsai/shared-actions/release-candidate-context@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
+        uses: rapidsai/shared-actions/release-candidate-context@5381edb5bd40dd1e8a76c6fac1c2842247f860bf
         with:
           source-sha: ${{ env.RAPIDS_SHA }}
           audit-boundary: 'true'
@@ -302,7 +302,7 @@ jobs:
           repository: ${{ inputs.repo || github.repository }}
           source-sha: ${{ env.RAPIDS_SHA }}
       - name: Prepare candidate dependencies and build policy
-        uses: rapidsai/shared-actions/release-candidate-dependencies@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
+        uses: rapidsai/shared-actions/release-candidate-dependencies@5381edb5bd40dd1e8a76c6fac1c2842247f860bf
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
           artifact-family: wheel
@@ -407,7 +407,7 @@ jobs:
           role-duration-seconds: 3600 # 1h, the producer role's maximum session duration
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}
       - name: Create wheel release catalog companion
-        uses: rapidsai/shared-actions/release-catalog-dispatch@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
+        uses: rapidsai/shared-actions/release-catalog-dispatch@5381edb5bd40dd1e8a76c6fac1c2842247f860bf
         with:
           config: >-
             {
@@ -426,6 +426,6 @@ jobs:
         env:
           # DOES NOT NEED alternative-gh-token-secret-name - github.token is enough and more limited
           GH_TOKEN: ${{ github.token }}
-          SHARED_ACTIONS_REF: 10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0
+          SHARED_ACTIONS_REF: 5381edb5bd40dd1e8a76c6fac1c2842247f860bf
+        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@5381edb5bd40dd1e8a76c6fac1c2842247f860bf
         continue-on-error: true

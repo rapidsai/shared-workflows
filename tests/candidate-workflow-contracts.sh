@@ -157,12 +157,12 @@ rg -Fq "inputs.candidate-docs && 'false'" "${custom}"
 for workflow in conda-cpp-build-candidate.yaml conda-python-build-candidate.yaml wheels-build-candidate.yaml custom-job-candidate.yaml; do
   path="${root}/.github/workflows/${workflow}"
   telemetry_steps="$(rg -c 'uses: rapidsai/shared-actions/telemetry-dispatch-(setup|stash-job-artifacts)@' "${path}")"
-  telemetry_pins="$(rg -c 'SHARED_ACTIONS_REF: 10a2bb85aa2032447995b7c22ccf9c43a0dc74d0' "${path}")"
+  telemetry_pins="$(rg -c 'SHARED_ACTIONS_REF: 5381edb5bd40dd1e8a76c6fac1c2842247f860bf' "${path}")"
   if [[ "${telemetry_steps}" != 2 || "${telemetry_pins}" != 2 ]]; then
     echo "${workflow} telemetry runtime checkout must use the same pinned shared-actions revision" >&2
     exit 1
   fi
-  context_steps="$(rg -c 'uses: rapidsai/shared-actions/release-candidate-context@10a2bb85aa2032447995b7c22ccf9c43a0dc74d0' "${path}")"
+  context_steps="$(rg -c 'uses: rapidsai/shared-actions/release-candidate-context@5381edb5bd40dd1e8a76c6fac1c2842247f860bf' "${path}")"
   boundary_audits="$(rg -c "audit-boundary: 'true'" "${path}")"
   if [[ "${context_steps}" != 1 || "${boundary_audits}" != 1 ]]; then
     echo "${workflow} candidate context must run the private boundary audit" >&2
