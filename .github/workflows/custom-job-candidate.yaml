@@ -233,7 +233,7 @@ jobs:
       - name: Resolve controller-bound candidate metadata
         id: candidate-context
         if: ${{ inputs.candidate-train-sha256 == '' }}
-        uses: rapidsai/shared-actions/release-candidate-context@1dd81e7f3c7dd183f30ae2dbf1e0c3b1122674b8
+        uses: rapidsai/shared-actions/release-candidate-context@f1b91d61c122ac51f260d440a25295db902109b9
         with:
           source-sha: ${{ inputs.sha || github.sha }}
           script: ${{ inputs.script }}
@@ -266,7 +266,7 @@ jobs:
         run: | # zizmor: ignore[template-injection]
           echo "RAPIDS_BASE_BRANCH=${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}" >> "${GITHUB_ENV}"
       - name: Standardize repository information
-        uses: rapidsai/shared-actions/rapids-github-info@1dd81e7f3c7dd183f30ae2dbf1e0c3b1122674b8
+        uses: rapidsai/shared-actions/rapids-github-info@f1b91d61c122ac51f260d440a25295db902109b9
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
@@ -282,7 +282,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}
       - name: Prepare candidate dependencies and build policy
         if: ${{ (inputs.candidate-docs || inputs.candidate-dependency-family != '') }}
-        uses: rapidsai/shared-actions/release-candidate-dependencies@1dd81e7f3c7dd183f30ae2dbf1e0c3b1122674b8
+        uses: rapidsai/shared-actions/release-candidate-dependencies@f1b91d61c122ac51f260d440a25295db902109b9
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
           prepare-conda-channel: ${{ inputs.candidate-prepare-conda-channel || inputs.candidate-docs }}
@@ -312,7 +312,7 @@ jobs:
           persist-credentials: false
       - name: Stage candidate documentation privately
         if: ${{ inputs.candidate-docs }}
-        uses: rapidsai/shared-actions/release-candidate-docs@1dd81e7f3c7dd183f30ae2dbf1e0c3b1122674b8
+        uses: rapidsai/shared-actions/release-candidate-docs@f1b91d61c122ac51f260d440a25295db902109b9
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
       - name: Set up uv for candidate documentation
@@ -364,7 +364,7 @@ jobs:
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}
       - name: Create release catalog companion
         if: ${{ inputs.release-catalog-config != '' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@1dd81e7f3c7dd183f30ae2dbf1e0c3b1122674b8
+        uses: rapidsai/shared-actions/release-catalog-dispatch@f1b91d61c122ac51f260d440a25295db902109b9
         with:
           config: ${{ inputs.release-catalog-config }}
           source-artifact-name: ${{ inputs.candidate-artifact-name || inputs.artifact-name }}
