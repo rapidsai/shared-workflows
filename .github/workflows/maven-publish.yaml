@@ -106,8 +106,11 @@ jobs:
           # release tarball and add it to PATH so the release check below
           # (and any downstream steps) can find it.
           mkdir -p /tmp/gha-tools
-          wget -qO- https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz \
-            | tar -xz -C /tmp/gha-tools
+          gha_archive="$(mktemp)"
+          trap 'rm -f -- "$gha_archive"' EXIT
+          wget -q --tries=4 --retry-on-http-error=429,500,502,503,504 --waitretry=10 \
+            https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O "$gha_archive"
+          tar -xzf "$gha_archive" -C /tmp/gha-tools
           echo "/tmp/gha-tools" >> "${GITHUB_PATH}"
 
       - name: Determine publish destination
