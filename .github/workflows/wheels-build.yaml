@@ -382,4 +382,6 @@ jobs:
 
       - name: Upload additional artifacts
         if: ${{ !cancelled() && inputs.build_type != 'release-candidate' }}
-        run: rapids-upload-artifacts-dir "cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}"
+        run: rapids-upload-artifacts-dir "cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_py${RAPIDS_PY_VERSION//.}_job${RAPIDS_JOB_ID}"
+        env:
+          RAPIDS_JOB_ID: ${{ job.check_run_id }}

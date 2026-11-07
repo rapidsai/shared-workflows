@@ -308,4 +308,6 @@ jobs:
           upload-to-s3: 'true'
       - name: Upload additional artifacts
         if: ${{ !cancelled() && inputs.build_type != 'release-candidate' }}
-        run: rapids-upload-artifacts-dir "cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)"
+        run: rapids-upload-artifacts-dir "cuda${RAPIDS_CUDA_VERSION%%.*}_$(arch)_job${RAPIDS_JOB_ID}"
+        env:
+          RAPIDS_JOB_ID: ${{ job.check_run_id }}
