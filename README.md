@@ -20,6 +20,10 @@ Reusable workflows must be placed in the `.github/workflows` directory as mentio
 
 ## Usage
 
+Maven, Conda and wheel publishers support opt-in GitHub OIDC authentication to
+nVault. See [publisher credential setup](docs/nvault-publishers.md) for role
+boundaries, configuration and rollout checks.
+
 ### matrix_filter
 
 Several of the workflows in this project have matrices (combinations of workflow inputs) expressed in inline YAML/JSON.
