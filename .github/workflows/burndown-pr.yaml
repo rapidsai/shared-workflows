@@ -37,8 +37,11 @@ jobs:
             (.head.ref | test("^version-update-[0-9]{2}\\.[0-9]{2}$")) and
             (.head.sha | test("^[0-9a-f]{40}$")) and
             ([.labels[].name] | index("non-breaking") != null and index("improvement") != null) and
-            (.body | contains("This PR reviews the atomic burndown candidate that updates main to version")) and
-            (.body | contains("The candidate history also contains the release-settings commit and its revert"))
+            (.body |
+              (contains("This PR updates the repository to version ") and
+               test("This is part of the [0-9]{2}\\.[0-9]{2} release burndown process\\.")) or
+              (contains("This PR reviews the atomic burndown candidate that updates main to version") and
+               contains("The candidate history also contains the release-settings commit and its revert")))
           ' <<< "$PR_INFO" >/dev/null; then
             echo 'skip_product_ci=false' >> "$GITHUB_OUTPUT"
             exit 0

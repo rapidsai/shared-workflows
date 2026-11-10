@@ -8,7 +8,7 @@ keeping the checks that authorize the actual cutover.
 The reusable `.github/workflows/burndown-pr.yaml` emits `skip-product-ci=true`
 only when canonical GitHub PR metadata identifies an open, same-repository PR
 targeting main, with a `version-update-YY.MM` head, both `non-breaking` and
-`improvement` labels, the generated atomic-candidate body markers, a full head SHA,
+`improvement` labels, the concise release-burndown description (or existing atomic-candidate body markers), a full head SHA,
 and exactly one valid `Burndown-Base` and `Burndown-Release` commit trailer.
 The head commit is read from GitHub with a read-only token. Metadata mismatch
 returns false; an API failure fails the classifier job. A branch name alone is

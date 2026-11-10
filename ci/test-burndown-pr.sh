@@ -39,6 +39,9 @@ check() {
 }
 
 check true "$candidate"
+concise=$(jq '.body="This PR updates the repository to version 27.02.\n\nThis is part of the 26.12 release burndown process.\n"' <<< "$candidate")
+check true "$concise"
+check false "$(jq '.body="This PR updates the repository to version 27.02."' <<< "$candidate")"
 check false "$(jq '.head.ref="feature/work"' <<< "$candidate")"
 check false "$(jq '.base.ref="release/26.12"' <<< "$candidate")"
 check false "$(jq '.head.repo.full_name="someone/rmm"' <<< "$candidate")"
