@@ -79,7 +79,7 @@ jobs:
         uses: nv-gha-runners/get-pr-info@main
       - name: Identify burndown version PR
         id: burndown-version-pr
-        if: ${{ inputs.enable_check_version_files_changed }}
+        if: ${{ inputs.enable_check_version_files_changed || inputs.enable_check_version_against_tag }}
         env:
           PR_INFO: ${{ steps.get-pr-info.outputs.pr-info }}
         run: |
@@ -119,16 +119,19 @@ jobs:
             exit 1
           fi
         env:
-          VERSION_FILES_CHANGED: ${{ (inputs.enable_check_version_files_changed && fromJSON(steps.changed-files.outputs.changed_file_groups).version_files) || 'false' }}
+          # Step expressions can be evaluated even when its condition skips the step.
+          # Burndown PRs skip changed-files, so its output can be empty.
+          VERSION_FILES_CHANGED: ${{ fromJSON(steps.changed-files.outputs.changed_file_groups || '{}').version_files || 'false' }}
       - name: Fetch tags
-        if: ${{ inputs.enable_check_version_against_tag }}
+        if: ${{ inputs.enable_check_version_against_tag && steps.burndown-version-pr.outputs.exempt != 'true' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0 # https://github.com/actions/checkout/issues/1471
           fetch-tags: true
       - name: Check VERSION file against latest tag
-        if: ${{ inputs.enable_check_version_against_tag }}
+        # The burndown driver creates the new alpha tag only after candidate approval.
+        if: ${{ inputs.enable_check_version_against_tag && steps.burndown-version-pr.outputs.exempt != 'true' }}
         run: |
           expected_version="$(cat VERSION)"
           actual_version="$(python -m dunamai from git --format '{base}')"
