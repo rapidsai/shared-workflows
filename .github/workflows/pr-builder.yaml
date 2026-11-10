@@ -21,8 +21,12 @@ jobs:
           failed_jobs="$(jq -cn \
             'env.NEEDS
             | fromjson
-            | (."burndown-policy".result == "success"
-               and ."burndown-policy".outputs."skip-product-ci" == "true") as $version_update
+            | (if has("burndown-policy") then
+                ."burndown-policy".result == "success"
+                and ."burndown-policy".outputs."skip-product-ci" == "true"
+              else
+                .checks.outputs."skip-product-ci" == "true"
+              end) as $version_update
             | to_entries
             | map(select(
               ($version_update | not) or .key == "checks" or .key == "burndown-policy"
