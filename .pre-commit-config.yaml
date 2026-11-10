@@ -48,7 +48,7 @@ repos:
     rev: v0.11.0.1
     hooks:
       - id: shellcheck
-        files: ^(\.github/actions/(select-candidate-version/select|evaluate-build-policy/evaluate|select-candidate-matrix/select)\.sh|ci/maven-publish/.*\.sh|ci/publication-rehearsal/sign_maven_fixture\.sh|tests/(candidate-workflow-contracts|select-candidate-version)\.sh)$
+        files: ^(\.github/actions/(select-candidate-version/select|evaluate-build-policy/evaluate|select-candidate-matrix/select)\.sh|ci/(maven-publish/.*|test-burndown-pr)\.sh|ci/publication-rehearsal/sign_maven_fixture\.sh|tests/(candidate-workflow-contracts|select-candidate-version)\.sh)$
   - repo: https://github.com/rapidsai/pre-commit-hooks
     rev: v1.6.1
     hooks:

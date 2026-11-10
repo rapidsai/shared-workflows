@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+name: Test burndown PR classifier
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/burndown-pr.yaml
+      - .github/workflows/test-burndown-pr-classifier.yaml
+      - ci/test-burndown-pr.sh
+
+permissions: {}
+
+jobs:
+  burndown-classifier-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Test the exact classifier shell used by the reusable workflow
+        run: bash ci/test-burndown-pr.sh
