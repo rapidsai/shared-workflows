@@ -6,7 +6,7 @@ on:
         type: string
         required: true
       docs-project:
-        description: "Which project's URL to link. Defaults to the repository name."
+        description: "Which project's URL to link. (key in 'docs-preview-urls' mapping)"
         type: string
         required: true
       sha:
@@ -32,10 +32,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          url=$(jq -r --arg p "${PROJECT}" '.[$p] // empty' <<< "${urls}")
+          if [[ ! "${SHA}" =~ ^[0-9a-f]+$ ]]; then
+            echo "::error::'sha' must be a full lowercase git commit SHA"
+            exit 1
+          fi
+
+          # strip control characters (e.g. newlines) so values can't inject workflow commands
+          PROJECT=$(tr -d '[:cntrl:]' <<< "${PROJECT}")
+
+          url=$(jq -r --arg p "${PROJECT}" '.[$p] // empty' <<< "${URLS}")
           if [[ -z "${url:-}" ]]; then
-            echo "::warning::No docs preview URL for project '${PROJECT}'. Available: $(jq -r 'keys | join(", ")' <<< "${urls}")"
+            available=$(jq -r 'keys | join(", ")' <<< "${URLS}" | tr -d '[:cntrl:]')
+            echo "::warning::No docs preview URL for project '${PROJECT}'. Available: ${available}"
             exit 0
+          fi
+          if [[ ! "${url}" =~ ^https://[^[:space:][:cntrl:]\)\(\<\>\"]+$ ]]; then
+            echo "::error::docs preview URL for project must be an https:// URL without whitespace or markdown/HTML special characters"
+            exit 1
           fi
           gh api --method POST "repos/${REPO}/statuses/${SHA}" \
             -f state=success \
