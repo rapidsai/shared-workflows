@@ -38,56 +38,26 @@ _sonatype_call() {
   rm -f "${body_file}"
 }
 
-# _sonatype_upload FILE URL
-# Basic auth, PUT FILE. Logs failure and returns 1 on non-2xx.
-_sonatype_upload() {
-  local upload_file=$1 url=$2
-  local body_file status
+# portal_upload_bundle ZIP NAME PUBLISHING_TYPE
+# Bearer auth, multipart POST of the bundle. Prints the deployment id on 201;
+# logs failure and returns 1 otherwise.
+portal_upload_bundle() {
+  local zip_path=$1 name=$2 publishing_type=$3
+  local body_file status url
+  url="${CENTRAL_PORTAL_URL}/api/v1/publisher/upload?publishingType=${publishing_type}&name=$(printf %s "${name}" | jq -sRr @uri)"
   body_file=$(mktemp)
   status=$(curl -sS --retry 3 --retry-delay 2 \
-    --user "${MAVEN_DEPLOY_USERNAME}:${MAVEN_DEPLOY_TOKEN}" \
-    --upload-file "${upload_file}" \
-    -o "${body_file}" -w '%{http_code}' "${url}") \
+    -H "Authorization: Bearer $(_portal_auth)" \
+    --form "bundle=@${zip_path};type=application/octet-stream" \
+    -X POST -o "${body_file}" -w '%{http_code}' "${url}") \
     || status="transport-error"
-  if [[ ${status} != 2* ]]; then
-    _sonatype_error_log PUT "${url}" "${status}" "${body_file}" >&2
+  if [[ ${status} != 201 ]]; then
+    _sonatype_error_log POST "${url}" "${status}" "${body_file}" >&2
     rm -f "${body_file}"
     return 1
   fi
+  tr -d '[:space:]' < "${body_file}"
   rm -f "${body_file}"
-}
-
-staging_search_repositories() {
-  local state=${1:-}
-  local url
-  url="${OSSRH_STAGING_API_URL}/manual/search/repositories?ip=client&profile_id=$(printf %s "${PROFILE_ID}" | jq -sRr @uri)"
-  if [[ -n ${state} ]]; then
-    url+="&state=$(printf %s "${state}" | jq -sRr @uri)"
-  fi
-  _sonatype_call GET "${url}"
-}
-
-staging_upload_file() {
-  local file_path=$1 repository_path=$2
-  local encoded_path
-  encoded_path=$(jq -rn --arg path "${repository_path}" \
-    '$path | split("/") | map(@uri) | join("/")')
-  _sonatype_upload "${file_path}" \
-    "${OSSRH_STAGING_API_URL}/service/local/staging/deploy/maven2/${encoded_path}"
-}
-
-staging_handoff_repository() {
-  local repository_key=$1
-  _sonatype_call POST \
-    "${OSSRH_STAGING_API_URL}/manual/upload/repository/${repository_key}?publishing_type=portal_api" \
-    >/dev/null
-}
-
-staging_drop_repository() {
-  local repository_key=$1
-  _sonatype_call DELETE \
-    "${OSSRH_STAGING_API_URL}/manual/drop/repository/${repository_key}" \
-    >/dev/null
 }
 
 portal_get_status() {
@@ -106,7 +76,8 @@ portal_publish_deployment() {
 # Never upload another bundle merely because publication is still in progress.
 publish_deployment() {
   local deployment_id=$1 response state elapsed=0 requested=false
-  local expected_purl="pkg:maven/${GROUP_ID}/${ARTIFACT_ID}@${VERSION}"
+  local expected_purls
+  expected_purls=$(jq -c '[.[] | "pkg:maven/\(.groupId)/\(.artifactId)@\(.version)"] | sort' <<< "${EXPECTED_COORDINATES}")
   echo "Publishing deployment ${deployment_id}"
   while (( elapsed < POLL_TIMEOUT_SEC )); do
     response=$(portal_get_status "${deployment_id}")
@@ -114,9 +85,9 @@ publish_deployment() {
     echo "  [${elapsed}s] state=${state}"
     case "${state}" in
       VALIDATED|PUBLISHING|PUBLISHED)
-        jq -e --arg expected "${expected_purl}" \
-          '.purls == [$expected]' <<< "${response}" >/dev/null \
-          || fatal "Portal deployment does not match ${expected_purl}"
+        jq -e --argjson expected "${expected_purls}" \
+          '(.purls | sort) == $expected' <<< "${response}" >/dev/null \
+          || fatal "Portal deployment does not match the complete release coordinate set"
         ;;
     esac
     case "${state}" in
@@ -156,23 +127,55 @@ copy_bundle() {
 
 require_bundle_contents() {
   local artifact_dir=$1
+  local packaging=${2:-jar}
   local pattern desc entry
   local expected=(
     "${ARTIFACT_ID}-${VERSION}.pom|the POM"
     "${ARTIFACT_ID}-${VERSION}.pom.asc|the POM signature"
+  )
+  if [[ ${packaging} == jar ]]; then
+    expected+=(
     "${ARTIFACT_ID}-${VERSION}.jar|the unclassified primary jar"
     "${ARTIFACT_ID}-${VERSION}.jar.asc|the unclassified primary jar signature"
     "${ARTIFACT_ID}-${VERSION}-sources.jar|the sources jar"
     "${ARTIFACT_ID}-${VERSION}-sources.jar.asc|the sources jar signature"
     "${ARTIFACT_ID}-${VERSION}-javadoc.jar|the javadoc jar"
     "${ARTIFACT_ID}-${VERSION}-javadoc.jar.asc|the javadoc jar signature"
-  )
+    )
+  fi
   for entry in "${expected[@]}"; do
     IFS='|' read -r pattern desc <<< "${entry}"
     if [[ ! -f ${artifact_dir}/${pattern} ]]; then
       fatal "bundle is missing ${desc} (${pattern})"
     fi
   done
+}
+
+validate_publication_tree() {
+  local root=$1 coordinates=$2 artifact packaging directory file suffix
+  local allowed_dirs="" count=0 actual_count
+  while IFS=$'\t' read -r artifact packaging; do
+    local ARTIFACT_ID=${artifact}
+    directory="${root}/$(maven_group_path "${GROUP_ID}")/${artifact}/${VERSION}"
+    require_bundle_contents "${directory}" "${packaging}"
+    allowed_dirs+="${directory}"$'\n'
+    count=$((count + 1))
+  done < <(jq -r '.[] | [.artifactId, .packaging] | @tsv' <<< "${coordinates}")
+  actual_count=$(find "${root}" -type f -name '*.pom' | wc -l)
+  (( actual_count == count )) || fatal "POM inventory does not match manifest"
+  [[ -z $(find "${root}" -type l -print -quit) ]] || fatal "symlinks are not publishable"
+  while IFS= read -r -d '' file; do
+    directory=$(dirname "${file}")
+    grep -Fxq "${directory}" <<< "${allowed_dirs}" || fatal "unexpected publication path: ${file}"
+    suffix=${file##*/}
+    case ${suffix} in
+      *.pom|*.jar)
+        [[ -f ${file}.asc ]] || fatal "missing signature: ${file}"
+        ;;
+      *.pom.asc|*.jar.asc|*.md5|*.sha1|*.sha256|*.sha512) ;;
+      *) fatal "unexpected publication file: ${file}" ;;
+    esac
+  done < <(find "${root}" -type f -print0)
 }
 
 generate_bundle_checksums() {
@@ -193,72 +196,3 @@ create_bundle_zip() {
   (cd "${bundle_dir}" && zip -qr "${zip_path}" .)
 }
 
-require_no_open_staging_repository() {
-  local response count
-  response=$(staging_search_repositories open)
-  count=$(jq -er '.repositories | length' <<< "${response}") \
-    || fatal "OSSRH staging search returned an invalid response"
-  if (( count != 0 )); then
-    jq . <<< "${response}" >&2 || true
-    fatal "found ${count} open OSSRH staging repository/repositories for ${PROFILE_ID} from this IP; drop or hand them off before retrying"
-  fi
-}
-
-upload_tree_to_staging() {
-  local root=$1 file repository_path count=0
-  echo "Uploading Maven repository files to the OSSRH staging service"
-  while IFS= read -r -d '' file; do
-    repository_path=${file#"${root}/"}
-    staging_upload_file "${file}" "${repository_path}"
-    # Consumed by the EXIT cleanup trap in maven_central_publish.sh.
-    # shellcheck disable=SC2034
-    STAGING_FILE_UPLOADED="true"
-    count=$((count + 1))
-  done < <(find "${root}" -type f -print0)
-  echo "  uploaded files: ${count}"
-}
-
-find_open_staging_repository() {
-  local response count
-  response=$(staging_search_repositories open)
-  count=$(jq -er '.repositories | length' <<< "${response}") \
-    || fatal "OSSRH staging search returned an invalid response"
-  if (( count != 1 )); then
-    jq . <<< "${response}" >&2 || true
-    fatal "expected exactly one open OSSRH staging repository after upload, found ${count}"
-  fi
-  STAGING_REPOSITORY_KEY=$(jq -er '.repositories[0].key | select(type == "string" and length > 0)' \
-    <<< "${response}") || fatal "OSSRH staging response did not contain a repository key"
-  # Keys are composite paths of the form <profileId>/<clientIp>/<groupId>--default-repository,
-  # so slashes are expected. Just guard against characters that would break URL path use.
-  if [[ ! ${STAGING_REPOSITORY_KEY} =~ ^[A-Za-z0-9._/-]+$ ]]; then
-    fatal "OSSRH staging service returned an invalid repository key: ${STAGING_REPOSITORY_KEY}"
-  fi
-  echo "  staging repository: ${STAGING_REPOSITORY_KEY}"
-}
-
-wait_for_portal_handoff() {
-  local repository_key=$1
-  local response state elapsed=0
-  echo "Polling OSSRH staging handoff (interval=${POLL_INTERVAL_SEC}s, timeout=${POLL_TIMEOUT_SEC}s)"
-  while (( elapsed < POLL_TIMEOUT_SEC )); do
-    response=$(staging_search_repositories)
-    state=$(jq -r --arg key "${repository_key}" \
-      '.repositories[]? | select(.key == $key) | .state // "UNKNOWN"' \
-      <<< "${response}")
-    DEPLOYMENT_ID=$(jq -r --arg key "${repository_key}" \
-      '.repositories[]? | select(.key == $key) | .portal_deployment_id // empty' \
-      <<< "${response}")
-    echo "  [${elapsed}s] staging state=${state:-UNKNOWN}"
-    if [[ -n ${DEPLOYMENT_ID} ]]; then
-      if [[ ! ${DEPLOYMENT_ID} =~ ^[A-Za-z0-9-]+$ ]]; then
-        fatal "OSSRH staging service returned an invalid Portal deployment id"
-      fi
-      echo "  Portal deployment id: ${DEPLOYMENT_ID}"
-      return 0
-    fi
-    sleep "${POLL_INTERVAL_SEC}"
-    elapsed=$((elapsed + POLL_INTERVAL_SEC))
-  done
-  fatal "timed out waiting for OSSRH staging repository '${repository_key}' to reach the Portal"
-}

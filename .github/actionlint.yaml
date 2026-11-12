@@ -3,15 +3,19 @@ self-hosted-runner:
   labels:
     - linux-amd64-*
     - linux-arm64-*
+    - wsl-amd64-*
 
 # Avoid warnings about referencing things in ${{ vars.* }} statements.
 config-variables:
   - AWS_REGION
   - AWS_ROLE_ARN
   - MAVEN_DEPLOY_USERNAME
-  - TELEMETRY_ENABLED
 
 paths:
+  .github/workflows/*.yaml:
+    ignore:
+      # https://github.com/rhysd/actionlint/issues/711
+      - 'reusable workflow call "\$/.+" at "uses" is not following the format'
   .github/workflows/compute-matrix.yaml:
     ignore:
       # https://github.com/rhysd/actionlint/issues/711

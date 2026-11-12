@@ -55,6 +55,10 @@ on:
         default: ""
         type: string
         required: false
+    outputs:
+      skip-product-ci:
+        description: Whether the existing version check identified a version-update PR
+        value: ${{ jobs.other-checks.outputs.skip-product-ci || 'false' }}
 
 defaults:
   run:
@@ -64,8 +68,10 @@ jobs:
   other-checks:
     if: ${{ inputs.enable_check_size || inputs.enable_check_pr_job_dependencies || inputs.enable_check_version_files_changed || inputs.enable_check_version_against_tag }}
     runs-on: ubuntu-latest
+    outputs:
+      skip-product-ci: ${{ steps.burndown-version-pr.outputs.exempt || 'false' }}
     container:
-      image: rapidsai/ci-conda:26.12-latest # zizmor: ignore[unpinned-images]
+      image: rapidsai/ci-conda:27.02-latest # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -73,16 +79,25 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: true
-      - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
       - name: Get PR Info
         if: ${{ inputs.base-branch == '' }}
         id: get-pr-info
         uses: nv-gha-runners/get-pr-info@main
+      - name: Identify burndown version PR
+        id: burndown-version-pr
+        if: ${{ inputs.enable_check_version_files_changed || inputs.enable_check_version_against_tag }}
+        env:
+          PR_INFO: ${{ steps.get-pr-info.outputs.pr-info }}
+        run: |
+          if jq -e '
+            # Match the branch name pattern used by rapidsai/release-scripts for a version update branch
+            .head.ref | test("^version-update-[0-9]+\\.[0-9]{2}$")
+          ' <<< "${PR_INFO}" >/dev/null; then
+            echo "exempt=true" | tee -a "${GITHUB_OUTPUT}"
+            echo "Allowing the version-update PR to update VERSION files."
+          else
+            echo "exempt=false" | tee -a "${GITHUB_OUTPUT}"
+          fi
       - name: Run rapids-size-checker
         if: ${{ inputs.enable_check_size }}
         run: rapids-size-checker
@@ -95,31 +110,34 @@ jobs:
           IGNORED_JOBS: ${{ inputs.ignored_pr_jobs }}
       - name: Check changed files
         id: changed-files
-        if: ${{ inputs.enable_check_version_files_changed }}
-        uses: rapidsai/shared-actions/changed-files@main
+        if: ${{ inputs.enable_check_version_files_changed && steps.burndown-version-pr.outputs.exempt != 'true' }}
+        uses: rapidsai/shared-actions/changed-files@release/26.12
         with:
           files_yaml: |
             version_files:
               - VERSION
               - RAPIDS_VERSION
       - name: Check if VERSION or RAPIDS_VERSION file has changed
-        if: ${{ inputs.enable_check_version_files_changed }}
+        if: ${{ inputs.enable_check_version_files_changed && steps.burndown-version-pr.outputs.exempt != 'true' }}
         run: |
           if [ "$VERSION_FILES_CHANGED" != "false" ]; then
             echo "ERROR: VERSION or RAPIDS_VERSION file has been changed"
             exit 1
           fi
         env:
-          VERSION_FILES_CHANGED: ${{ (inputs.enable_check_version_files_changed && fromJSON(steps.changed-files.outputs.changed_file_groups).version_files) || 'false' }}
+          # Step expressions can be evaluated even when its condition skips the step.
+          # Burndown PRs skip changed-files, so its output can be empty.
+          VERSION_FILES_CHANGED: ${{ fromJSON(steps.changed-files.outputs.changed_file_groups || '{}').version_files || 'false' }}
       - name: Fetch tags
-        if: ${{ inputs.enable_check_version_against_tag }}
+        if: ${{ inputs.enable_check_version_against_tag && steps.burndown-version-pr.outputs.exempt != 'true' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0 # https://github.com/actions/checkout/issues/1471
           fetch-tags: true
       - name: Check VERSION file against latest tag
-        if: ${{ inputs.enable_check_version_against_tag }}
+        # The burndown driver creates the new alpha tag only after candidate approval.
+        if: ${{ inputs.enable_check_version_against_tag && steps.burndown-version-pr.outputs.exempt != 'true' }}
         run: |
           expected_version="$(cat VERSION)"
           actual_version="$(python -m dunamai from git --format '{base}')"
@@ -127,31 +145,18 @@ jobs:
             echo "ERROR: Expected latest tag to be '$expected_version', got '$actual_version'; did you accidentally merge 'main' into a release-bound PR?"
             exit 1
           fi
-      - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-
   check-style:
     if: ${{ inputs.enable_check_style }}
     runs-on: ubuntu-latest
     container:
       # Must pin to Python <3.13, cmake-format is broken, see https://github.com/python/cpython/issues/140797
-      image: rapidsai/ci-conda:26.12-cuda13.3.0-ubuntu24.04-py3.12 # zizmor: ignore[unpinned-images]
+      image: rapidsai/ci-conda:27.02-cuda13.4.3-ubuntu24.04-py3.12 # zizmor: ignore[unpinned-images]
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: true
-      - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
       - name: Get PR Info
         if: ${{ inputs.base-branch == '' }}
         id: get-pr-info
@@ -173,9 +178,3 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RAPIDS_BASE_BRANCH: ${{ inputs.base-branch || fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}
-      - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
