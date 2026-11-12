@@ -55,6 +55,10 @@ on:
         default: ""
         type: string
         required: false
+    outputs:
+      skip-product-ci:
+        description: Whether the existing version check identified a version-update PR
+        value: ${{ jobs.other-checks.outputs.skip-product-ci || 'false' }}
 
 defaults:
   run:
@@ -64,6 +68,8 @@ jobs:
   other-checks:
     if: ${{ inputs.enable_check_size || inputs.enable_check_pr_job_dependencies || inputs.enable_check_version_files_changed || inputs.enable_check_version_against_tag }}
     runs-on: ubuntu-latest
+    outputs:
+      skip-product-ci: ${{ steps.burndown-version-pr.outputs.exempt || 'false' }}
     container:
       image: rapidsai/ci-conda:27.02-latest # zizmor: ignore[unpinned-images]
       env:
