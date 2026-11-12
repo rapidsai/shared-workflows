@@ -181,7 +181,7 @@ jobs:
           persist-credentials: true
       - name: Setup caller cache
         if: inputs.cache-paths != '' || inputs.cache-key-prefix != '' || inputs.cache-key-files != '' || inputs.cache-environment != ''
-        uses: rapidsai/shared-actions/setup-caller-cache@main
+        uses: rapidsai/shared-actions/setup-caller-cache@release/26.12
         with:
           cache-paths: ${{ inputs.cache-paths }}
           cache-key-prefix: ${{ inputs.cache-key-prefix }}
@@ -213,7 +213,7 @@ jobs:
           enable-pypi-anaconda: true
 
       - name: Setup sccache-dist
-        uses: rapidsai/shared-actions/setup-sccache-dist@main
+        uses: rapidsai/shared-actions/setup-sccache-dist@release/26.12
         env:
           AWS_REGION: "${{env.AWS_REGION}}"
           AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
