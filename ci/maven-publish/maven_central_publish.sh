@@ -63,8 +63,7 @@ OPTIONS:
 ENVIRONMENT VARIABLES:
     MAVEN_DEPLOY_USERNAME          Publisher Portal user token username.
     MAVEN_DEPLOY_TOKEN             Publisher Portal user token password.
-    GITHUB_OUTPUT                  If set, receives STAGING_REPOSITORY_KEY and
-                                   DEPLOYMENT_ID.
+    GITHUB_OUTPUT                  If set, receives DEPLOYMENT_ID and DEPLOYMENT_STATE.
 
 EOF
 }
