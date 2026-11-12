@@ -5,7 +5,7 @@
 # file is GPG-signed. The destination is chosen inside this workflow with
 # `rapids-is-release-build`:
 #   - release build (vYY.MM.PP tag) -> Maven Central via the Sonatype Central
-#     Publisher Portal (OSSRH staging, validation, automatic publication).
+#     Publisher Portal (bundle upload, validation, automatic publication).
 #   - non-release build (nightly, branch push) -> Sonatype snapshot repository
 #     (direct HTTP PUT, immediately available, no staging or portal step).
 name: Maven publish
@@ -30,6 +30,11 @@ on:
           a Maven repository directory.
         required: true
         type: string
+      primary-artifact-id:
+        description: Receipt coordinate; required when the Maven repository contains multiple POMs.
+        required: false
+        type: string
+        default: ''
       docs-project:
         description: |
           Optional registered Java docs project in rapidsai/docs, e.g. cudf-java.
@@ -46,10 +51,8 @@ on:
         default: ''
       profile-id:
         description: |
-          Sonatype staging profile to search, if different from the Maven groupId read from
-          the POM (e.g. a verified parent namespace like com.nvidia for a com.nvidia.cuopt
-          groupId). Defaults to the groupId when not set. Only applies to the Maven Central
-          path (release builds); ignored on the snapshot path.
+          Accepted for backward compatibility. The Central Publisher Portal API
+          derives namespace authorization from the account; no staging profile is used.
         required: false
         type: string
         default: ''
@@ -148,8 +151,11 @@ jobs:
         run: |
           shared-workflows/ci/maven-publish/prepare_maven_bundle.sh \
             --input maven-repo \
-            --output signed-maven-repo
+            --output signed-maven-repo \
+            --manifest-output maven-coordinates.json \
+            --primary-artifact-id "${PRIMARY_ARTIFACT_ID}"
         env:
+          PRIMARY_ARTIFACT_ID: ${{ inputs.primary-artifact-id }}
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
@@ -167,6 +173,7 @@ jobs:
             --artifact-id "${ARTIFACT_ID}"
             --version "${VERSION}"
             --output-bundle central-bundle.zip
+            --manifest maven-coordinates.json
             --deployment-receipt deployment-receipt/deployment.json
           )
           if [[ -n ${PROFILE_ID} ]]; then
@@ -223,6 +230,7 @@ jobs:
             --group-id "${GROUP_ID}" \
             --artifact-id "${ARTIFACT_ID}" \
             --version "${VERSION}" \
+            --manifest maven-coordinates.json \
             --output-bundle snapshot-bundle.zip
         env:
           GROUP_ID: ${{ steps.prepare.outputs.GROUP_ID }}

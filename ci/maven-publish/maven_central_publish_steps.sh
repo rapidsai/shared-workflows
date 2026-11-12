@@ -195,4 +195,3 @@ create_bundle_zip() {
   echo "Zipping bundle at ${zip_path}"
   (cd "${bundle_dir}" && zip -qr "${zip_path}" .)
 }
-

@@ -44,12 +44,16 @@ EOF
 deploy_snapshot_with_mvn() {
   local artifact_dir=$1 artifact_id=$2 version=$3
   local repo_url=$4 settings_file=$5 log_path=$6
+  local packaging=${7:-jar}
 
   local main_jar="${artifact_dir}/${artifact_id}-${version}.jar"
   local pom_file="${artifact_dir}/${artifact_id}-${version}.pom"
   local sources_jar="${artifact_dir}/${artifact_id}-${version}-sources.jar"
   local javadoc_jar="${artifact_dir}/${artifact_id}-${version}-javadoc.jar"
 
+  if [[ ${packaging} == pom ]]; then
+    main_jar=${pom_file}
+  fi
   if [[ ! -f ${main_jar} ]]; then
     fatal "missing primary jar: ${main_jar}"
   fi
@@ -62,6 +66,7 @@ deploy_snapshot_with_mvn() {
   local -a files=() types=() classifiers=()
   local jar classifier
   for jar in "${artifact_dir}"/*.jar; do
+    [[ -f ${jar} ]] || continue
     case ${jar} in
       "${main_jar}"|"${sources_jar}"|"${javadoc_jar}") continue ;;
     esac
@@ -82,6 +87,7 @@ deploy_snapshot_with_mvn() {
     -DrepositoryId=ossrh
     -Dfile="${main_jar}"
     -DpomFile="${pom_file}"
+    -Dpackaging="${packaging}"
   )
   if [[ -f ${sources_jar} ]]; then
     mvn_args+=(-Dsources="${sources_jar}")

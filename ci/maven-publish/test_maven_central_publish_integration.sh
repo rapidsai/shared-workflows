@@ -23,6 +23,8 @@ done
 
 cp "${SCRIPT_DIR}/mock_central_curl.sh" "${MOCK_BIN}/curl"
 chmod +x "${MOCK_BIN}/curl"
+printf '#!/bin/bash\nexit 0\n' > "${MOCK_BIN}/sleep"
+chmod +x "${MOCK_BIN}/sleep"
 
 export PATH="${MOCK_BIN}:${PATH}"
 export GITHUB_OUTPUT MOCK_STATE_DIR
@@ -40,35 +42,13 @@ OUTPUT_BUNDLE="${TEST_ROOT}/central-bundle.zip"
 
 unzip -tq "${OUTPUT_BUNDLE}" >/dev/null
 unzip -l "${OUTPUT_BUNDLE}" | grep -F 'example-26.08.0.jar.asc.sha1'
-grep -Fx 'STAGING_REPOSITORY_KEY=repo-key' "${GITHUB_OUTPUT}"
 grep -Fx 'DEPLOYMENT_ID=00000000-0000-0000-0000-000000000001' "${GITHUB_OUTPUT}"
-[[ $(wc -l < "${MOCK_STATE_DIR}/uploads.log") -eq 24 ]]
-grep -F '/ai/rapids/example/26.08.0/example-26.08.0.jar.asc.sha1' "${MOCK_STATE_DIR}/uploads.log"
-grep -F 'manual/upload/repository/repo-key?publishing_type=portal_api' \
-  "${MOCK_STATE_DIR}/curl.log"
-if grep -Fq 'api/v1/publisher/upload' "${MOCK_STATE_DIR}/curl.log"; then
-  echo "bundle upload endpoint must not be used" >&2
-  exit 1
-fi
+[[ $(wc -l < "${MOCK_STATE_DIR}/uploads.log") -eq 1 ]]
+cmp "${OUTPUT_BUNDLE}" "${MOCK_STATE_DIR}/uploaded.zip"
+grep -F 'publisher/upload?publishingType=USER_MANAGED' "${MOCK_STATE_DIR}/curl.log"
 [[ -f ${MOCK_STATE_DIR}/publish-requested && ! -f ${MOCK_STATE_DIR}/portal-dropped ]]
-[[ ! -f ${MOCK_STATE_DIR}/staging-dropped ]]
 
 rm -f "${MOCK_STATE_DIR}"/*
-export PREEXISTING_OPEN=true
-if "${SCRIPT_DIR}/maven_central_publish.sh" \
-  --input "${TEST_ROOT}/signed" \
-  --group-id ai.rapids \
-  --artifact-id example \
-  --version 26.08.0 \
-  --output-bundle "${TEST_ROOT}/blocked-bundle.zip"; then
-  echo "a pre-existing open staging repository must block publication" >&2
-  exit 1
-fi
-[[ ! -e ${MOCK_STATE_DIR}/uploads.log ]]
-[[ ! -e ${MOCK_STATE_DIR}/staging-dropped ]]
-
-rm -f "${MOCK_STATE_DIR}"/*
-export PREEXISTING_OPEN=false
 export FAIL_UPLOAD=true
 if "${SCRIPT_DIR}/maven_central_publish.sh" \
   --input "${TEST_ROOT}/signed" \
@@ -79,7 +59,7 @@ if "${SCRIPT_DIR}/maven_central_publish.sh" \
   echo "an upload failure must fail publication" >&2
   exit 1
 fi
-[[ -f ${MOCK_STATE_DIR}/staging-dropped ]]
+[[ ! -f ${MOCK_STATE_DIR}/publish-requested ]]
 
 export FAIL_UPLOAD=false
 export GITHUB_REF=refs/tags/v26.08.00
@@ -173,5 +153,47 @@ fi
 [[ ! -f ${MOCK_STATE_DIR}/uploads.log && ! -f ${MOCK_STATE_DIR}/publish.log ]]
 if grep -Fq 'DEPLOYMENT_STATE=PUBLISHED' "${GITHUB_OUTPUT}"; then exit 1; fi
 unset PORTAL_STATE POLL_TIMEOUT_SEC
+
+# Mixed JAR/POM-only bundles publish atomically and resume the same package set.
+POM_DIR="${TEST_ROOT}/signed/ai/rapids/relocated/26.08.0"
+mkdir -p "${POM_DIR}"
+printf 'POM-only\n' > "${POM_DIR}/relocated-26.08.0.pom"
+printf 'signature\n' > "${POM_DIR}/relocated-26.08.0.pom.asc"
+MANIFEST="${TEST_ROOT}/coordinates.json"
+jq -n '[{groupId: "ai.rapids", artifactId: "example", version: "26.08.0", packaging: "jar"},
+        {groupId: "ai.rapids", artifactId: "relocated", version: "26.08.0", packaging: "pom"}]' > "${MANIFEST}"
+export PORTAL_PURLS='["pkg:maven/ai.rapids/relocated@26.08.0","pkg:maven/ai.rapids/example@26.08.0"]'
+run_multi() {
+  "${SCRIPT_DIR}/maven_central_publish.sh" \
+    --input "${TEST_ROOT}/signed" --group-id ai.rapids --artifact-id example \
+    --version 26.08.0 --output-bundle "${TEST_ROOT}/multi.zip" \
+    --manifest "${MANIFEST}" --deployment-receipt "${TEST_ROOT}/multi-deployment.json"
+}
+rm -f "${MOCK_STATE_DIR}"/*
+run_multi
+unzip -l "${TEST_ROOT}/multi.zip" | grep -F 'relocated-26.08.0.pom.asc.sha1'
+jq -e '.coordinates | length == 2' "${TEST_ROOT}/multi-deployment.json"
+rm -f "${MOCK_STATE_DIR}/uploads.log"
+run_multi
+[[ ! -f ${MOCK_STATE_DIR}/uploads.log ]]
+for purls in \
+  '["pkg:maven/ai.rapids/example@26.08.0"]' \
+  '["pkg:maven/ai.rapids/relocated@26.08.0","pkg:maven/ai.rapids/example@26.08.0","pkg:maven/ai.rapids/extra@26.08.0"]' \
+  '["pkg:maven/ai.rapids/relocated@26.08.0","pkg:maven/ai.rapids/example@26.08.0","pkg:maven/ai.rapids/example@26.08.0"]'; do
+  rm -f "${MOCK_STATE_DIR}"/*
+  export PORTAL_PURLS=${purls}
+  if run_multi; then echo 'a different Portal package set must fail' >&2; exit 1; fi
+  [[ ! -f ${MOCK_STATE_DIR}/publish.log && ! -f ${MOCK_STATE_DIR}/uploads.log ]]
+done
+
+# Removing a coordinate from the manifest cannot silently omit it from checks.
+jq '.[0:1]' "${MANIFEST}" > "${MANIFEST}.partial"
+mv "${MANIFEST}.partial" "${MANIFEST}"
+rm -f "${MOCK_STATE_DIR}"/*
+if run_multi; then echo 'incomplete manifest must fail' >&2; exit 1; fi
+[[ ! -f ${MOCK_STATE_DIR}/curl.log ]]
+rm -rf "${POM_DIR}"
+if run_multi; then echo 'changed receipt package set must fail' >&2; exit 1; fi
+[[ ! -f ${MOCK_STATE_DIR}/curl.log ]]
 
 echo "Maven Central publish integration test passed"

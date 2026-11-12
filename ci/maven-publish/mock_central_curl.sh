@@ -13,6 +13,11 @@ while [[ $# -gt 0 ]]; do
     -o) body_file=$2; shift 2 ;;
     -X) method=$2; shift 2 ;;
     --upload-file) method=PUT; shift 2 ;;
+    --form)
+      bundle=${2#bundle=@}
+      cp "${bundle%%;*}" "${MOCK_STATE_DIR}/uploaded.zip"
+      shift 2
+      ;;
     https://*) url=$1; shift ;;
     *) shift ;;
   esac
@@ -20,6 +25,12 @@ done
 status=200
 body=""
 case "${url}" in
+  *publisher/upload*)
+    printf '%s\n' "${url}" >> "${MOCK_STATE_DIR}/uploads.log"
+    status=201
+    body=00000000-0000-0000-0000-000000000001
+    if [[ ${FAIL_UPLOAD:-false} == true ]]; then status=400; fi
+    ;;
   *manual/search/repositories*state=open*)
     if [[ ${PREEXISTING_OPEN:-false} == true || -f ${MOCK_STATE_DIR}/uploaded ]]; then
       body='{"repositories":[{"key":"repo-key","state":"open","portal_deployment_id":"","warnings":[]}]}'
@@ -47,8 +58,12 @@ case "${url}" in
     if [[ -f ${MOCK_STATE_DIR}/publish-requested ]]; then
       state=${AFTER_PUBLISH_STATE:-PUBLISHED}
     fi
-    body=$(jq -n --arg state "${state}" --arg purl "${PORTAL_PURL:-pkg:maven/ai.rapids/example@26.08.0}" \
-      '{deploymentState: $state, purls: [$purl]}')
+    purls=${PORTAL_PURLS:-}
+    if [[ -z ${purls} ]]; then
+      purls=$(jq -cn --arg purl "${PORTAL_PURL:-pkg:maven/ai.rapids/example@26.08.0}" '[$purl]')
+    fi
+    body=$(jq -n --arg state "${state}" --argjson purls "${purls}" \
+      '{deploymentState: $state, purls: $purls}')
     ;;
   *publisher/deployment/*)
     if [[ ${method} == DELETE ]]; then

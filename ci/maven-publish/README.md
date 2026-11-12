@@ -37,9 +37,37 @@ java-publish:
 
 Configure `vars.MAVEN_DEPLOY_USERNAME` with the Sonatype token username.
 Set `docs-project` for projects registered with the docs dispatcher; omit it for
-publication without docs. Use `profile-id` when Sonatype's verified namespace
-differs from the Maven group. Release publication is automatic: callers must omit
+publication without docs. `profile-id` is accepted for compatibility but unused:
+the direct Central Publisher Portal API checks the account's namespace access.
+Release publication is automatic: callers must omit
 the removed `stage-for-maven-central-publish` and `publish-to-maven-central` inputs.
+
+For a reactor such as cuVS Lucene, include every supported versioned module and
+the POM-only parent and relocation in one repository artifact. Set
+`primary-artifact-id: cuvs-lucene` to keep the existing docs receipt coordinate.
+All coordinates must have the same group and version. Preparation reads each
+POM's coordinates and packaging, signs every artifact, and writes a separate
+coordinate manifest outside the Maven tree. POM-only packages require a signed
+POM; JAR packages also require signed primary, sources, and javadoc JARs.
+Snapshot publishing deploys each coordinate with its declared packaging.
+
+The release uploads one `USER_MANAGED` ZIP using the direct Portal API. Before
+requesting publication it verifies that the Portal's complete package-URL set
+matches the manifest, independent of ordering. Missing, extra, and duplicate
+packages fail verification. Recovery receipts bind the deployment to the full
+coordinate set; a rerun resumes that deployment without uploading again. One
+completed-publication receipt is emitted only after the entire set is `PUBLISHED`.
+Its schema and primary coordinate remain compatible with the docs dispatcher.
+The Lucene docs registration must fetch javadoc from a versioned module such as
+`cuvs-lucene-10.2`; the relocation coordinate has no javadoc JAR. Verify that
+registration separately before enabling docs deployment.
+
+Signing and Maven credentials must be backed by the team's Vault records and
+made available to each caller through the existing secret synchronization path.
+The workflow consumes `GPG_PRIVATE_KEY`, `GPG_PASSPHRASE`, and
+`MAVEN_DEPLOY_TOKEN` as secrets, and `MAVEN_DEPLOY_USERNAME` as a repository/org
+variable. Do not put a Vault token or credential value in workflow configuration.
+Verify consumer enrollment and synchronization for the caller before cutover.
 
 ## Completed-publication receipt
 
@@ -72,5 +100,5 @@ for publication recovery, including when publication has not completed.
 
 See the dispatcher's [rollout and recovery guide](https://github.com/rapidsai/release-tracking/blob/main/docs/java-docs-dispatch.md)
 for App access, deployment order, and docs retries. Rerun a failed publisher job to
-resume its retained deployment within 90 days. If the staging handoff failed
+resume its retained deployment within 90 days. If the upload response was lost
 before retaining `deployment.json`, reconcile the deployment in Sonatype first.
