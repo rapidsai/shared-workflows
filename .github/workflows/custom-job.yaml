@@ -212,7 +212,7 @@ jobs:
         run: | # zizmor: ignore[template-injection]
           echo "RAPIDS_BASE_BRANCH=${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}" >> "${GITHUB_ENV}"
       - name: Standardize repository information
-        uses: rapidsai/shared-actions/rapids-github-info@release/26.12
+        uses: rapidsai/shared-actions/rapids-github-info@main
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
@@ -221,7 +221,7 @@ jobs:
           build_workflow_name: ${{ inputs.build_workflow_name }}
       # Install latest rapidsai/sccache client and configure sccache-dist
       - name: Setup sccache-dist
-        uses: rapidsai/shared-actions/setup-sccache-dist@release/26.12
+        uses: rapidsai/shared-actions/setup-sccache-dist@main
         env:
           AWS_REGION: "${{env.AWS_REGION}}"
           AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
