@@ -193,6 +193,7 @@ jobs:
     runs-on: "${{ matrix.OS }}-${{ matrix.ARCH }}-gpu-${{ matrix.GPU }}-${{ matrix.DRIVER }}-1"
     continue-on-error: ${{ inputs.continue-on-error }}
     env:
+      GH_TOKEN: ${{ github.token }}
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
       RAPIDS_DEPENDENCIES: ${{ matrix.DEPENDENCIES }}
       RAPIDS_TESTS_DIR: ${{ github.workspace }}/test-results
@@ -215,6 +216,10 @@ jobs:
           ref: ${{ inputs.sha }}
           fetch-depth: 0
           persist-credentials: true
+      # Dependency clones launched by CMake need credentials outside the checkout.
+      # The CI image already includes gh; use the automatic job token by default.
+      - name: Configure GitHub Git authentication
+        run: gh auth setup-git --hostname github.com
       - name: Setup caller cache
         if: inputs.cache-paths != '' || inputs.cache-key-prefix != '' || inputs.cache-key-files != '' || inputs.cache-environment != ''
         uses: rapidsai/shared-actions/setup-caller-cache@release/26.12
