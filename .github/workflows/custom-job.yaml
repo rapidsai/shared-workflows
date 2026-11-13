@@ -1,5 +1,11 @@
 on:
   workflow_call:
+    outputs:
+      docs-preview-urls:
+        description: |
+          JSON object mapping docs project name to its PR preview URL, written by
+          rapids-upload-docs (gha-tools) on pull-request builds. Empty otherwise.
+        value: ${{ jobs.build.outputs.docs-preview-urls }}
     inputs:
       build_type:
         description: "One of: [branch, nightly, pull-request, release-candidate]"
@@ -174,6 +180,8 @@ jobs:
       fail-fast: false
     runs-on: "linux-${{ inputs.arch }}-${{ inputs.node_type }}"
     continue-on-error: ${{ inputs.continue-on-error }}
+    outputs:
+      docs-preview-urls: ${{ steps.run-script.outputs.docs-preview-urls }}
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     container:
@@ -278,6 +286,7 @@ jobs:
           SECRET_3_NAME: ${{ secrets.script-env-secret-3-key }}
           SECRET_3_VALUE: ${{ secrets.script-env-secret-3-value }}
       - name: Run script
+        id: run-script
         run: |
           ulimit -n "$(ulimit -Hn)"
           $INPUTS_SCRIPT
