@@ -101,23 +101,23 @@ Values passed through `secrets:` are redacted everywhere in the GitHub UI, inclu
 
 ### Docs preview status
 
-`custom-job.yaml` exposes a `docs-preview-urls` output: a JSON object mapping each docs project to its PR preview URL, written by `rapids-upload-docs` (gha-tools) on pull-request builds.
-`docs-preview-status.yaml` reads that output and posts a commit status on the PR head commit, with a **Details** link to the docs preview.
+`custom-job.yaml` has historically been used for docs builds in RAPIDS projects.
+
+It has a docs-specific output, `docs-preview-urls`, that's intended for use with the `docs-preview-status` workflow.
+That workflow populate a link in the CI checks section on PRs, to make it easier to find docs previews.
 
 ```yaml
-docs-preview:
-  needs: [docs-build]
-  if: needs.docs-build.result == 'success'
-  permissions:
-    statuses: write
-  uses: rapidsai/shared-workflows/.github/workflows/docs-preview-status.yaml@main
-  with:
-    docs-preview-urls: ${{ needs.docs-build.outputs.docs-preview-urls }}
-    # docs-project: <name>   # only if the main docs project dir differs from the repo name
+  docs-preview:
+    needs: [docs-build]
+    if: needs.docs-build.result == 'success'
+    permissions:
+      statuses: write
+    uses: rapidsai/shared-workflows/.github/workflows/docs-preview-status.yaml@preview-links
+    with:
+      docs-project: <name> # (e.g. 'rmm')
+      docs-preview-urls: ${{ needs.docs-build.outputs.docs-preview-urls }}
+      sha: ${{ github.sha }}
 ```
-
-Do not add `docs-preview` to the `needs:` of `pr-builder`; the link is informational and should never block merges.
-Instead, add `docs-preview` to the `ignored_pr_jobs` input of the `checks` job, so `rapids-check-pr-job-dependencies` doesn't flag it as missing from `pr-builder`.
 
 ### Release catalog
 
