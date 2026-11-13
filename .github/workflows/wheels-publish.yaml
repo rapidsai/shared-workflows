@@ -75,7 +75,7 @@ jobs:
     name: wheels publish
     # Candidate artifacts are staged privately by the build workflow. They must
     # not enter public Anaconda.org or PyPI channels before rollover approval.
-    if: ${{ inputs.build_type != 'release-candidate' }}
+    if: ${{ inputs.build_type != 'release-candidate' && (vars.NV_VAULT_ENABLED != 'true' || (github.event_name != 'pull_request' && github.event_name != 'pull_request_target')) }}
     # Use a self-hosted runner to ensure we have sufficient disk space. Using
     # cpu8 since we shouldn't need much CPU horsepower.
     runs-on: "linux-amd64-cpu8"
@@ -143,9 +143,41 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
+      - name: Validate Vault configuration
+        if: ${{ vars.NV_VAULT_ENABLED == 'true' }}
+        env:
+          NV_VAULT_JWT_PATH: ${{ vars.NV_VAULT_JWT_PATH }}
+          NV_VAULT_WHEELS_ROLE: ${{ vars.NV_VAULT_WHEELS_ROLE }}
+          NV_VAULT_WHEELS_NIGHTLY_PATH: ${{ vars.NV_VAULT_WHEELS_NIGHTLY_PATH }}
+        run: |
+          set -euo pipefail
+          for name in NV_VAULT_JWT_PATH NV_VAULT_WHEELS_ROLE NV_VAULT_WHEELS_NIGHTLY_PATH; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing required Vault configuration: ${name}"
+              exit 1
+            fi
+          done
+
+      - name: Read vault-wheels credentials from Vault
+        id: vault-wheels
+        if: ${{ vars.NV_VAULT_ENABLED == 'true' }}
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          url: https://prod.vault.nvidia.com
+          namespace: swgpu-rapids
+          method: jwt
+          path: ${{ vars.NV_VAULT_JWT_PATH }}
+          role: ${{ vars.NV_VAULT_WHEELS_ROLE }}
+          jwtGithubAudience: https://prod.vault.nvidia.com:443
+          exportEnv: false
+          exportToken: false
+          secrets: |
+            ${{ vars.NV_VAULT_WHEELS_NIGHTLY_PATH }} token | CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN ;
+
       - name: Download wheels from artifact storage and publish to anaconda repository
         id: download_wheels
         run: |
+          : "${RAPIDS_CONDA_TOKEN:?must be set}"
           UPLOAD_DIR="$(mktemp -d)"
           rapids-wheels-anaconda-github \
             "${INPUTS_PACKAGE_NAME}" \
@@ -154,7 +186,7 @@ jobs:
           echo "package_upload_dir=${UPLOAD_DIR}" >> "${GITHUB_OUTPUT}"
         env:
           GH_TOKEN: ${{ github.token }}
-          RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
+          RAPIDS_CONDA_TOKEN: ${{ vars.NV_VAULT_ENABLED != 'true' && secrets.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN || steps.vault-wheels.outputs.CONDA_RAPIDSAI_WHEELS_NIGHTLY_TOKEN }}
           PACKAGENAME: ${{ inputs.package-name }}
           PACKAGETYPE: ${{ inputs.package-type }}
           INPUTS_PACKAGE_NAME: ${{ inputs.package-name }}
@@ -173,11 +205,43 @@ jobs:
             echo "is_release_build=false" | tee -a "${GITHUB_OUTPUT}"
           fi
 
+      - name: Validate Vault configuration
+        if: ${{ vars.NV_VAULT_ENABLED == 'true' && inputs.publish_to_pypi && steps.check_if_release.outputs.is_release_build == 'true' }}
+        env:
+          NV_VAULT_JWT_PATH: ${{ vars.NV_VAULT_JWT_PATH }}
+          NV_VAULT_PYPI_ROLE: ${{ vars.NV_VAULT_PYPI_ROLE }}
+          NV_VAULT_PYPI_PATH: ${{ vars.NV_VAULT_PYPI_PATH }}
+        run: |
+          set -euo pipefail
+          for name in NV_VAULT_JWT_PATH NV_VAULT_PYPI_ROLE NV_VAULT_PYPI_PATH; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing required Vault configuration: ${name}"
+              exit 1
+            fi
+          done
+
+      - name: Read vault-pypi credentials from Vault
+        id: vault-pypi
+        if: ${{ vars.NV_VAULT_ENABLED == 'true' && inputs.publish_to_pypi && steps.check_if_release.outputs.is_release_build == 'true' }}
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          url: https://prod.vault.nvidia.com
+          namespace: swgpu-rapids
+          method: jwt
+          path: ${{ vars.NV_VAULT_JWT_PATH }}
+          role: ${{ vars.NV_VAULT_PYPI_ROLE }}
+          jwtGithubAudience: https://prod.vault.nvidia.com:443
+          exportEnv: false
+          exportToken: false
+          secrets: |
+            ${{ vars.NV_VAULT_PYPI_PATH }} token | RAPIDSAI_PYPI_TOKEN ;
+
       - name: Publish the downloaded wheels to PyPI
         if: ${{ inputs.publish_to_pypi && steps.check_if_release.outputs.is_release_build == 'true' }}
         run: |
+          : "${TWINE_PASSWORD:?must be set}"
           python3 -m pip install 'twine>=6.2.0'
           python3 -m twine upload -u __token__ "${UPLOAD_DIR}"/*
         env:
           UPLOAD_DIR: ${{ steps.download_wheels.outputs.package_upload_dir }}
-          TWINE_PASSWORD: ${{ secrets.RAPIDSAI_PYPI_TOKEN }}
+          TWINE_PASSWORD: ${{ vars.NV_VAULT_ENABLED != 'true' && secrets.RAPIDSAI_PYPI_TOKEN || steps.vault-pypi.outputs.RAPIDSAI_PYPI_TOKEN }}
