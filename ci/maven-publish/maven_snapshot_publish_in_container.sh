@@ -42,22 +42,17 @@ mkdir -p "${DEPLOY_DIR}" "${DOWNLOAD_DIR}"
 stage_snapshot_deploy_inputs "${INPUT_DIR}" "${DEPLOY_DIR}"
 
 GROUP_PATH="$(maven_group_path "${GROUP_ID}")"
-ARTIFACT_DIR="${DEPLOY_DIR}/${GROUP_PATH}/${ARTIFACT_ID}/${VERSION}"
-if [[ ! -d ${ARTIFACT_DIR} ]]; then
-  fatal "expected artifact dir ${ARTIFACT_DIR} not present in input"
-fi
-
 write_maven_settings "${SETTINGS_FILE}"
-
-deploy_snapshot_with_mvn \
-  "${ARTIFACT_DIR}" "${ARTIFACT_ID}" "${VERSION}" \
-  "${SNAPSHOT_REPOSITORY_URL}" "${SETTINGS_FILE}" "${DEPLOY_LOG}"
-
-# Scope at the artifactId directory so the parent maven-metadata.xml is
-# fetched alongside everything under the SNAPSHOT version directory.
-download_deployed_tree \
-  "${DEPLOY_LOG}" "${SNAPSHOT_REPOSITORY_URL}" \
-  "${GROUP_PATH}/${ARTIFACT_ID}" "${DOWNLOAD_DIR}"
+while IFS=$'\t' read -r artifact packaging; do
+  ARTIFACT_DIR="${DEPLOY_DIR}/${GROUP_PATH}/${artifact}/${VERSION}"
+  [[ -d ${ARTIFACT_DIR} ]] || fatal "missing snapshot coordinate: ${artifact}"
+  deploy_snapshot_with_mvn \
+    "${ARTIFACT_DIR}" "${artifact}" "${VERSION}" \
+    "${SNAPSHOT_REPOSITORY_URL}" "${SETTINGS_FILE}" "${DEPLOY_LOG}" "${packaging}"
+  download_deployed_tree \
+    "${DEPLOY_LOG}" "${SNAPSHOT_REPOSITORY_URL}" \
+    "${GROUP_PATH}/${artifact}" "${DOWNLOAD_DIR}"
+done < <(jq -r '.[] | [.artifactId, .packaging] | @tsv' <<< "${COORDINATES}")
 
 BUNDLE_ZIP="${BUNDLE_DIR}/${ARTIFACT_ID}-${VERSION}.zip"
 (cd "${DOWNLOAD_DIR}" && zip -qr "${BUNDLE_ZIP}" .)

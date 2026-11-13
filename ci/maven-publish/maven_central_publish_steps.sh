@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-# Central Publisher Portal HTTP wrappers and local bundle helpers for maven_central_publish.sh.
+# Sonatype HTTP wrappers and local bundle helpers for maven_central_publish.sh.
 
 _portal_auth() {
   printf '%s:%s' "${MAVEN_DEPLOY_USERNAME}" "${MAVEN_DEPLOY_TOKEN}" \
@@ -22,10 +22,10 @@ _sonatype_error_log() {
 # Bearer auth, no request body. Prints response body on 2xx; logs failure and
 # returns 1 on non-2xx.
 _sonatype_call() {
-  local method=$1 url=$2
+  local method=$1 url=$2 retries=${3:-3}
   local body_file status
   body_file=$(mktemp)
-  status=$(curl -sS --retry 3 --retry-delay 2 \
+  status=$(curl -sS --connect-timeout 15 --max-time 60 --retry "${retries}" --retry-delay 2 \
     -H "Authorization: Bearer $(_portal_auth)" \
     -X "${method}" -o "${body_file}" -w '%{http_code}' "${url}") \
     || status="transport-error"
@@ -67,11 +67,56 @@ portal_get_status() {
     || echo '{}'
 }
 
-portal_drop_deployment() {
-  local deployment_id=$1
-  _sonatype_call DELETE \
-    "${CENTRAL_PORTAL_URL}/api/v1/publisher/deployment/${deployment_id}" \
-    >/dev/null
+portal_publish_deployment() {
+  _sonatype_call POST \
+    "${CENTRAL_PORTAL_URL}/api/v1/publisher/deployment/$1" 0 >/dev/null
+}
+
+# Resume the same deployment after an uncertain publish response or a timeout.
+# Never upload another bundle merely because publication is still in progress.
+publish_deployment() {
+  local deployment_id=$1 response state elapsed=0 requested=false
+  local expected_purls
+  expected_purls=$(jq -c '[.[] | "pkg:maven/\(.groupId)/\(.artifactId)@\(.version)"] | sort' <<< "${EXPECTED_COORDINATES}")
+  echo "Publishing deployment ${deployment_id}"
+  while (( elapsed < POLL_TIMEOUT_SEC )); do
+    response=$(portal_get_status "${deployment_id}")
+    state=$(jq -r '.deploymentState // "UNKNOWN"' <<< "${response}")
+    echo "  [${elapsed}s] state=${state}"
+    case "${state}" in
+      VALIDATED|PUBLISHING|PUBLISHED)
+        jq -e --argjson expected "${expected_purls}" \
+          '(.purls | sort) == $expected' <<< "${response}" >/dev/null \
+          || fatal "Portal deployment does not match the complete release coordinate set"
+        ;;
+    esac
+    case "${state}" in
+      VALIDATED)
+        if [[ ${requested} == false ]]; then
+          # A failed response may follow an accepted request. Check state before
+          # attempting another promotion, including after a workflow rerun.
+          portal_publish_deployment "${deployment_id}" \
+            || echo "Publish response uncertain; checking deployment state" >&2
+          requested=true
+        fi
+        ;;
+      PUBLISHED)
+        if [[ -n ${GITHUB_OUTPUT:-} ]]; then
+          echo "DEPLOYMENT_STATE=PUBLISHED" >> "${GITHUB_OUTPUT}"
+        fi
+        return 0
+        ;;
+      FAILED|VALIDATION_FAILED)
+        jq . <<< "${response}" >&2 || true
+        fatal "Publisher Portal reported terminal state ${state}"
+        ;;
+      PENDING|VALIDATING|PUBLISHING|UNKNOWN) ;;
+      *) fatal "unexpected Portal deployment state '${state}'" ;;
+    esac
+    sleep "${POLL_INTERVAL_SEC}"
+    elapsed=$((elapsed + POLL_INTERVAL_SEC))
+  done
+  fatal "timed out waiting for PUBLISHED; resume deployment ${deployment_id}, last state '${state}'"
 }
 
 copy_bundle() {
@@ -82,23 +127,55 @@ copy_bundle() {
 
 require_bundle_contents() {
   local artifact_dir=$1
+  local packaging=${2:-jar}
   local pattern desc entry
   local expected=(
     "${ARTIFACT_ID}-${VERSION}.pom|the POM"
     "${ARTIFACT_ID}-${VERSION}.pom.asc|the POM signature"
+  )
+  if [[ ${packaging} == jar ]]; then
+    expected+=(
     "${ARTIFACT_ID}-${VERSION}.jar|the unclassified primary jar"
     "${ARTIFACT_ID}-${VERSION}.jar.asc|the unclassified primary jar signature"
     "${ARTIFACT_ID}-${VERSION}-sources.jar|the sources jar"
     "${ARTIFACT_ID}-${VERSION}-sources.jar.asc|the sources jar signature"
     "${ARTIFACT_ID}-${VERSION}-javadoc.jar|the javadoc jar"
     "${ARTIFACT_ID}-${VERSION}-javadoc.jar.asc|the javadoc jar signature"
-  )
+    )
+  fi
   for entry in "${expected[@]}"; do
     IFS='|' read -r pattern desc <<< "${entry}"
     if [[ ! -f ${artifact_dir}/${pattern} ]]; then
       fatal "bundle is missing ${desc} (${pattern})"
     fi
   done
+}
+
+validate_publication_tree() {
+  local root=$1 coordinates=$2 artifact packaging directory file suffix
+  local allowed_dirs="" count=0 actual_count
+  while IFS=$'\t' read -r artifact packaging; do
+    local ARTIFACT_ID=${artifact}
+    directory="${root}/$(maven_group_path "${GROUP_ID}")/${artifact}/${VERSION}"
+    require_bundle_contents "${directory}" "${packaging}"
+    allowed_dirs+="${directory}"$'\n'
+    count=$((count + 1))
+  done < <(jq -r '.[] | [.artifactId, .packaging] | @tsv' <<< "${coordinates}")
+  actual_count=$(find "${root}" -type f -name '*.pom' | wc -l)
+  (( actual_count == count )) || fatal "POM inventory does not match manifest"
+  [[ -z $(find "${root}" -type l -print -quit) ]] || fatal "symlinks are not publishable"
+  while IFS= read -r -d '' file; do
+    directory=$(dirname "${file}")
+    grep -Fxq "${directory}" <<< "${allowed_dirs}" || fatal "unexpected publication path: ${file}"
+    suffix=${file##*/}
+    case ${suffix} in
+      *.pom|*.jar)
+        [[ -f ${file}.asc ]] || fatal "missing signature: ${file}"
+        ;;
+      *.pom.asc|*.jar.asc|*.md5|*.sha1|*.sha256|*.sha512) ;;
+      *) fatal "unexpected publication file: ${file}" ;;
+    esac
+  done < <(find "${root}" -type f -print0)
 }
 
 generate_bundle_checksums() {
@@ -117,35 +194,4 @@ create_bundle_zip() {
   local zip_path=$1 bundle_dir=$2
   echo "Zipping bundle at ${zip_path}"
   (cd "${bundle_dir}" && zip -qr "${zip_path}" .)
-}
-
-wait_for_validated() {
-  local deployment_id=$1
-  local response state elapsed=0
-  echo "Polling status (interval=${POLL_INTERVAL_SEC}s, timeout=${POLL_TIMEOUT_SEC}s)"
-  while (( elapsed < POLL_TIMEOUT_SEC )); do
-    response=$(portal_get_status "${deployment_id}")
-    state=$(jq -r '.deploymentState // "UNKNOWN"' <<< "${response}")
-    echo "  [${elapsed}s] state=${state}"
-    case "${state}" in
-      VALIDATED) return 0 ;;
-      FAILED|VALIDATION_FAILED)
-        jq . <<< "${response}" >&2 || true
-        fatal "Publisher Portal reported terminal state ${state}"
-        ;;
-      PUBLISHED)
-        fatal "unexpected PUBLISHED state (USER_MANAGED deployments should never auto-publish)"
-        ;;
-    esac
-    sleep "${POLL_INTERVAL_SEC}"
-    elapsed=$((elapsed + POLL_INTERVAL_SEC))
-  done
-  fatal "timed out waiting for VALIDATED, last state was '${state}'"
-}
-
-drop_deployment() {
-  local deployment_id=$1
-  echo "Dropping deployment ${deployment_id} (--auto-drop true)"
-  portal_drop_deployment "${deployment_id}"
-  echo "Deployment dropped. Nothing was published to Maven Central."
 }
