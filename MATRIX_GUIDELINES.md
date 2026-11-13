@@ -13,12 +13,13 @@ This document describes the principles and practices for determining the CI test
 Test matrices span multiple dimensions:
 
 - **CPU Architecture** (`ARCH`): `amd64`, `arm64`
-- **CUDA Version** (`CUDA_VER`): e.g., `12.2.2`, `12.9.2`, `13.3.0`
+- **CUDA Version** (`CUDA_VER`): e.g., `12.2.2`, `12.9.2`, `13.4.3`
 - **Python Version** (`PY_VER`): e.g., `3.12`, `3.13`, `3.14`
 - **GPU Architecture** (`GPU`): `l4`, `a100`, `h100`
 - **Driver Version** (`DRIVER`): `earliest`, `latest`
 - **Linux Distribution** (`LINUX_VER`): `rockylinux8`, `ubuntu22.04`, `ubuntu24.04`
 - **Dependencies** (`DEPENDENCIES`): `oldest`, `latest`
+- **Operating System** (`OS`): `linux`, `wsl`
 
 ## Two-Tier Matrix Strategy
 
@@ -64,7 +65,7 @@ When trading off coverage for resource utilization, prioritize in this order:
 - **Previous major, minimum supported version**
 - **Latest major.minor version**
 - **Latest major, earliest minor version**
-  - e.g. if 13.3 is the latest, use 13.0
+  - e.g. if 13.4 is the latest, use 13.0
   - If this is the same as the latest major.minor, use the latest minor of the previous major (e.g. if 13.0 is the latest, use 12.9)
 - If resources allow, also test the latest minor of the previous major
 

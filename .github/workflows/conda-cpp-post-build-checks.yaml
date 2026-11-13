@@ -54,7 +54,7 @@ jobs:
   check-symbols:
     runs-on: linux-amd64-cpu4
     container:
-      image: rapidsai/ci-wheel:26.12-latest # zizmor: ignore[unpinned-images]
+      image: rapidsai/ci-wheel:27.02-latest # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
@@ -70,12 +70,6 @@ jobs:
           path: "./src/"
           fetch-depth: 0
           persist-credentials: true
-      - name: Telemetry setup
-        uses: rapidsai/shared-actions/telemetry-dispatch-setup@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
       - name: Standardize repository information
         env:
           RAPIDS_REPOSITORY: ${{ inputs.repo || github.repository }}
@@ -129,9 +123,3 @@ jobs:
           else
             python ./tool/detect.py "${RAPIDS_EXTRACTED_DIR}"/lib
           fi
-      - name: Telemetry upload attributes
-        uses: rapidsai/shared-actions/telemetry-dispatch-stash-job-artifacts@main
-        continue-on-error: true
-        if: ${{ vars.TELEMETRY_ENABLED == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
