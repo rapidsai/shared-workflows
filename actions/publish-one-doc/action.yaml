@@ -1,0 +1,164 @@
+name: Publish one doc
+description: Upload a file to S3 and flush the Akamai CDN cache for it
+
+inputs:
+  akamai-access-token:
+    description: Akamai EdgeGrid access token
+    required: true
+    type: string
+  akamai-client-secret:
+    description: Akamai EdgeGrid client secret
+    required: true
+    type: string
+  akamai-client-token:
+    description: Akamai EdgeGrid client token
+    required: true
+    type: string
+  akamai-emails-to-notify:
+    description: Comma-delimited list of email addresses to notify
+    required: false
+    type: string
+  akamai-host:
+    description: Akamai API hostname
+    required: true
+    type: string
+  akamai-request-name:
+    description: Name of the Akamai flush request
+    required: true
+    type: string
+  dry-run:
+    default: "false"
+    description: If true, run without making any changes
+    required: false
+    type: boolean
+  file-path:
+    description: Path to the local file to upload and flush from the Akamai CDN cache
+    required: true
+    type: string
+  target-aws-access-key-id:
+    description: AWS access key ID
+    required: true
+    type: string
+  target-aws-region:
+    description: AWS region
+    required: true
+    type: string
+  target-aws-secret-access-key:
+    description: AWS secret access key
+    required: true
+    type: string
+  target-s3-bucket:
+    description: The S3 bucket to upload files to
+    required: true
+    type: string
+  target-s3-key:
+    description: The S3 key (project name) to upload the file under
+    required: true
+    type: string
+  target-s3-key-prefix:
+    default: "developer/docs"
+    description: Prefix for the S3 key to upload files to
+    required: false
+    type: string
+
+outputs: {}
+
+runs:
+  using: composite
+  steps:
+
+    - name: Install Akamai CDN dependencies
+      run: |
+        # use sudo unless already running as root (e.g. inside a CI container)
+        sudo_cmd=()
+        if (( EUID != 0 )); then
+          sudo_cmd=(sudo)
+        fi
+        cuda_source=/etc/apt/sources.list.d/cuda-ubuntu2604-x86_64.list
+        if [[ -e "${cuda_source}" ]]; then
+          "${sudo_cmd[@]}" rm -f -- "${cuda_source}"
+        fi
+        "${sudo_cmd[@]}" apt-get update
+        "${sudo_cmd[@]}" apt-get install -y --no-install-recommends xsltproc
+        rapids-pip-retry install --upgrade pip
+        rapids-pip-retry install -q httpie-edgegrid
+      shell: bash
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+      with:
+        aws-access-key-id: ${{ inputs.target-aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.target-aws-secret-access-key }}
+        aws-region: ${{ inputs.target-aws-region }}
+        unset-current-credentials: true
+
+    - name: Upload file
+      env:
+        DRY_RUN: ${{ inputs.dry-run }}
+        FILE_PATH: ${{ inputs.file-path }}
+        S3_BUCKET: ${{ inputs.target-s3-bucket }}
+        S3_KEY: ${{ inputs.target-s3-key }}
+        S3_KEY_PREFIX: ${{ inputs.target-s3-key-prefix }}
+      run: |
+        DRY_RUN_FLAG=""
+        if [[ "$DRY_RUN" == "true" ]]; then
+          DRY_RUN_FLAG="--dryrun"
+        fi
+        aws s3 cp $DRY_RUN_FLAG "${FILE_PATH}" "s3://${S3_BUCKET}/${S3_KEY_PREFIX}/${S3_KEY}/$(basename "${FILE_PATH}")"
+      shell: bash
+
+    - name: Create Akamai .edgerc file
+      env:
+        AKAMAI_ACCESS_TOKEN: ${{ inputs.akamai-access-token }}
+        AKAMAI_CLIENT_SECRET: ${{ inputs.akamai-client-secret }}
+        AKAMAI_CLIENT_TOKEN: ${{ inputs.akamai-client-token }}
+        AKAMAI_HOST: ${{ inputs.akamai-host }}
+      run: |
+        umask 077
+        cat > ~/.edgerc <<EOF
+        [default]
+        client_secret = ${AKAMAI_CLIENT_SECRET}
+        host = ${AKAMAI_HOST}
+        access_token = ${AKAMAI_ACCESS_TOKEN}
+        client_token = ${AKAMAI_CLIENT_TOKEN}
+        EOF
+      shell: bash
+
+    - name: Create Akamai ECCU flush request XML for file
+      env:
+        FILE_PATH: ${{ inputs.file-path }}
+        TARGET_S3_KEY: ${{ inputs.target-s3-key }}
+        XSLT_TEMPLATE: ${{ github.action_path }}/akamai-eccu-flush.xslt
+      run: |
+        TARGET_URL_PATH="${TARGET_S3_KEY}/$(basename "${FILE_PATH}")"
+        xsltproc --stringparam target-path "${TARGET_URL_PATH}" "${XSLT_TEMPLATE}" "${XSLT_TEMPLATE}" | \
+          sed 's/xmlns:match="x" //' > /tmp/flush.xml
+        cat /tmp/flush.xml
+      shell: bash
+
+    - name: Create Akamai email-addresses.json for file flush
+      env:
+        AKAMAI_EMAILS_TO_NOTIFY: ${{ inputs.akamai-emails-to-notify }}
+      run: |
+        echo -n "${AKAMAI_EMAILS_TO_NOTIFY}" | jq -Rc 'split(",")' > /tmp/file-email-addresses.json
+      shell: bash
+
+    - name: Submit Akamai ECCU flush request for file
+      env:
+        AKAMAI_REQUEST_NAME: ${{ inputs.akamai-request-name }}
+      if: ${{ inputs.dry-run == 'false' }}
+      run: |
+        http --ignore-stdin --auth-type edgegrid -a default: :/eccu-api/v1/requests \
+          metadata=@/tmp/flush.xml \
+          propertyName=docs.nvidia.com \
+          propertyNameExactMatch=true \
+          propertyType=HOST_HEADER \
+          requestName="${AKAMAI_REQUEST_NAME}" \
+          statusUpdateEmails:=@/tmp/file-email-addresses.json
+      shell: bash
+
+    - name: Delete Akamai .edgerc file
+      if: always()
+      run: |
+        rm -f ~/.edgerc
+      shell: bash
