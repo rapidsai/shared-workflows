@@ -149,6 +149,29 @@ jobs:
           enable-pip: true
           enable-pypi-anaconda: true
 
+      - name: Checkout devcontainer features from PR 816
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: KyleFromNVIDIA/rapids-devcontainers
+          ref: test-dfg-conda-recipe
+          path: devcontainers
+          persist-credentials: false
+
+      - name: Use local devcontainer features
+        env:
+          CONFIG_DIR: repo/.devcontainer/cuda${{ matrix.CUDA_VER }}-${{ matrix.PACKAGER }}
+        run: |
+          # Local features must include the common scripts normally copied during publishing.
+          cp -a devcontainers/features/src "${CONFIG_DIR}/pr-features"
+          for feature in "${CONFIG_DIR}/pr-features/"*/; do
+            cp -a devcontainers/features/common/. "${feature}/common/"
+          done
+
+          # Update both features and overrideFeatureInstallOrder, preserving options and JSONC comments.
+          sed -i -E \
+            's#ghcr.io/rapidsai/devcontainers/features/([^"/:@]+)(:[^"/]+|@[^"/]+)?#./pr-features/\1#g' \
+            "${CONFIG_DIR}/devcontainer.json"
+
       - name: Run build in devcontainer
         uses: devcontainers/ci@513af61f4de4f75d37e4438f184ba4358f0fc1ca # v0.3.1900000450
         with:
