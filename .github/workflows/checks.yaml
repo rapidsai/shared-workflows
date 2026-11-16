@@ -55,6 +55,13 @@ on:
         default: ""
         type: string
         required: false
+      ci-imgs-pr:
+        required: false
+        type: string
+        default: ""
+        description: |
+          PR number of a ci-imgs PR from which to take the image. If not specified,
+          use the nightly images (default).
     outputs:
       skip-product-ci:
         description: Whether the existing version check identified a version-update PR
@@ -65,13 +72,38 @@ defaults:
     shell: bash
 
 jobs:
+  compute-images:
+    runs-on: ubuntu-latest
+    outputs:
+      check-style-image: ${{ steps.compute-check-style-image.outputs.image-name }}
+      other-checks-image: ${{ steps.compute-other-checks-image.outputs.image-name }}
+    steps:
+      - id: prepare-matrix
+        uses: $/.github/actions/prepare-matrix-dispatch
+        with:
+          action-repo: ${{ github.action_repository }}
+          action-ref: ${{ github.action_ref }}
+      - id: compute-check-style-image
+        uses: $/.github/actions/compute-image
+        with:
+          image-type: ci-conda
+          # Must pin to Python <3.13, cmake-format is broken, see https://github.com/python/cpython/issues/140797
+          image-slug: ${{ steps.prepare-matrix.outputs.rapids-version }}-cuda13.4.3-ubuntu24.04-py3.12
+          ci-imgs-pr: ${{ inputs.ci-imgs-pr }}
+      - id: compute-other-checks-image
+        uses: $/.github/actions/compute-image
+        with:
+          image-type: ci-conda
+          image-slug: ${{ steps.prepare-matrix.outputs.rapids-version }}-latest
+          ci-imgs-pr: ${{ inputs.ci-imgs-pr }}
   other-checks:
     if: ${{ inputs.enable_check_size || inputs.enable_check_pr_job_dependencies || inputs.enable_check_version_files_changed || inputs.enable_check_version_against_tag }}
+    needs: compute-images
     runs-on: ubuntu-latest
     outputs:
       skip-product-ci: ${{ steps.burndown-version-pr.outputs.exempt || 'false' }}
     container:
-      image: rapidsai/ci-conda:27.02-latest # zizmor: ignore[unpinned-images]
+      image: ${{ needs.compute-images.outputs.other-checks-image }} # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -147,10 +179,10 @@ jobs:
           fi
   check-style:
     if: ${{ inputs.enable_check_style }}
+    needs: compute-images
     runs-on: ubuntu-latest
     container:
-      # Must pin to Python <3.13, cmake-format is broken, see https://github.com/python/cpython/issues/140797
-      image: rapidsai/ci-conda:27.02-cuda13.4.3-ubuntu24.04-py3.12 # zizmor: ignore[unpinned-images]
+      image: ${{ needs.compute-images.outputs.check-style-image }} # zizmor: ignore[unpinned-images]
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -123,15 +123,15 @@ jobs:
 
           if ! MATRIX="$(
             jq -n -c '
-              def image_matrix_suffix:
-                @text "cuda\(.CUDA_VER)-\(.LINUX_VER)-py\(.PY_VER)";
+              def image_slug:
+                @text "\($ENV.RAPIDS_VERSION)-cuda\(.CUDA_VER)-\(.LINUX_VER)-py\(.PY_VER)";
 
               def add_image_name:
                 . + if $ENV.IMAGE_TYPE != "" then
                   {"IMAGE_NAME": (if $ENV.CI_IMGS_PR != "" then
-                    @text "rapidsai/staging:\($ENV.IMAGE_TYPE)-\($ENV.CI_IMGS_PR)-\($ENV.RAPIDS_VERSION)-\(image_matrix_suffix)"
+                    @text "rapidsai/staging:\($ENV.IMAGE_TYPE)-\($ENV.CI_IMGS_PR)-\(image_slug)"
                   else
-                    @text "rapidsai/\($ENV.IMAGE_TYPE):\($ENV.RAPIDS_VERSION)-\(image_matrix_suffix)"
+                    @text "rapidsai/\($ENV.IMAGE_TYPE):\(image_slug)"
                   end)}
                 else
                   {}

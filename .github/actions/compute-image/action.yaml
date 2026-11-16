@@ -1,0 +1,41 @@
+name: Compute Image
+description: Output the image name for a given image type, slug, and ci-imgs PR.
+
+inputs:
+  image-type:
+    description: Image type (ci-conda, ci-wheel, citestwheel).
+    required: true
+    type: string
+  image-slug:
+    description: Image slug.
+    required: true
+    type: string
+  ci-imgs-pr:
+    description: |
+      PR number of a ci-imgs PR from which to take the image. If not specified,
+      use the nightly images (default).
+    required: false
+    default: ""
+    type: string
+
+outputs:
+  image-name:
+    description: Image name.
+    value: ${{ steps.compute-image.outputs.image-name }}
+
+runs:
+  using: composite
+  steps:
+    - id: compute-image
+      name: Compute Image
+      shell: bash
+      env:
+        IMAGE_TYPE: ${{ inputs.image-type }}
+        IMAGE_SLUG: ${{ inputs.image-slug }}
+        CI_IMGS_PR: ${{ inputs.ci-imgs-pr }}
+      run:
+        if [[ -n "$CI_IMGS_PR" ]]; then
+          echo "image-name=rapidsai/staging:$IMAGE_TYPE-$CI_IMGS_PR-$IMAGE_SLUG" >> "$GITHUB_OUTPUT"
+        else
+          echo "image-name=rapidsai/$IMAGE_TYPE:$IMAGE_SLUG" >> "$GITHUB_OUTPUT"
+        fi
