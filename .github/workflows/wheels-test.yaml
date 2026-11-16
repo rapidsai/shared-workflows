@@ -143,6 +143,13 @@ on:
         description: |
           Restore caller cache paths without saving them at job completion. Use this for
           short-lived refs that should consume a cache maintained by a trusted ref.
+      ci-imgs-pr:
+        required: false
+        type: string
+        default: ""
+        description: |
+          PR number of a ci-imgs PR from which to take the image. If not specified,
+          use the nightly images (default).
     secrets:
       script-env-secret-1-key:
         description: |
@@ -202,6 +209,8 @@ jobs:
       matrix_name: wheels-test
       matrix_type: ${{ inputs.matrix_type }}
       matrix_filter: ${{ inputs.matrix_filter }}
+      image-type: citestwheel
+      ci-imgs-pr: ${{ inputs.ci-imgs-pr }}
   test:
     name: ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.OS }}, ${{ matrix.LINUX_VER }}, ${{ matrix.GPU }}, ${{ matrix.DRIVER }}-driver, ${{ matrix.DEPENDENCIES }}-deps
     needs: compute-matrix
@@ -216,7 +225,7 @@ jobs:
     runs-on: "${{ matrix.OS }}-${{ matrix.ARCH }}-gpu-${{ matrix.GPU }}-${{ matrix.DRIVER }}-1"
     continue-on-error: ${{ inputs.continue-on-error }}
     container:
-      image: "rapidsai/citestwheel:27.02-cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}"
+      image: ${{ matrix.IMAGE_NAME }} # zizmor: ignore[unpinned-images]
       options: ${{ inputs.container-options }}
       env:
         NVIDIA_VISIBLE_DEVICES: ${{ env.NVIDIA_VISIBLE_DEVICES }} # GPU jobs must set this container env variable

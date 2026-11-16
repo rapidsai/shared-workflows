@@ -164,6 +164,13 @@ on:
         description: |
           Restore caller cache paths without saving them at job completion. Use this for
           short-lived refs that should consume a cache maintained by a trusted ref.
+      ci-imgs-pr:
+        required: false
+        type: string
+        default: ""
+        description: |
+          PR number of a ci-imgs PR from which to take the image. If not specified,
+          use the nightly images (default).
 
 defaults:
   run:
@@ -192,6 +199,8 @@ jobs:
       matrix_name: wheels-build
       matrix_type: ${{ inputs.matrix_type }}
       matrix_filter: ${{ inputs.matrix_filter }}
+      image-type: ci-wheel
+      ci-imgs-pr: ${{ inputs.ci-imgs-pr }}
       pure_wheel: ${{ inputs.pure-wheel }}
   build:
     name: ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}
@@ -203,7 +212,7 @@ jobs:
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     container:
-      image: "rapidsai/ci-wheel:27.02-cuda${{ matrix.CUDA_VER }}-${{ matrix.LINUX_VER }}-py${{ matrix.PY_VER }}"
+      image: ${{ matrix.IMAGE_NAME }} # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
         RAPIDS_DATETIME_STRING: ${{ inputs.build-datetime }}
