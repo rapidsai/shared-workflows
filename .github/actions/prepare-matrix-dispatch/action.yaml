@@ -13,6 +13,9 @@ outputs:
   matrix:
     description: Build matrix.
     value: ${{ steps.prepare-matrix.outputs.matrix }}
+  rapids-version:
+    description: RAPIDS version.
+    value: ${{ steps.prepare-matrix.outputs.rapids-version }}
 
 runs:
   using: composite

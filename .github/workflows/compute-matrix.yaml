@@ -35,6 +35,20 @@ on:
           or CUDA version. 'cuda_major' if the package is not dependent on
           operating system, Python minor version, or CPU architecture, but is
           dependent on CUDA major version.
+      image-type:
+        required: false
+        type: string
+        default: ""
+        description: |
+          Image type to include as `IMAGE_NAME` in the matrix output. If not specified,
+          `IMAGE_NAME` will not be included.
+      ci-imgs-pr:
+        required: false
+        type: string
+        default: ""
+        description: |
+          PR number of a ci-imgs PR from which to take the image. If not specified,
+          use the nightly images (default).
     outputs:
       matrix:
         value: ${{ jobs.compute-matrix.outputs.matrix }}
@@ -77,6 +91,9 @@ jobs:
           MATRIX_FILTER: ${{ inputs.matrix_filter }}
           PURE_WHEEL: ${{ inputs.pure_wheel }}
           PURE_CONDA: ${{ inputs.pure-conda }}
+          CI_IMGS_PR: ${{ inputs.ci-imgs-pr }}
+          IMAGE_TYPE: ${{ inputs.image-type }}
+          RAPIDS_VERSION: ${{ steps.prepare-matrix.outputs.rapids-version }}
         run: |
           set -eo pipefail
 
@@ -105,20 +122,33 @@ jobs:
           fi
 
           if ! MATRIX="$(
-            jq -n -c "
-              \$ENV.MATRIX | fromjson as \$matrix
+            jq -n -c '
+              def image_matrix_suffix:
+                @text "cuda\(.CUDA_VER)-\(.LINUX_VER)-py\(.PY_VER)";
+
+              def add_image_name:
+                . + if $ENV.IMAGE_TYPE != "" then
+                  {"IMAGE_NAME": (if $ENV.CI_IMGS_PR != "" then
+                    @text "rapidsai/staging:\($ENV.IMAGE_TYPE)-\($ENV.CI_IMGS_PR)-\($ENV.RAPIDS_VERSION)-\(image_matrix_suffix)"
+                  else
+                    @text "rapidsai/\($ENV.IMAGE_TYPE):\($ENV.RAPIDS_VERSION)-\(image_matrix_suffix)"
+                  end)}
+                else
+                  {}
+                end;
+
+              $ENV.MATRIX | fromjson as $matrix
               | [
-                  \$ENV.MATRIX_TYPES | fromjson
-                  | .[] as \$matrix_type
-                  | (\$matrix[\$ENV.MATRIX_NAME][\$matrix_type] // [])[]
+                  $ENV.MATRIX_TYPES | fromjson
+                  | .[] as $matrix_type
+                  | ($matrix[$ENV.MATRIX_NAME][$matrix_type] // [])[]
                 ]
-              | reduce .[] as \$entry (
+              | reduce .[] as $entry (
                   [];
-                  if index(\$entry) == null then . + [\$entry] else . end
+                  if index($entry) == null then . + [$entry | add_image_name] else . end
                 )
-              | ${MATRIX_FILTER}
-              | if (. | length) > 0 then {include: .} else \"\" | halt_error(1) end
-            "
+            ' | jq -c "${MATRIX_FILTER}" \
+              | jq -c 'if (. | length) > 0 then {include: .} else "" | halt_error(1) end'
           )"; then
             echo "::error::Empty matrix"
             exit 1

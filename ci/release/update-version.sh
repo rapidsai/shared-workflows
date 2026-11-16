@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2019-2023, NVIDIA CORPORATION.
+# Copyright (c) 2019-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 ###########################################
 # shared-workflows Version Updater #
 ###########################################
@@ -87,6 +87,8 @@ fi
 function sed_runner() {
     sed -i.bak ''"$1"'' $2 && rm -f ${2}.bak
 }
+
+echo "${NEXT_SHORT_TAG}" > RAPIDS_VERSION
 
 for FILE in .github/workflows/*.yaml; do
   # Update shared-workflows references
