@@ -1,0 +1,58 @@
+on:
+  workflow_call:
+    inputs:
+      docs-preview-urls:
+        description: "JSON object of the form {project: url}"
+        type: string
+        required: true
+      docs-project:
+        description: "Which project's URL to link. (key in 'docs-preview-urls' mapping)"
+        type: string
+        required: true
+      sha:
+        description: "Full git commit SHA to update check status for"
+        type: string
+        required: true
+
+permissions: {}
+
+jobs:
+  post-status:
+    runs-on: ubuntu-slim
+    permissions:
+      statuses: write
+    steps:
+      - name: Post docs preview commit status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROJECT: ${{ inputs.docs-project }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ inputs.sha }}
+          URLS: ${{ inputs.docs-preview-urls }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "${SHA}" =~ ^[0-9a-f]+$ ]]; then
+            echo "::error::'sha' must be a full lowercase git commit SHA"
+            exit 1
+          fi
+
+          # strip control characters (e.g. newlines) so values can't inject workflow commands
+          PROJECT=$(tr -d '[:cntrl:]' <<< "${PROJECT}")
+
+          url=$(jq -r --arg p "${PROJECT}" '.[$p] // empty' <<< "${URLS}")
+          if [[ -z "${url:-}" ]]; then
+            available=$(jq -r 'keys | join(", ")' <<< "${URLS}" | tr -d '[:cntrl:]')
+            echo "::warning::No docs preview URL for project '${PROJECT}'. Available: ${available}"
+            exit 0
+          fi
+          if [[ ! "${url}" =~ ^https://[^[:space:][:cntrl:]\)\(\<\>\"]+$ ]]; then
+            echo "::error::docs preview URL for project must be an https:// URL without whitespace or markdown/HTML special characters"
+            exit 1
+          fi
+          gh api --method POST "repos/${REPO}/statuses/${SHA}" \
+            -f state=success \
+            -f context="docs-preview" \
+            -f description="${PROJECT} docs preview (NVIDIA VPN required)" \
+            -f target_url="${url}"
+          echo "- [${PROJECT} docs preview](${url})" >> "${GITHUB_STEP_SUMMARY}"

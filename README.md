@@ -99,6 +99,26 @@ wheel-tests:
 
 Values passed through `secrets:` are redacted everywhere in the GitHub UI, including in logs, and in most cases are replaced with `***`.
 
+### Docs preview status
+
+`custom-job.yaml` has historically been used for docs builds in RAPIDS projects.
+
+It has a docs-specific output, `docs-preview-urls`, that's intended for use with the `docs-preview-status` workflow.
+That workflow populate a link in the CI checks section on PRs, to make it easier to find docs previews.
+
+```yaml
+  docs-preview:
+    needs: [docs-build]
+    if: needs.docs-build.result == 'success'
+    permissions:
+      statuses: write
+    uses: rapidsai/shared-workflows/.github/workflows/docs-preview-status.yaml@preview-links
+    with:
+      docs-project: <name> # (e.g. 'rmm')
+      docs-preview-urls: ${{ needs.docs-build.outputs.docs-preview-urls }}
+      sha: ${{ github.sha }}
+```
+
 ### Release catalog
 
 We add additional metadata files to our builds to help track what dependencies
