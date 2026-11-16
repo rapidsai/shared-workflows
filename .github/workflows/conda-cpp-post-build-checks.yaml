@@ -30,6 +30,13 @@ on:
         description: |
           Name of package to use when constructing artifact name using `rapids-artifact-name`, e.g. `libcudf`, `libucxx`
         type: string
+      ci-imgs-pr:
+        required: false
+        type: string
+        default: ""
+        description: |
+          PR number of a ci-imgs PR from which to take the image. If not specified,
+          use the nightly images (default).
 
 defaults:
   run:
@@ -51,10 +58,27 @@ permissions:
   statuses: none
 
 jobs:
+  compute-image:
+    runs-on: ubuntu-latest
+    outputs:
+      image-name: ${{ steps.compute-image.outputs.image-name }}
+    steps:
+      - id: prepare-matrix
+        uses: $/.github/actions/prepare-matrix-dispatch
+        with:
+          action-repo: ${{ github.action_repository }}
+          action-ref: ${{ github.action_ref }}
+      - id: compute-image
+        uses: $/.github/actions/compute-image
+        with:
+          image-type: ci-conda
+          image-slug: ${{ steps.prepare-matrix.outputs.rapids-version }}-latest
+          ci-imgs-pr: ${{ inputs.ci-imgs-pr }}
   check-symbols:
     runs-on: linux-amd64-cpu4
+    needs: compute-image
     container:
-      image: rapidsai/ci-wheel:27.02-latest # zizmor: ignore[unpinned-images]
+      image: ${{ needs.compute-image.outputs.image-name }} # zizmor: ignore[unpinned-images]
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
