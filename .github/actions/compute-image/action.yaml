@@ -33,7 +33,7 @@ runs:
         IMAGE_TYPE: ${{ inputs.image-type }}
         IMAGE_SLUG: ${{ inputs.image-slug }}
         CI_IMGS_PR: ${{ inputs.ci-imgs-pr }}
-      run:
+      run: |
         if [[ -n "$CI_IMGS_PR" ]]; then
           echo "image-name=rapidsai/staging:$IMAGE_TYPE-$CI_IMGS_PR-$IMAGE_SLUG" >> "$GITHUB_OUTPUT"
         else
