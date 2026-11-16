@@ -159,7 +159,7 @@ jobs:
       matrix_name: conda-cpp-build
       matrix_type: ${{ inputs.matrix_type }}
       matrix_filter: ${{ inputs.matrix_filter }}
-      image_type: ci-conda
+      image-type: ci-conda
       ci-imgs-pr: ${{ inputs.ci-imgs-pr }}
   build:
     name: ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}
