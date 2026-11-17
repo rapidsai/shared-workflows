@@ -39,13 +39,13 @@ on:
     secrets:
       GPG_PRIVATE_KEY:
         description: Armored GPG private key used to sign every artifact at upload.
-        required: true
+        required: false
       GPG_PASSPHRASE:
         description: Passphrase for GPG_PRIVATE_KEY.
-        required: true
+        required: false
       MAVEN_DEPLOY_TOKEN:
         description: Auth token paired with vars.MAVEN_DEPLOY_USERNAME.
-        required: true
+        required: false
 
 defaults:
   run:
@@ -58,6 +58,11 @@ permissions:
 jobs:
   maven-publish:
     name: maven publish
+    if: ${{ (vars.NV_VAULT_ENABLED != 'true' || (github.event_name != 'pull_request' && github.event_name != 'pull_request_target')) }}
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
     runs-on: linux-amd64-cpu4
     steps:
       - name: Self-checkout shared-workflows
@@ -93,6 +98,39 @@ jobs:
           name: ${{ inputs.artifact-name }}
           path: maven-repo
 
+      - name: Validate Vault configuration
+        if: ${{ vars.NV_VAULT_ENABLED == 'true' }}
+        env:
+          NV_VAULT_JWT_PATH: ${{ vars.NV_VAULT_JWT_PATH }}
+          NV_VAULT_MAVEN_ROLE: ${{ vars.NV_VAULT_MAVEN_ROLE }}
+          NV_VAULT_MAVEN_SIGNING_PATH: ${{ vars.NV_VAULT_MAVEN_SIGNING_PATH }}
+          NV_VAULT_MAVEN_DEPLOY_PATH: ${{ vars.NV_VAULT_MAVEN_DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          for name in NV_VAULT_JWT_PATH NV_VAULT_MAVEN_ROLE NV_VAULT_MAVEN_SIGNING_PATH NV_VAULT_MAVEN_DEPLOY_PATH; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing required Vault configuration: ${name}"
+              exit 1
+            fi
+          done
+
+      - name: Read vault-signing credentials from Vault
+        id: vault-signing
+        if: ${{ vars.NV_VAULT_ENABLED == 'true' }}
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          url: https://prod.vault.nvidia.com
+          namespace: swgpu-rapids
+          method: jwt
+          path: ${{ vars.NV_VAULT_JWT_PATH }}
+          role: ${{ vars.NV_VAULT_MAVEN_ROLE }}
+          jwtGithubAudience: https://prod.vault.nvidia.com:443
+          exportEnv: false
+          exportToken: false
+          secrets: |
+            ${{ vars.NV_VAULT_MAVEN_SIGNING_PATH }} private_key | GPG_PRIVATE_KEY ;
+            ${{ vars.NV_VAULT_MAVEN_SIGNING_PATH }} passphrase | GPG_PASSPHRASE ;
+
       - name: Prepare signed Maven bundle
         id: prepare
         run: |
@@ -100,8 +138,24 @@ jobs:
             --input maven-repo \
             --output signed-maven-repo
         env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          GPG_PRIVATE_KEY: ${{ vars.NV_VAULT_ENABLED != 'true' && secrets.GPG_PRIVATE_KEY || steps.vault-signing.outputs.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ vars.NV_VAULT_ENABLED != 'true' && secrets.GPG_PASSPHRASE || steps.vault-signing.outputs.GPG_PASSPHRASE }}
+
+      - name: Read vault-deploy credentials from Vault
+        id: vault-deploy
+        if: ${{ vars.NV_VAULT_ENABLED == 'true' }}
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          url: https://prod.vault.nvidia.com
+          namespace: swgpu-rapids
+          method: jwt
+          path: ${{ vars.NV_VAULT_JWT_PATH }}
+          role: ${{ vars.NV_VAULT_MAVEN_ROLE }}
+          jwtGithubAudience: https://prod.vault.nvidia.com:443
+          exportEnv: false
+          exportToken: false
+          secrets: |
+            ${{ vars.NV_VAULT_MAVEN_DEPLOY_PATH }} token | MAVEN_DEPLOY_TOKEN ;
 
       - name: Upload to Maven Central
         id: publish-central
@@ -123,7 +177,7 @@ jobs:
           # Invert: stage-for-...=true means don't auto-drop.
           AUTO_DROP: ${{ !inputs.stage-for-maven-central-publish }}
           MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME }}
-          MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
+          MAVEN_DEPLOY_TOKEN: ${{ vars.NV_VAULT_ENABLED != 'true' && secrets.MAVEN_DEPLOY_TOKEN || steps.vault-deploy.outputs.MAVEN_DEPLOY_TOKEN }}
 
       - name: Upload to Sonatype snapshots
         id: publish-snapshot
@@ -140,7 +194,7 @@ jobs:
           ARTIFACT_ID: ${{ steps.prepare.outputs.ARTIFACT_ID }}
           VERSION: ${{ steps.prepare.outputs.VERSION }}
           MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME }}
-          MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
+          MAVEN_DEPLOY_TOKEN: ${{ vars.NV_VAULT_ENABLED != 'true' && secrets.MAVEN_DEPLOY_TOKEN || steps.vault-deploy.outputs.MAVEN_DEPLOY_TOKEN }}
 
       - name: Retain signed Maven Central bundle
         if: ${{ !cancelled() && steps.destination.outputs.is_release == 'true' }}

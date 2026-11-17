@@ -73,7 +73,7 @@ jobs:
   upload:
     # Candidate artifacts are staged privately by the build workflow. They must
     # not enter either public Anaconda.org channel before rollover approval.
-    if: ${{ inputs.build_type != 'release-candidate' }}
+    if: ${{ inputs.build_type != 'release-candidate' && (vars.NV_VAULT_ENABLED != 'true' || (github.event_name != 'pull_request' && github.event_name != 'pull_request_target')) }}
     runs-on: linux-amd64-cpu4
     container:
       image: "python:3.14-slim"
@@ -144,19 +144,85 @@ jobs:
           else
             echo "is_release=false" >> "${GITHUB_OUTPUT}"
           fi
+      - name: Validate Vault configuration
+        if: ${{ vars.NV_VAULT_ENABLED == 'true' && steps.conda-upload-destination.outputs.is_release == 'true' }}
+        env:
+          NV_VAULT_JWT_PATH: ${{ vars.NV_VAULT_JWT_PATH }}
+          NV_VAULT_CONDA_RELEASE_ROLE: ${{ vars.NV_VAULT_CONDA_RELEASE_ROLE }}
+          NV_VAULT_CONDA_RELEASE_PATH: ${{ vars.NV_VAULT_CONDA_RELEASE_PATH }}
+        run: |
+          set -euo pipefail
+          for name in NV_VAULT_JWT_PATH NV_VAULT_CONDA_RELEASE_ROLE NV_VAULT_CONDA_RELEASE_PATH; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing required Vault configuration: ${name}"
+              exit 1
+            fi
+          done
+
+      - name: Read vault-release credentials from Vault
+        id: vault-release
+        if: ${{ vars.NV_VAULT_ENABLED == 'true' && steps.conda-upload-destination.outputs.is_release == 'true' }}
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          url: https://prod.vault.nvidia.com
+          namespace: swgpu-rapids
+          method: jwt
+          path: ${{ vars.NV_VAULT_JWT_PATH }}
+          role: ${{ vars.NV_VAULT_CONDA_RELEASE_ROLE }}
+          jwtGithubAudience: https://prod.vault.nvidia.com:443
+          exportEnv: false
+          exportToken: false
+          secrets: |
+            ${{ vars.NV_VAULT_CONDA_RELEASE_PATH }} token | CONDA_RAPIDSAI_TOKEN ;
+
+      - name: Validate Vault configuration
+        if: ${{ vars.NV_VAULT_ENABLED == 'true' && (steps.conda-upload-destination.outputs.is_release == 'false' || inputs.dual_publish) }}
+        env:
+          NV_VAULT_JWT_PATH: ${{ vars.NV_VAULT_JWT_PATH }}
+          NV_VAULT_CONDA_NIGHTLY_ROLE: ${{ vars.NV_VAULT_CONDA_NIGHTLY_ROLE }}
+          NV_VAULT_CONDA_NIGHTLY_PATH: ${{ vars.NV_VAULT_CONDA_NIGHTLY_PATH }}
+        run: |
+          set -euo pipefail
+          for name in NV_VAULT_JWT_PATH NV_VAULT_CONDA_NIGHTLY_ROLE NV_VAULT_CONDA_NIGHTLY_PATH; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing required Vault configuration: ${name}"
+              exit 1
+            fi
+          done
+
+      - name: Read vault-nightly credentials from Vault
+        id: vault-nightly
+        if: ${{ vars.NV_VAULT_ENABLED == 'true' && (steps.conda-upload-destination.outputs.is_release == 'false' || inputs.dual_publish) }}
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          url: https://prod.vault.nvidia.com
+          namespace: swgpu-rapids
+          method: jwt
+          path: ${{ vars.NV_VAULT_JWT_PATH }}
+          role: ${{ vars.NV_VAULT_CONDA_NIGHTLY_ROLE }}
+          jwtGithubAudience: https://prod.vault.nvidia.com:443
+          exportEnv: false
+          exportToken: false
+          secrets: |
+            ${{ vars.NV_VAULT_CONDA_NIGHTLY_PATH }} token | CONDA_RAPIDSAI_NIGHTLY_TOKEN ;
+
       - name: Upload packages to release location
         if: ${{ steps.conda-upload-destination.outputs.is_release == 'true' }}
-        run: rapids-upload-to-anaconda-github
+        run: |
+          : "${RAPIDS_CONDA_TOKEN:?must be set}"
+          rapids-upload-to-anaconda-github
         env:
           SKIP_UPLOAD_PKGS: ${{ inputs.skip_upload_pkgs }}
           RAPIDS_CONDA_UPLOAD_LABEL: ${{ inputs.upload_to_label }}
-          RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_TOKEN }}
+          RAPIDS_CONDA_TOKEN: ${{ vars.NV_VAULT_ENABLED != 'true' && secrets.CONDA_RAPIDSAI_TOKEN || steps.vault-release.outputs.CONDA_RAPIDSAI_TOKEN }}
           GH_TOKEN: ${{ github.token }}
       - name: Upload packages to nightly location
         if: ${{ steps.conda-upload-destination.outputs.is_release == 'false' || inputs.dual_publish }}
-        run: rapids-upload-to-anaconda-github
+        run: |
+          : "${RAPIDS_CONDA_TOKEN:?must be set}"
+          rapids-upload-to-anaconda-github
         env:
           SKIP_UPLOAD_PKGS: ${{ inputs.skip_upload_pkgs }}
           RAPIDS_CONDA_UPLOAD_LABEL: ${{ inputs.upload_to_label }}
-          RAPIDS_CONDA_TOKEN: ${{ secrets.CONDA_RAPIDSAI_NIGHTLY_TOKEN }}
+          RAPIDS_CONDA_TOKEN: ${{ vars.NV_VAULT_ENABLED != 'true' && secrets.CONDA_RAPIDSAI_NIGHTLY_TOKEN || steps.vault-nightly.outputs.CONDA_RAPIDSAI_NIGHTLY_TOKEN }}
           GH_TOKEN: ${{ github.token }}

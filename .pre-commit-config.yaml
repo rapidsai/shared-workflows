@@ -6,6 +6,20 @@ ci:
   skip: [actionlint-docker]
 
 repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.10
+    hooks:
+      - id: ruff-check
+        files: ^tests/test_nvault_publishers\.py$
+        args: ['--select=E,F,B', '--ignore=E501']
+      - id: ruff-format
+        files: ^tests/test_nvault_publishers\.py$
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.9.2
+    hooks:
+      - id: bandit
+        files: ^tests/test_nvault_publishers\.py$
+        args: [--skip, B101]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -44,3 +58,12 @@ repos:
           (?x)^(
             .github/workflows/build-in-devcontainer.yaml
           )$
+  - repo: local
+    hooks:
+      - id: nvault-publisher-contracts
+        name: Vault publisher credential contracts
+        entry: python -m pytest -q tests/test_nvault_publishers.py
+        language: python
+        additional_dependencies: [pytest==8.4.2, pyyaml==6.0.3]
+        pass_filenames: false
+        files: ^(\.github/workflows/(maven-publish|conda-upload-packages|wheels-publish)\.yaml|tests/test_nvault_publishers\.py)$
