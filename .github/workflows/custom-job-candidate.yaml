@@ -243,7 +243,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: rapidsai/gha-tools
-          ref: 4ad4c79d92c1a198efc5217e09af8ba203c2d502
+          ref: dca4bf61c4e404bb43f923668cc7a8ce363ea91a
           path: candidate-gha-tools
           persist-credentials: false
       - name: Select frozen release-candidate version helper
