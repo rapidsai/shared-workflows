@@ -151,13 +151,20 @@ POMs. Source runs must originate on `main` or `release/*` in that repository
 with a push, manual, or scheduled event; pull-request outputs are rejected. Ordinary publisher tests
 continue to use disposable keys unless live signing is explicitly selected.
 
-The dispatching repository must have the three signing secrets enrolled in
-the `3s-signing-smoke` GitHub environment first. Restrict that environment to
-the reviewed smoke-test branch. Temporary test credentials stay separate from
-production publisher secrets.
-The reusable smoke workflow can also be called from each consumer repository to
-exercise its own SSA identity; a run in shared-workflows only proves the identity
-supplied there. It has no Sonatype credentials or publication steps.
+The smoke test uses GitHub OIDC to authenticate directly to RAPIDS Vault.
+Credentials remain in Vault and are fetched at runtime; no signing or registry
+credential is enrolled as a GitHub repository or environment secret. The pinned
+`hashicorp/vault-action` v4.0.0 uses Node 24, supported by the same runner class
+that runs checkout v7. The action masks returned values and exposes each only
+to the steps that need it; the Vault token is neither exported nor output.
+
+The [Vault configuration](vault/README.md) grants a ten-minute session with read
+access only to the temporary cuDF SSA identity and runtime registry token.
+Exact repository/owner IDs, branch, event, caller workflow, reusable workflow,
+and reviewed commit bind the role to this smoke test. This test deliberately
+uses cuDF's approved production identity while approval of the intended
+`rapids-pulse` client scope is pending. It does not establish access for that
+future identity. Remove the temporary role and policy after verification.
 
 A successful run retains the signed Maven tree, source-build provenance,
 coordinate manifest, public key, and verification results for seven days.

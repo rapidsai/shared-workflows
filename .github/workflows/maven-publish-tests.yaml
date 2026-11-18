@@ -54,13 +54,10 @@ jobs:
     permissions:
       actions: read
       contents: read
+      id-token: write
     uses: $/.github/workflows/maven-signing-smoke.yaml
     with:
       source-repository: ${{ inputs.source-repository }}
       source-run-id: ${{ inputs.source-run-id }}
       artifact-name: ${{ inputs.artifact-name }}
       primary-artifact-id: ${{ inputs.primary-artifact-id }}
-    secrets:
-      NVSEC_SSA_CLIENT_ID: ${{ secrets.NVSEC_SSA_CLIENT_ID }}
-      NVSEC_SSA_CLIENT_SECRET: ${{ secrets.NVSEC_SSA_CLIENT_SECRET }}
-      NVSEC_GITLAB_TOKEN: ${{ secrets.NVSEC_GITLAB_TOKEN }}

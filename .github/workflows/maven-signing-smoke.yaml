@@ -21,34 +21,18 @@ on:
         required: false
         default: ''
         type: string
-    secrets:
-      NVSEC_SSA_CLIENT_ID:
-        required: true
-      NVSEC_SSA_CLIENT_SECRET:
-        required: true
-      NVSEC_GITLAB_TOKEN:
-        required: true
 permissions:
   actions: read
   contents: read
+  id-token: write
 defaults:
   run:
     shell: bash
 jobs:
   sign:
-    environment: 3s-signing-smoke
     runs-on: linux-amd64-cpu4
     timeout-minutes: 120
     steps:
-      - name: Check signing credentials
-        env:
-          NVSEC_SSA_CLIENT_ID: ${{ secrets.NVSEC_SSA_CLIENT_ID }}
-          NVSEC_SSA_CLIENT_SECRET: ${{ secrets.NVSEC_SSA_CLIENT_SECRET }}
-          NVSEC_GITLAB_TOKEN: ${{ secrets.NVSEC_GITLAB_TOKEN }}
-        run: |
-          : "${NVSEC_SSA_CLIENT_ID:?Missing approved production 3s client ID}"
-          : "${NVSEC_SSA_CLIENT_SECRET:?Missing approved production 3s client secret}"
-          : "${NVSEC_GITLAB_TOKEN:?Missing nvsec registry read token}"
       - name: Check out the signing implementation
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -82,14 +66,31 @@ jobs:
           name: ${{ inputs.artifact-name }}
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/3s-smoke/input
+      - name: Read signing credentials from Vault using GitHub OIDC
+        id: vault
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          url: https://prod.vault.nvidia.com
+          namespace: swgpu-rapids
+          method: jwt
+          path: jwt/github-actions/rapids-package-signing
+          role: maven-3s-smoke
+          jwtGithubAudience: https://prod.vault.nvidia.com:443
+          exportEnv: false
+          exportToken: false
+          outputToken: false
+          secrets: |
+            services/libcudf-static/ssa/prod/issue/creds client_id | NVSEC_SSA_CLIENT_ID ;
+            services/libcudf-static/ssa/prod/issue/creds secret | NVSEC_SSA_CLIENT_SECRET ;
+            kv2/rapids-team/data/rapids/gitlab/gitlab-master-rapids-svc-jenkins-pat token | NVSEC_GITLAB_TOKEN ;
       - name: Install 3s client
         env:
-          NVSEC_GITLAB_TOKEN: ${{ secrets.NVSEC_GITLAB_TOKEN }}
+          NVSEC_GITLAB_TOKEN: ${{ steps.vault.outputs.NVSEC_GITLAB_TOKEN }}
         run: bash shared-workflows/ci/maven-publish/install_nvsec.sh
       - name: Sign and independently verify the Maven repository
         env:
-          NVSEC_SSA_CLIENT_ID: ${{ secrets.NVSEC_SSA_CLIENT_ID }}
-          NVSEC_SSA_CLIENT_SECRET: ${{ secrets.NVSEC_SSA_CLIENT_SECRET }}
+          NVSEC_SSA_CLIENT_ID: ${{ steps.vault.outputs.NVSEC_SSA_CLIENT_ID }}
+          NVSEC_SSA_CLIENT_SECRET: ${{ steps.vault.outputs.NVSEC_SSA_CLIENT_SECRET }}
           NVSEC_SSA_SCOPE: SIGNING_RAPIDS_ADI_OPS
           PRIMARY_ARTIFACT_ID: ${{ inputs.primary-artifact-id }}
         run: bash shared-workflows/ci/maven-publish/run_3s_smoke.sh "${RUNNER_TEMP}/3s-smoke"
