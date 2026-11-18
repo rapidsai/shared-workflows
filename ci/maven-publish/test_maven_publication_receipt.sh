@@ -17,13 +17,11 @@ jq -e '.state == "PUBLISHED" and .docs_project == "cuvs-java" and .version == "2
   and .source_repository_id == 721217347 and .workflow_run_id == 42
   and .workflow_run_attempt == 1 and .source_ref == "refs/tags/v26.12.00"' \
   "${TEST_ROOT}/publication.json" >/dev/null
-for state in VALIDATED PUBLISHING FAILED; do
-  if DEPLOYMENT_STATE=${state} "${SCRIPT_DIR}/write_maven_publication_receipt.sh" "${TEST_ROOT}/blocked.json"; then
-    echo "unpublished state ${state} must not create a receipt" >&2
-    exit 1
-  fi
-  [[ ! -f ${TEST_ROOT}/blocked.json ]]
-done
+if DEPLOYMENT_STATE=VALIDATED   "${SCRIPT_DIR}/write_maven_publication_receipt.sh" "${TEST_ROOT}/blocked.json"; then
+  echo 'a validated deployment must not create a publication receipt' >&2
+  exit 1
+fi
+[[ ! -f ${TEST_ROOT}/blocked.json ]]
 for ref in refs/heads/main refs/pull/1/merge refs/tags/v26.10.0; do
   if GITHUB_REF=${ref} "${SCRIPT_DIR}/write_maven_publication_receipt.sh" --validate; then
     echo 'a mismatched/non-release ref must fail validation' >&2

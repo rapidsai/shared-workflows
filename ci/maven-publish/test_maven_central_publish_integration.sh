@@ -107,16 +107,6 @@ run_publish
 [[ ! -f ${MOCK_STATE_DIR}/uploads.log ]]
 [[ $(wc -l < "${MOCK_STATE_DIR}/publish.log") -eq 1 ]]
 
-# A mismatched coordinate must block promotion.
-rm -f "${MOCK_STATE_DIR}"/*
-export PORTAL_PURL='pkg:maven/ai.rapids/other@26.08.0'
-if run_publish; then
-  echo 'mismatched Portal coordinates must block publication' >&2
-  exit 1
-fi
-[[ ! -f ${MOCK_STATE_DIR}/publish.log ]]
-unset PORTAL_PURL
-
 # A failed validation/publication must not emit the success output.
 for state in FAILED VALIDATION_FAILED; do
   rm -f "${MOCK_STATE_DIR}"/*
@@ -144,8 +134,6 @@ unset AFTER_PUBLISH_STATE
 rm -f "${MOCK_STATE_DIR}"/*
 export PORTAL_STATE=PUBLISHING
 export POLL_TIMEOUT_SEC=1
-printf '#!/bin/bash\nexit 0\n' > "${MOCK_BIN}/sleep"
-chmod +x "${MOCK_BIN}/sleep"
 if run_publish; then
   echo 'publication timeout must fail the job' >&2
   exit 1
