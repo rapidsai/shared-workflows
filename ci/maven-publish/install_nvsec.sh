@@ -5,6 +5,16 @@ set -euo pipefail
 : "${NVSEC_GITLAB_TOKEN:?must be set}"
 : "${RUNNER_TEMP:?must be set}"
 : "${GITHUB_PATH:?must be set}"
+# The managed CPU pool can reach Vault but does not necessarily have corporate
+# DNS/network access to the current nvsec registry. Distinguish this from an
+# authentication failure or a nonexistent package version before invoking pip.
+if ! curl --silent --show-error --output /dev/null --connect-timeout 10 --max-time 20 \
+  https://gitlab-master.nvidia.com; then
+  echo 'The nvsec registry requires NVIDIA corporate DNS/network access.' >&2
+  echo 'Use an approved network route or a mirror containing nvsec 2.16.1 and its dependencies.' >&2
+  exit 1
+fi
+
 install_home=$(mktemp -d)
 trap 'rm -rf "${install_home}"' EXIT
 chmod 700 "${install_home}"

@@ -174,3 +174,30 @@ checks the retained signatures, matches their receipts, and compares artifact
 bytes with the downloaded input. No credential files or raw client logs are
 included. Use a representative repository including its largest expected JAR;
 a small artifact alone does not establish production size or timing limits.
+
+### Live runner check, November 18, 2026
+
+[Smoke run 44384629121, attempt 2](https://github.com/rapidsai/shared-workflows/actions/runs/44384629121/attempts/2)
+validated the successful cuDF source build, downloaded its 2.6 GB Maven
+repository, and authenticated to Vault using GitHub OIDC. Vault returned the
+approved temporary credentials without GitHub secret enrollment. The run stopped
+before signing because the managed CPU runner could not resolve
+`gitlab-master.nvidia.com`, the current nvsec package registry.
+
+The NVIDIA Artifactory `sw-cloudsec-pypi` and `sw-nvsec-pypi` indexes were checked;
+they contain releases only through 2.2.3, not the pinned 2.16.1. Do not downgrade
+or treat their presence as proof of a current mirror. Before another full
+Actions attempt, provide an approved runner-accessible distribution path for
+the pinned client and its dependencies, or use a runner with corporate network
+access. The installer checks connectivity first so DNS failures do not look
+like missing package versions. The temporary test role, policy, and runner-pool
+enrollment are removed after the attempt; reruns require fresh enrollment bound
+to the reviewed commit. Production publisher enrollment remains separate.
+
+A separate local test using the same pinned `nvsec==2.16.1`, signer, temporary
+cuDF identity, and production job successfully signed a real cuVS build POM and
+CUDA JAR from [build 44241143198](https://github.com/NVIDIA/cuvs/actions/runs/44241143198).
+Both returned signatures verified against the pinned RAPIDS fingerprint, and
+source bytes were preserved. This establishes the live job/signature contract
+for that sample; it does not establish full-size cuDF package acceptance,
+Sonatype acceptance, or a working end-to-end managed-runner installation path.
