@@ -54,20 +54,6 @@ read_pom_coordinates() {
   fi
 }
 
-import_gpg_signing_key() {
-  local -n out_key_id=$1
-  export GNUPGHOME
-  GNUPGHOME="$(mktemp -d)"
-  chmod 700 "${GNUPGHOME}"
-  echo "${GPG_PRIVATE_KEY}" | gpg --batch --yes --pinentry-mode loopback \
-    --passphrase "${GPG_PASSPHRASE}" --import
-  out_key_id=$(gpg --list-secret-keys --keyid-format=long --with-colons \
-    | awk -F: '$1=="sec" { print $5; exit }')
-  if [[ -z ${out_key_id} ]]; then
-    fatal "no GPG secret key was imported"
-  fi
-}
-
 list_artifacts_to_sign() {
   local artifact_dir=$1
   local -n out_files=$2
@@ -77,20 +63,6 @@ list_artifacts_to_sign() {
   if (( ${#out_files[@]} == 0 )); then
     fatal "no artifacts found under ${artifact_dir} to sign"
   fi
-}
-
-sign_artifacts_in_place() {
-  local -n files_ref=$1
-  local key_id=$2
-  local file
-  for file in "${files_ref[@]}"; do
-    gpg --batch --yes --pinentry-mode loopback \
-      --passphrase "${GPG_PASSPHRASE}" \
-      --local-user "${key_id}" \
-      --armor --detach-sign \
-      --output "${file}.asc" \
-      "${file}"
-  done
 }
 
 write_bundle_metadata() {

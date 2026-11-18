@@ -1,0 +1,108 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+name: Maven 3s signing smoke test
+on:
+  workflow_call:
+    inputs:
+      source-repository:
+        description: NVIDIA/cuvs or NVIDIA/cudf repository containing the Maven build.
+        required: true
+        type: string
+      source-run-id:
+        description: Successful trusted build run containing the Maven repository artifact.
+        required: true
+        type: string
+      artifact-name:
+        description: Exact Maven repository artifact name.
+        required: true
+        type: string
+      primary-artifact-id:
+        description: Receipt coordinate for a Maven repository containing multiple POMs.
+        required: false
+        default: ''
+        type: string
+    secrets:
+      NVSEC_SSA_CLIENT_ID:
+        required: true
+      NVSEC_SSA_CLIENT_SECRET:
+        required: true
+      NVSEC_GITLAB_TOKEN:
+        required: true
+permissions:
+  actions: read
+  contents: read
+defaults:
+  run:
+    shell: bash
+jobs:
+  sign:
+    environment: 3s-signing-smoke
+    runs-on: linux-amd64-cpu4
+    timeout-minutes: 120
+    steps:
+      - name: Check signing credentials
+        env:
+          NVSEC_SSA_CLIENT_ID: ${{ secrets.NVSEC_SSA_CLIENT_ID }}
+          NVSEC_SSA_CLIENT_SECRET: ${{ secrets.NVSEC_SSA_CLIENT_SECRET }}
+          NVSEC_GITLAB_TOKEN: ${{ secrets.NVSEC_GITLAB_TOKEN }}
+        run: |
+          : "${NVSEC_SSA_CLIENT_ID:?Missing approved production 3s client ID}"
+          : "${NVSEC_SSA_CLIENT_SECRET:?Missing approved production 3s client secret}"
+          : "${NVSEC_GITLAB_TOKEN:?Missing nvsec registry read token}"
+      - name: Check out the signing implementation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: shared-workflows
+          persist-credentials: false
+      - name: Validate source build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_REPOSITORY: ${{ inputs.source-repository }}
+          SOURCE_RUN_ID: ${{ inputs.source-run-id }}
+          ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        run: |
+          [[ ${SOURCE_REPOSITORY} == NVIDIA/cuvs || ${SOURCE_REPOSITORY} == NVIDIA/cudf ]]
+          [[ ${SOURCE_RUN_ID} =~ ^[1-9][0-9]*$ && -n ${ARTIFACT_NAME} ]]
+          mkdir -p "${RUNNER_TEMP}/3s-smoke"
+          gh api "repos/${SOURCE_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}" \
+            | jq -e --arg repository "${SOURCE_REPOSITORY}" \
+              'select(.conclusion == "success" and .head_repository.full_name == $repository
+                and (.head_branch == "main" or (.head_branch | startswith("release/")))
+                and (.event == "push" or .event == "workflow_dispatch" or .event == "schedule"))
+               | {id, html_url, head_sha, head_branch, event, conclusion,
+                  repository: .head_repository.full_name}' \
+            > "${RUNNER_TEMP}/3s-smoke/source-build.json"
+      - name: Download the Maven repository
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          repository: ${{ inputs.source-repository }}
+          run-id: ${{ inputs.source-run-id }}
+          name: ${{ inputs.artifact-name }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/3s-smoke/input
+      - name: Install 3s client
+        env:
+          NVSEC_GITLAB_TOKEN: ${{ secrets.NVSEC_GITLAB_TOKEN }}
+        run: bash shared-workflows/ci/maven-publish/install_nvsec.sh
+      - name: Sign and independently verify the Maven repository
+        env:
+          NVSEC_SSA_CLIENT_ID: ${{ secrets.NVSEC_SSA_CLIENT_ID }}
+          NVSEC_SSA_CLIENT_SECRET: ${{ secrets.NVSEC_SSA_CLIENT_SECRET }}
+          NVSEC_SSA_SCOPE: SIGNING_RAPIDS_ADI_OPS
+          PRIMARY_ARTIFACT_ID: ${{ inputs.primary-artifact-id }}
+        run: bash shared-workflows/ci/maven-publish/run_3s_smoke.sh "${RUNNER_TEMP}/3s-smoke"
+      - name: Retain verified files and signing evidence
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: maven-3s-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/3s-smoke/signed
+            ${{ runner.temp }}/3s-smoke/coordinates.json
+            ${{ runner.temp }}/3s-smoke/source-build.json
+            ${{ runner.temp }}/3s-smoke/request-receipts.jsonl
+            ${{ runner.temp }}/3s-smoke/verification.json
+            shared-workflows/ci/maven-publish/keys/rapids-production.asc
+          retention-days: 7
+          if-no-files-found: error

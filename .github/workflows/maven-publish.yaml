@@ -57,11 +57,14 @@ on:
         type: string
         default: ''
     secrets:
-      GPG_PRIVATE_KEY:
-        description: Armored GPG private key used to sign every artifact at upload.
+      NVSEC_SSA_CLIENT_ID:
+        description: Production 3s SSA client ID, synchronized from Vault.
         required: true
-      GPG_PASSPHRASE:
-        description: Passphrase for GPG_PRIVATE_KEY.
+      NVSEC_SSA_CLIENT_SECRET:
+        description: Production 3s SSA client secret with SIGNING_RAPIDS_ADI_OPS access.
+        required: true
+      NVSEC_GITLAB_TOKEN:
+        description: Read-only GitLab package registry token for installing nvsec.
         required: true
       MAVEN_DEPLOY_TOKEN:
         description: Auth token paired with vars.MAVEN_DEPLOY_USERNAME.
@@ -146,6 +149,11 @@ jobs:
           name: ${{ inputs.artifact-name }}
           path: maven-repo
 
+      - name: Install 3s signing client
+        env:
+          NVSEC_GITLAB_TOKEN: ${{ secrets.NVSEC_GITLAB_TOKEN }}
+        run: bash shared-workflows/ci/maven-publish/install_nvsec.sh
+
       - name: Prepare signed Maven bundle
         id: prepare
         run: |
@@ -156,8 +164,9 @@ jobs:
             --primary-artifact-id "${PRIMARY_ARTIFACT_ID}"
         env:
           PRIMARY_ARTIFACT_ID: ${{ inputs.primary-artifact-id }}
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          NVSEC_SSA_CLIENT_ID: ${{ secrets.NVSEC_SSA_CLIENT_ID }}
+          NVSEC_SSA_CLIENT_SECRET: ${{ secrets.NVSEC_SSA_CLIENT_SECRET }}
+          NVSEC_SSA_SCOPE: SIGNING_RAPIDS_ADI_OPS
 
       - name: Upload to Maven Central
         id: publish-central

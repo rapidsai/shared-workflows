@@ -8,10 +8,33 @@ on:
       - .github/workflows/maven-publish.yaml
       - .github/workflows/maven-publish-tests.yaml
   workflow_dispatch:
+    inputs:
+      live-signing:
+        description: Sign existing build artifacts with production 3s, without publication.
+        type: boolean
+        default: false
+      source-repository:
+        description: Repository supplying the Maven build artifact.
+        type: choice
+        options: [NVIDIA/cuvs, NVIDIA/cudf]
+        default: NVIDIA/cuvs
+      source-run-id:
+        description: Successful trusted build run containing the Maven repository artifact.
+        type: string
+        default: ''
+      artifact-name:
+        description: Exact Maven repository artifact name in that run.
+        type: string
+        default: ''
+      primary-artifact-id:
+        description: Receipt coordinate, required for repositories containing multiple POMs.
+        type: string
+        default: ''
 permissions:
   contents: read
 jobs:
   test:
+    if: ${{ !inputs.live-signing }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -19,9 +42,25 @@ jobs:
           persist-credentials: false
       - name: Test bundle checks, publication, receipts, and snapshots
         run: |
+          bash ci/maven-publish/test_3s_signing.sh
           bash ci/maven-publish/test_maven_publish_steps.sh
           bash ci/maven-publish/test_maven_central_publish_integration.sh
           bash ci/maven-publish/test_maven_publication_receipt.sh
           bash ci/maven-publish/test_maven_snapshot_publish_steps.sh
       - name: Test signing with a disposable key
         run: bash ci/maven-publish/test_prepare_maven_bundle_integration.sh
+  live-signing:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.live-signing }}
+    permissions:
+      actions: read
+      contents: read
+    uses: $/.github/workflows/maven-signing-smoke.yaml
+    with:
+      source-repository: ${{ inputs.source-repository }}
+      source-run-id: ${{ inputs.source-run-id }}
+      artifact-name: ${{ inputs.artifact-name }}
+      primary-artifact-id: ${{ inputs.primary-artifact-id }}
+    secrets:
+      NVSEC_SSA_CLIENT_ID: ${{ secrets.NVSEC_SSA_CLIENT_ID }}
+      NVSEC_SSA_CLIENT_SECRET: ${{ secrets.NVSEC_SSA_CLIENT_SECRET }}
+      NVSEC_GITLAB_TOKEN: ${{ secrets.NVSEC_GITLAB_TOKEN }}

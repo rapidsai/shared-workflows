@@ -36,9 +36,14 @@ REQUIRED:
     --manifest-output          Manifest path outside the Maven tree (default: <output>.coordinates.json).
 
 ENVIRONMENT VARIABLES:
-    GPG_PRIVATE_KEY            Armored GPG private key (required).
-    GPG_PASSPHRASE             Passphrase for the GPG private key (required).
+    NVSEC_SSA_CLIENT_ID        Production 3s SSA client ID (required).
+    NVSEC_SSA_CLIENT_SECRET    Production 3s SSA client secret (required).
+    NVSEC_SSA_SCOPE            Must be SIGNING_RAPIDS_ADI_OPS.
+    THREES_TIMEOUT            Per-file timeout in seconds (default: 1800, maximum: 3600).
+
     GITHUB_OUTPUT              If set, receives GROUP_ID, ARTIFACT_ID, VERSION.
+
+Requires nvsec 2.16.1, gpg, and jq on the host; no private GPG key is used.
 
 EOF
 }
@@ -88,8 +93,9 @@ if [[ ! -d ${INPUT_DIR} ]]; then
   fatal "--input '${INPUT_DIR}' does not exist or is not a directory"
 fi
 
-: "${GPG_PRIVATE_KEY:?must be set}"
-: "${GPG_PASSPHRASE:?must be set}"
+# shellcheck disable=SC1091
+. "${SCRIPT_DIR}/sign_maven_artifacts.sh"
+validate_3s_environment
 
 INPUT_DIR="$(cd "${INPUT_DIR}" && pwd)"
 mkdir -p "${OUTPUT_DIR}"
@@ -116,8 +122,6 @@ DOCKER_ARGS=(
   --volume "${OUTPUT_DIR}:/bundle"
   --volume "${METADATA_SCRATCH}:/metadata"
   --workdir /bundle
-  --env GPG_PRIVATE_KEY="${GPG_PRIVATE_KEY}"
-  --env GPG_PASSPHRASE="${GPG_PASSPHRASE}"
   --env HOST_UID="$(id -u)"
   --env HOST_GID="$(id -g)"
   --env PRIMARY_ARTIFACT_ID="${PRIMARY_ARTIFACT_ID}"
@@ -126,6 +130,9 @@ DOCKER_ARGS=(
 
 docker run "${DOCKER_ARGS[@]}" "${IMAGE}" \
   bash /scripts/prepare_maven_bundle_in_container.sh
+
+sign_maven_tree "${OUTPUT_DIR}" "${SCRIPT_DIR}/keys/rapids-production.asc" \
+  565BF95475A2C617A5982D2E8B239C09A78134A9
 
 METADATA_FILE="${METADATA_SCRATCH}/bundle_metadata.env"
 if [[ ! -f ${METADATA_FILE} ]]; then

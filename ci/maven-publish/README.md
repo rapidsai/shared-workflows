@@ -26,8 +26,9 @@ java-publish:
     contents: read
   uses: rapidsai/shared-workflows/.github/workflows/maven-publish.yaml@main
   secrets:
-    GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-    GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+    NVSEC_SSA_CLIENT_ID: ${{ secrets.NVSEC_SSA_CLIENT_ID }}
+    NVSEC_SSA_CLIENT_SECRET: ${{ secrets.NVSEC_SSA_CLIENT_SECRET }}
+    NVSEC_GITLAB_TOKEN: ${{ secrets.NVSEC_GITLAB_TOKEN }}
     MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
   with:
     artifact-name: cudf_java_maven_repo
@@ -62,12 +63,48 @@ The Lucene docs registration must fetch javadoc from a versioned module such as
 `cuvs-lucene-10.2`; the relocation coordinate has no javadoc JAR. Verify that
 registration separately before enabling docs deployment.
 
+## Production 3s signing
+
+Maven artifacts use the same production `RAPIDS_ADI_OPS` job and
+`SIGNING_RAPIDS_ADI_OPS` scope as the cuVS/cuDF standalone builds. This removes
+private GPG keys and passphrases from the publisher. Each POM and JAR is submitted
+sequentially. Every returned detached signature is verified against the pinned
+RAPIDS public key before preparation succeeds. Missing signatures, modified
+bytes, unexpected keys, unknown states, and contradictory states stop publication.
+There is no local-key or Dev fallback. Discard partial output after failure;
+the original input remains read-only.
+
+The public key in `keys/rapids-production.asc` has primary fingerprint
+`565BF95475A2C617A5982D2E8B239C09A78134A9`, confirmed for the standalone
+integration under [SGN-9460](https://nvidia.atlassian.net/browse/SGN-9460), linked
+from [SGN-3310](https://nvidia.atlassian.net/browse/SGN-3310). Key rotation requires
+reviewed updates to both the public key and pinned fingerprint.
+
 Signing and Maven credentials must be backed by the team's Vault records and
 made available to each caller through the existing secret synchronization path.
-The workflow consumes `GPG_PRIVATE_KEY`, `GPG_PASSPHRASE`, and
-`MAVEN_DEPLOY_TOKEN` as secrets, and `MAVEN_DEPLOY_USERNAME` as a repository/org
-variable. Do not put a Vault token or credential value in workflow configuration.
-Verify consumer enrollment and synchronization for the caller before cutover.
+Enroll `NVSEC_SSA_CLIENT_ID` and `NVSEC_SSA_CLIENT_SECRET` with an approved
+production `SIGNING_RAPIDS_ADI_OPS` grant for each consumer. `NVSEC_GITLAB_TOKEN`
+needs read access to the nvsec package registry in NVIDIA GitLab project 25923.
+`MAVEN_DEPLOY_TOKEN` and `vars.MAVEN_DEPLOY_USERNAME` continue to authorize
+Sonatype publication. Do not put credential values in workflow configuration.
+
+The workflow installs `nvsec==2.16.1`, matching the standalone integration, using
+a disposable private `.netrc`. Signing uses an isolated, disposable token/log
+home. Credentials are passed through the environment. The container prepares
+the repository layout without receiving signing credentials. The host requires
+`gpg` and `jq` as well as `nvsec`. `THREES_TIMEOUT` defaults to 1800 seconds per
+artifact, capped at 3600 seconds.
+
+Deploy the workflow and caller mappings together: the removed `GPG_PRIVATE_KEY`
+and `GPG_PASSPHRASE` inputs are incompatible with old callers. Before cutover,
+verify Vault synchronization and registry access from the Actions runner, then
+sign a representative Maven artifact with each consumer identity. Confirm that
+the production job accepts `{}` parameters and returns ASCII-armored signatures
+accepted by Sonatype. Multipart upload does not bypass the per-file service
+limit. Confirm public-key availability to Maven consumers through an approved
+distribution channel. Local tests use disposable keys and simulated 3s responses;
+they do not establish live SSA grants, runner connectivity, job acceptance, or
+Sonatype acceptance.
 
 ## Completed-publication receipt
 
@@ -102,3 +139,31 @@ See the dispatcher's [rollout and recovery guide](https://github.com/rapidsai/re
 for App access, deployment order, and docs retries. Rerun a failed publisher job to
 resume its retained deployment within 90 days. If the upload response was lost
 before retaining `deployment.json`, reconcile the deployment in Sonatype first.
+
+## Signing-only Actions smoke test
+
+The `Maven publisher tests` workflow has an opt-in `live-signing` dispatch input.
+It runs the reusable [signing smoke workflow](../../.github/workflows/maven-signing-smoke.yaml)
+on the same runner class as publication. Supply `source-repository` (`NVIDIA/cuvs`
+or `NVIDIA/cudf`), a successful trusted `source-run-id`, the exact Maven repository
+`artifact-name`, and `primary-artifact-id` when the artifact contains multiple
+POMs. Source runs must originate on `main` or `release/*` in that repository
+with a push, manual, or scheduled event; pull-request outputs are rejected. Ordinary publisher tests
+continue to use disposable keys unless live signing is explicitly selected.
+
+The dispatching repository must have the three signing secrets enrolled in
+the `3s-signing-smoke` GitHub environment first. Restrict that environment to
+the reviewed smoke-test branch. Temporary test credentials stay separate from
+production publisher secrets.
+The reusable smoke workflow can also be called from each consumer repository to
+exercise its own SSA identity; a run in shared-workflows only proves the identity
+supplied there. It has no Sonatype credentials or publication steps.
+
+A successful run retains the signed Maven tree, source-build provenance,
+coordinate manifest, public key, and verification results for seven days.
+`request-receipts.jsonl` records each completed request ID, file SHA-256,
+expected fingerprint, and elapsed seconds. An independent verification pass
+checks the retained signatures, matches their receipts, and compares artifact
+bytes with the downloaded input. No credential files or raw client logs are
+included. Use a representative repository including its largest expected JAR;
+a small artifact alone does not establish production size or timing limits.

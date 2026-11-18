@@ -17,8 +17,6 @@ INPUT_DIR=/input
 BUNDLE_DIR=/bundle
 METADATA_DIR=/metadata
 
-: "${GPG_PRIVATE_KEY:?must be set}"
-: "${GPG_PASSPHRASE:?must be set}"
 : "${HOST_UID:?must be set}"
 : "${HOST_GID:?must be set}"
 
@@ -60,19 +58,7 @@ printf '%s\n' "${COORDINATES}" > "${METADATA_DIR}/coordinates.json"
 COORDINATES=$(load_publication_coordinates "${METADATA_DIR}/coordinates.json")
 printf '%s\n' "${COORDINATES}" > "${METADATA_DIR}/coordinates.json"
 
-GPG_KEY_ID=""
-import_gpg_signing_key GPG_KEY_ID
-echo "GPG signing key: ${GPG_KEY_ID}"
-
-# Populated through a nameref in list_artifacts_to_sign.
-# shellcheck disable=SC2034
-ARTIFACTS=()
-for POM_FILE in "${POMS[@]}"; do
-  list_artifacts_to_sign "$(dirname "${POM_FILE}")" ARTIFACTS
-  sign_artifacts_in_place ARTIFACTS "${GPG_KEY_ID}"
-done
-
 write_bundle_metadata "${METADATA_DIR}/bundle_metadata.env" \
   "${GROUP_ID}" "${ARTIFACT_ID}" "${VERSION}"
 
-echo "Signing complete for ${GROUP_ID}:${ARTIFACT_ID}:${VERSION}"
+echo "Preparation complete for ${GROUP_ID}:${ARTIFACT_ID}:${VERSION}"

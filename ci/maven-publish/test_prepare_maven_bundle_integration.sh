@@ -11,13 +11,25 @@ trap 'rm -rf "${TEST_ROOT}"' EXIT
 GNUPGHOME="${TEST_ROOT}/gnupg"
 export GNUPGHOME
 mkdir -m 700 "${GNUPGHOME}"
-GPG_PASSPHRASE=test-passphrase
+GPG_PASSPHRASE=
 gpg --batch --yes --pinentry-mode loopback \
   --passphrase "${GPG_PASSPHRASE}" \
   --quick-generate-key 'Maven Publish Test <maven-publish-test@nvidia.com>' \
   rsa2048 sign 1d
-GPG_PRIVATE_KEY=$(gpg --batch --yes --pinentry-mode loopback \
-  --passphrase "${GPG_PASSPHRASE}" --armor --export-secret-keys)
+# Exercise the production wrapper using a copy with disposable trust material.
+cp -R "${SCRIPT_DIR}" "${TEST_ROOT}/scripts"
+TEST_SCRIPT_DIR="${TEST_ROOT}/scripts"
+gpg --armor --export > "${TEST_SCRIPT_DIR}/keys/rapids-production.asc"
+fingerprint=$(gpg --with-colons --list-keys | awk -F: '$1=="fpr" {print $10; exit}')  # codespell:ignore fpr
+sed -i.bak "s/565BF95475A2C617A5982D2E8B239C09A78134A9/${fingerprint}/g" \
+  "${TEST_SCRIPT_DIR}/prepare_maven_bundle.sh" "${TEST_SCRIPT_DIR}/run_3s_smoke.sh"
+mkdir "${TEST_ROOT}/bin"
+cp "${SCRIPT_DIR}/mock_nvsec.sh" "${TEST_ROOT}/bin/nvsec"
+chmod +x "${TEST_ROOT}/bin/nvsec"
+export PATH="${TEST_ROOT}/bin:${PATH}"
+export MOCK_GPG_HOME=${GNUPGHOME}
+export NVSEC_SSA_CLIENT_ID=test NVSEC_SSA_CLIENT_SECRET=test
+export NVSEC_SSA_SCOPE=SIGNING_RAPIDS_ADI_OPS
 
 INPUT_DIR="${TEST_ROOT}/input"
 ARTIFACT_DIR="${INPUT_DIR}/ai/rapids/example/26.08.0"
@@ -38,10 +50,9 @@ printf 'sources jar\n' > "${ARTIFACT_DIR}/example-26.08.0-sources.jar"
 printf 'javadoc jar\n' > "${ARTIFACT_DIR}/example-26.08.0-javadoc.jar"
 printf 'stale checksum\n' > "${ARTIFACT_DIR}/example-26.08.0.jar.sha1"
 
-export GPG_PRIVATE_KEY GPG_PASSPHRASE GITHUB_OUTPUT
-"${SCRIPT_DIR}/prepare_maven_bundle.sh" \
-  --input "${INPUT_DIR}" \
-  --output "${OUTPUT_DIR}"
+export GITHUB_OUTPUT
+bash "${TEST_SCRIPT_DIR}/run_3s_smoke.sh" "${TEST_ROOT}"
+jq -e '.verified and .signed_file_count == 4 and .published == false' "${TEST_ROOT}/verification.json"
 
 SIGNED_DIR="${OUTPUT_DIR}/ai/rapids/example/26.08.0"
 for artifact in \
@@ -66,7 +77,7 @@ for artifact in example-parent example-relocation; do
     "<groupId>ai.rapids</groupId><artifactId>${artifact}</artifactId><version>26.08.0</version>" \
     '<packaging>pom</packaging></project>' > "${target}/${artifact}-26.08.0.pom"
 done
-"${SCRIPT_DIR}/prepare_maven_bundle.sh" \
+"${TEST_SCRIPT_DIR}/prepare_maven_bundle.sh" \
   --input "${INPUT_DIR}" --output "${TEST_ROOT}/mixed-signed" \
   --primary-artifact-id example --manifest-output "${TEST_ROOT}/coordinates.json"
 jq -e 'length == 3 and ([.[] | select(.packaging == "pom")] | length == 2)' "${TEST_ROOT}/coordinates.json"
