@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+name: Maven publisher tests
+on:
+  pull_request:
+    paths:
+      - ci/maven-publish/**
+      - .github/workflows/maven-publish.yaml
+      - .github/workflows/maven-publish-tests.yaml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Test bundle checks, publication, receipts, and snapshots
+        run: |
+          bash ci/maven-publish/test_maven_publish_steps.sh
+          bash ci/maven-publish/test_maven_central_publish_integration.sh
+          bash ci/maven-publish/test_maven_publication_receipt.sh
+          bash ci/maven-publish/test_maven_snapshot_publish_steps.sh
+      - name: Test signing with a disposable key
+        run: bash ci/maven-publish/test_prepare_maven_bundle_integration.sh

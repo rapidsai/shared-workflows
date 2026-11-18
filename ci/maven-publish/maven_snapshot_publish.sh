@@ -52,6 +52,7 @@ ENVIRONMENT VARIABLES:
 EOF
 }
 
+MANIFEST=""
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -84,6 +85,11 @@ parse_args() {
         OUTPUT_BUNDLE=$2
         shift 2
         ;;
+      --manifest)
+        require_value "$1" "${2:-}"
+        MANIFEST=$2
+        shift 2
+        ;;
       *)
         echo "Error: Unknown argument $1"
         print_help
@@ -110,7 +116,9 @@ fi
 : "${MAVEN_DEPLOY_USERNAME:?must be set}"
 : "${MAVEN_DEPLOY_TOKEN:?must be set}"
 
-require_cmds docker
+require_cmds docker jq
+COORDINATES=$(load_publication_coordinates "${MANIFEST}")
+export COORDINATES
 
 INPUT_DIR="$(cd "${INPUT_DIR}" && pwd)"
 OUTPUT_BUNDLE_PARENT="$(dirname "${OUTPUT_BUNDLE}")"
@@ -136,7 +144,7 @@ docker run \
   --volume "${SCRIPT_DIR}:/scripts:ro" \
   --workdir /bundle \
   --env MAVEN_DEPLOY_USERNAME --env MAVEN_DEPLOY_TOKEN \
-  --env GROUP_ID --env ARTIFACT_ID --env VERSION \
+  --env GROUP_ID --env ARTIFACT_ID --env VERSION --env COORDINATES \
   --env HOST_UID="$(id -u)" --env HOST_GID="$(id -g)" \
   "${IMAGE}" \
   bash /scripts/maven_snapshot_publish_in_container.sh

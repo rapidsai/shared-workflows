@@ -16,6 +16,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INPUT_DIR=""
 OUTPUT_DIR=""
 IMAGE="maven:3-eclipse-temurin-17"
+PRIMARY_ARTIFACT_ID=""
+MANIFEST_OUTPUT=""
 
 print_help() {
   cat << EOF
@@ -30,6 +32,8 @@ Both release and -SNAPSHOT versions are accepted. The destination check
 REQUIRED:
     -i, --input                Maven repository directory to sign.
     -o, --output               Empty directory for the signed Maven tree.
+    --primary-artifact-id      Receipt coordinate (required for multiple POMs).
+    --manifest-output          Manifest path outside the Maven tree (default: <output>.coordinates.json).
 
 ENVIRONMENT VARIABLES:
     GPG_PRIVATE_KEY            Armored GPG private key (required).
@@ -54,6 +58,16 @@ parse_args() {
       -o|--output)
         require_value "$1" "${2:-}"
         OUTPUT_DIR=$2
+        shift 2
+        ;;
+      --primary-artifact-id)
+        require_value "$1" "${2:-}"
+        PRIMARY_ARTIFACT_ID=$2
+        shift 2
+        ;;
+      --manifest-output)
+        require_value "$1" "${2:-}"
+        MANIFEST_OUTPUT=$2
         shift 2
         ;;
       *)
@@ -106,6 +120,7 @@ DOCKER_ARGS=(
   --env GPG_PASSPHRASE="${GPG_PASSPHRASE}"
   --env HOST_UID="$(id -u)"
   --env HOST_GID="$(id -g)"
+  --env PRIMARY_ARTIFACT_ID="${PRIMARY_ARTIFACT_ID}"
   --volume "${SCRIPT_DIR}:/scripts:ro"
 )
 
@@ -121,6 +136,11 @@ GROUP_ID=$(sed -n 's/^GROUP_ID=//p' "${METADATA_FILE}")
 ARTIFACT_ID=$(sed -n 's/^ARTIFACT_ID=//p' "${METADATA_FILE}")
 VERSION=$(sed -n 's/^VERSION=//p' "${METADATA_FILE}")
 require_maven_coordinates "${GROUP_ID}" "${ARTIFACT_ID}" "${VERSION}"
+MANIFEST_OUTPUT=${MANIFEST_OUTPUT:-${OUTPUT_DIR}.coordinates.json}
+mkdir -p "$(dirname "${MANIFEST_OUTPUT}")"
+MANIFEST_PARENT=$(cd "$(dirname "${MANIFEST_OUTPUT}")" && pwd)
+[[ ${MANIFEST_PARENT}/ != "${OUTPUT_DIR}/"* ]] || fatal "manifest must be outside the Maven tree"
+cp "${METADATA_SCRATCH}/coordinates.json" "${MANIFEST_OUTPUT}"
 
 {
   echo "GROUP_ID=${GROUP_ID}"
