@@ -134,14 +134,14 @@ jobs:
 
       - name: Restore retained deployment
         if: ${{ steps.receipt.outputs.artifact-id != '' }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           artifact-ids: ${{ steps.receipt.outputs.artifact-id }}
           path: deployment-receipt
           merge-multiple: true
 
       - name: Download Maven repository artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ inputs.artifact-name }}
           path: maven-repo
@@ -149,11 +149,12 @@ jobs:
       - name: Prepare signed Maven bundle
         id: prepare
         run: |
-          shared-workflows/ci/maven-publish/prepare_maven_bundle.sh \
-            --input maven-repo \
-            --output signed-maven-repo \
-            --manifest-output maven-coordinates.json \
-            --primary-artifact-id "${PRIMARY_ARTIFACT_ID}"
+          args=(--input maven-repo --output signed-maven-repo
+            --manifest-output maven-coordinates.json)
+          if [[ -n ${PRIMARY_ARTIFACT_ID} ]]; then
+            args+=(--primary-artifact-id "${PRIMARY_ARTIFACT_ID}")
+          fi
+          shared-workflows/ci/maven-publish/prepare_maven_bundle.sh "${args[@]}"
         env:
           PRIMARY_ARTIFACT_ID: ${{ inputs.primary-artifact-id }}
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -205,7 +206,7 @@ jobs:
 
       - name: Retain completed-publication receipt
         if: ${{ !cancelled() && steps.publish-central.outputs.DEPLOYMENT_STATE == 'PUBLISHED' && inputs.docs-project != '' && steps.receipt.outputs.published-artifact-id == '' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: maven-central-published-${{ inputs.docs-project }}
           path: completed-publication/publication.json
@@ -214,7 +215,7 @@ jobs:
 
       - name: Retain deployment for publication recovery
         if: ${{ !cancelled() && steps.destination.outputs.is_release == 'true' && steps.receipt.outputs.artifact-id == '' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: maven-central-deployment-${{ inputs.artifact-name }}-${{ github.run_id }}
           path: deployment-receipt/deployment.json
@@ -241,7 +242,7 @@ jobs:
 
       - name: Retain signed Maven Central bundle
         if: ${{ !cancelled() && steps.destination.outputs.is_release == 'true' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: maven-central-bundle-${{ steps.prepare.outputs.ARTIFACT_ID }}-${{ steps.prepare.outputs.VERSION }}-${{ inputs.source-git-sha }}
           path: central-bundle.zip
@@ -250,7 +251,7 @@ jobs:
 
       - name: Retain signed Sonatype snapshot bundle
         if: ${{ !cancelled() && steps.destination.outputs.is_release == 'false' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sonatype-snapshot-bundle-${{ steps.prepare.outputs.ARTIFACT_ID }}-${{ steps.prepare.outputs.VERSION }}-${{ inputs.source-git-sha }}
           path: snapshot-bundle.zip
