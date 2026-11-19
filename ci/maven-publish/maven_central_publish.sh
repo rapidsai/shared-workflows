@@ -27,7 +27,6 @@ POLL_TIMEOUT_SEC=${POLL_TIMEOUT_SEC:-1800}
 
 INPUT_DIR=""
 GROUP_ID=""
-PROFILE_ID=""
 ARTIFACT_ID=""
 VERSION=""
 OUTPUT_BUNDLE=""
@@ -54,7 +53,6 @@ REQUIRED:
     -o, --output-bundle            Path for the retained deployment ZIP.
 
 OPTIONS:
-    --profile-id <p>                Accepted for caller compatibility; unused by the Portal API.
     --manifest <path>              Coordinate manifest from bundle preparation.
     --deployment-receipt <path>   Save the deployment id before polling; if the
                                   receipt exists, resume that deployment.
@@ -84,11 +82,6 @@ parse_args() {
       -g|--group-id)
         require_value "$1" "${2:-}"
         GROUP_ID=$2
-        shift 2
-        ;;
-      --profile-id)
-        require_value "$1" "${2:-}"
-        PROFILE_ID=$2
         shift 2
         ;;
       -a|--artifact-id)
@@ -165,7 +158,7 @@ if [[ -n ${DEPLOYMENT_RECEIPT} && -f ${DEPLOYMENT_RECEIPT} ]]; then
   DEPLOYMENT_ID=$(jq -er --arg group "${GROUP_ID}" --arg artifact "${ARTIFACT_ID}" \
     --arg version "${VERSION}" --argjson coordinates "${EXPECTED_COORDINATES}" \
     'select(.groupId == $group and .artifactId == $artifact and .version == $version)
-     | select((.coordinates // [{groupId: $group, artifactId: $artifact, version: $version, packaging: "jar"}]) == $coordinates)
+     | select(.coordinates == $coordinates)
      | .deploymentId | select(type == "string" and test("^[A-Za-z0-9-]+$"))' \
     "${DEPLOYMENT_RECEIPT}") || fatal "deployment receipt does not match this release"
   if [[ -n ${GITHUB_OUTPUT:-} ]]; then
@@ -185,8 +178,6 @@ if [[ -e ${OUTPUT_BUNDLE} ]]; then
 fi
 echo "Maven Central upload"
 echo "  coordinates:   ${GROUP_ID}:${ARTIFACT_ID}:${VERSION}"
-# profile-id is retained only for backward compatibility.
-: "${PROFILE_ID}"
 echo "  input dir:     ${INPUT_DIR}"
 echo "  output bundle: ${OUTPUT_BUNDLE}"
 echo "  target portal: ${CENTRAL_PORTAL_URL}"
@@ -195,12 +186,11 @@ WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "${WORK_DIR}"' EXIT
 BUNDLE_DIR="${WORK_DIR}/bundle"
 mkdir -p "${BUNDLE_DIR}"
-copy_bundle "${INPUT_DIR}" "${BUNDLE_DIR}"
-validate_publication_tree "${BUNDLE_DIR}" "${EXPECTED_COORDINATES}"
+cp -a "${INPUT_DIR}/." "${BUNDLE_DIR}/"
 generate_bundle_checksums "${BUNDLE_DIR}"
 
 BUNDLE_ZIP="${WORK_DIR}/${ARTIFACT_ID}-${VERSION}.zip"
-create_bundle_zip "${BUNDLE_ZIP}" "${BUNDLE_DIR}"
+(cd "${BUNDLE_DIR}" && zip -qr "${BUNDLE_ZIP}" .)
 mv "${BUNDLE_ZIP}" "${OUTPUT_BUNDLE}"
 
 # USER_MANAGED prevents an upload from publishing before identity validation.

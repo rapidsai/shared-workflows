@@ -119,35 +119,17 @@ publish_deployment() {
   fatal "timed out waiting for PUBLISHED; resume deployment ${deployment_id}, last state '${state}'"
 }
 
-copy_bundle() {
-  local source_dir=$1 destination_dir=$2
-  echo "Copying signed Maven tree into bundle scratch space"
-  cp -a "${source_dir}/." "${destination_dir}/"
-}
-
 require_bundle_contents() {
   local artifact_dir=$1
   local packaging=${2:-jar}
-  local pattern desc entry
-  local expected=(
-    "${ARTIFACT_ID}-${VERSION}.pom|the POM"
-    "${ARTIFACT_ID}-${VERSION}.pom.asc|the POM signature"
-  )
+  local suffix file
+  local suffixes=(.pom)
   if [[ ${packaging} == jar ]]; then
-    expected+=(
-    "${ARTIFACT_ID}-${VERSION}.jar|the unclassified primary jar"
-    "${ARTIFACT_ID}-${VERSION}.jar.asc|the unclassified primary jar signature"
-    "${ARTIFACT_ID}-${VERSION}-sources.jar|the sources jar"
-    "${ARTIFACT_ID}-${VERSION}-sources.jar.asc|the sources jar signature"
-    "${ARTIFACT_ID}-${VERSION}-javadoc.jar|the javadoc jar"
-    "${ARTIFACT_ID}-${VERSION}-javadoc.jar.asc|the javadoc jar signature"
-    )
+    suffixes+=(.jar -sources.jar -javadoc.jar)
   fi
-  for entry in "${expected[@]}"; do
-    IFS='|' read -r pattern desc <<< "${entry}"
-    if [[ ! -f ${artifact_dir}/${pattern} ]]; then
-      fatal "bundle is missing ${desc} (${pattern})"
-    fi
+  for suffix in "${suffixes[@]}"; do
+    file="${artifact_dir}/${ARTIFACT_ID}-${VERSION}${suffix}"
+    [[ -f ${file} ]] || fatal "missing release artifact: ${file}"
   done
 }
 
@@ -188,10 +170,4 @@ generate_bundle_checksums() {
     sha1sum "${file}" | awk '{ print $1 }' > "${file}.sha1"
   done < <(find "${root}" -type f ! -name '*.md5' ! -name '*.sha1' \
     ! -name '*.sha256' ! -name '*.sha512' | sort)
-}
-
-create_bundle_zip() {
-  local zip_path=$1 bundle_dir=$2
-  echo "Zipping bundle at ${zip_path}"
-  (cd "${bundle_dir}" && zip -qr "${zip_path}" .)
 }

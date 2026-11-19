@@ -21,26 +21,6 @@ remove_generated_sidecars() {
   \) -delete
 }
 
-discover_single_pom() {
-  local input_dir=$1
-  local -n out_pom_var=$2
-  local -a candidates
-  mapfile -t candidates < <(find "${input_dir}" -type f -name '*.pom' | sort)
-  # The single-candidate assignment is observed through the caller's nameref.
-  # shellcheck disable=SC2034
-  case ${#candidates[@]} in
-    0) fatal "no *.pom found anywhere under ${input_dir}" ;;
-    1) out_pom_var=${candidates[0]} ;;
-    *)
-      {
-        echo "Error: expected exactly one POM under ${input_dir}, found:"
-        printf '  %s\n' "${candidates[@]}"
-      } >&2
-      exit 1
-      ;;
-  esac
-}
-
 read_pom_coordinates() {
   local pom_file=$1
   local -n out_group_var=$2

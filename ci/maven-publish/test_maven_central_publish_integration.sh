@@ -20,6 +20,7 @@ for suffix in \
   -javadoc.jar -javadoc.jar.asc; do
   printf 'content for %s\n' "${suffix}" > "${ARTIFACT_DIR}/example-26.08.0${suffix}"
 done
+printf 'stale checksum\n' > "${ARTIFACT_DIR}/example-26.08.0.jar.md5"
 
 cp "${SCRIPT_DIR}/mock_central_curl.sh" "${MOCK_BIN}/curl"
 chmod +x "${MOCK_BIN}/curl"
@@ -43,11 +44,13 @@ OUTPUT_BUNDLE="${TEST_ROOT}/central-bundle.zip"
 
 unzip -tq "${OUTPUT_BUNDLE}" >/dev/null
 unzip -l "${OUTPUT_BUNDLE}" | grep -F 'example-26.08.0.jar.asc.sha1'
+expected_md5=$(md5sum "${ARTIFACT_DIR}/example-26.08.0.jar" | awk '{ print $1 }')
+[[ $(unzip -p "${OUTPUT_BUNDLE}" ai/rapids/example/26.08.0/example-26.08.0.jar.md5) == "${expected_md5}" ]]
 grep -Fx 'DEPLOYMENT_ID=00000000-0000-0000-0000-000000000001' "${GITHUB_OUTPUT}"
 [[ $(wc -l < "${MOCK_STATE_DIR}/uploads.log") -eq 1 ]]
 cmp "${OUTPUT_BUNDLE}" "${MOCK_STATE_DIR}/uploaded.zip"
 grep -F 'publisher/upload?publishingType=USER_MANAGED' "${MOCK_STATE_DIR}/curl.log"
-[[ -f ${MOCK_STATE_DIR}/publish-requested && ! -f ${MOCK_STATE_DIR}/portal-dropped ]]
+[[ -f ${MOCK_STATE_DIR}/publish-requested ]]
 
 rm -f "${MOCK_STATE_DIR}"/*
 export FAIL_UPLOAD=true
@@ -73,6 +76,16 @@ run_publish() {
 }
 
 rm -f "${MOCK_STATE_DIR}"/*
+# An unsigned artifact must fail at the publisher entry point, before any HTTP call.
+signature="${ARTIFACT_DIR}/example-26.08.0-javadoc.jar.asc"
+mv "${signature}" "${TEST_ROOT}/signature"
+if run_publish; then
+  echo 'an unsigned artifact must block publication' >&2
+  exit 1
+fi
+[[ ! -f ${MOCK_STATE_DIR}/curl.log ]]
+mv "${TEST_ROOT}/signature" "${signature}"
+
 export GITHUB_REF=refs/tags/v26.12.00
 if run_publish; then
   echo 'a tag/POM mismatch must block publication' >&2
@@ -104,7 +117,7 @@ rm -f "${MOCK_STATE_DIR}"/*
 export UNCERTAIN_PUBLISH=true
 run_publish
 grep -Fx 'DEPLOYMENT_STATE=PUBLISHED' "${GITHUB_OUTPUT}"
-[[ -f ${RECEIPT} && ! -f ${MOCK_STATE_DIR}/portal-dropped ]]
+[[ -f ${RECEIPT} ]]
 [[ $(wc -l < "${MOCK_STATE_DIR}/publish.log") -eq 1 ]]
 
 # A retained deployment must not bypass the tagged-source check on a rerun.

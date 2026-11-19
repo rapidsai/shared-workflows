@@ -33,8 +33,8 @@ java-publish:
 
 Configure `vars.MAVEN_DEPLOY_USERNAME` with the Sonatype token username.
 The reusable workflow reference follows the caller's release branch.
-`profile-id` is accepted for compatibility but unused: the direct Central
-Publisher Portal API checks the account's namespace access.
+The direct Central Publisher Portal API checks the account's namespace access;
+no staging profile is used.
 Release publication is automatic: callers must omit
 the removed `stage-for-maven-central-publish` and `publish-to-maven-central` inputs.
 

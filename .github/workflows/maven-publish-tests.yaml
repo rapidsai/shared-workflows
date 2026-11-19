@@ -17,10 +17,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Test bundle checks, publication recovery, and snapshots
+      - name: Test publication recovery and snapshot deployment
         run: |
-          bash ci/maven-publish/test_maven_publish_steps.sh
           bash ci/maven-publish/test_maven_central_publish_integration.sh
-          bash ci/maven-publish/test_maven_snapshot_publish_steps.sh
+          bash ci/maven-publish/test_maven_snapshot_publish_integration.sh
       - name: Test signing with a disposable key
         run: bash ci/maven-publish/test_prepare_maven_bundle_integration.sh

@@ -44,13 +44,6 @@ on:
         required: false
         type: string
         default: ''
-      profile-id:
-        description: |
-          Accepted for backward compatibility. The Central Publisher Portal API
-          derives namespace authorization from the account; no staging profile is used.
-        required: false
-        type: string
-        default: ''
     secrets:
       GPG_PRIVATE_KEY:
         description: Armored GPG private key used to sign every artifact at upload.
@@ -155,22 +148,16 @@ jobs:
         if: ${{ steps.destination.outputs.is_release == 'true' }}
         run: |
           mkdir -p deployment-receipt
-          args=(
-            --input signed-maven-repo
-            --group-id "${GROUP_ID}"
-            --artifact-id "${ARTIFACT_ID}"
-            --version "${VERSION}"
-            --output-bundle central-bundle.zip
-            --manifest maven-coordinates.json
+          shared-workflows/ci/maven-publish/maven_central_publish.sh \
+            --input signed-maven-repo \
+            --group-id "${GROUP_ID}" \
+            --artifact-id "${ARTIFACT_ID}" \
+            --version "${VERSION}" \
+            --output-bundle central-bundle.zip \
+            --manifest maven-coordinates.json \
             --deployment-receipt deployment-receipt/deployment.json
-          )
-          if [[ -n ${PROFILE_ID} ]]; then
-            args+=(--profile-id "${PROFILE_ID}")
-          fi
-          shared-workflows/ci/maven-publish/maven_central_publish.sh "${args[@]}"
         env:
           GROUP_ID: ${{ steps.prepare.outputs.GROUP_ID }}
-          PROFILE_ID: ${{ inputs.profile-id }}
           ARTIFACT_ID: ${{ steps.prepare.outputs.ARTIFACT_ID }}
           VERSION: ${{ steps.prepare.outputs.VERSION }}
           SOURCE_GIT_SHA: ${{ inputs.source-git-sha || github.sha }}
