@@ -32,3 +32,8 @@ paths:
       # source). actionlint's type schema appears to be out of date.
       - 'property "workflow_repository" is not defined in object type'
       - 'property "workflow_sha" is not defined in object type'
+  .github/workflows/publish-api-docs.yaml:
+    ignore:
+      # https://github.com/rhysd/actionlint/issues/711
+      - 'specifying action "\$/.github/actions/publish-docs" in invalid format because ref is missing. available formats are "{owner}/{repo}@{ref}" or "{owner}/{repo}/{path}@{ref}"'
+      - 'specifying action "\$/.github/actions/publish-one-doc" in invalid format because ref is missing. available formats are "{owner}/{repo}@{ref}" or "{owner}/{repo}/{path}@{ref}"'
