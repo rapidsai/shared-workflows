@@ -144,7 +144,7 @@ before retaining `deployment.json`, reconcile the deployment in Sonatype first.
 
 The `Maven publisher tests` workflow has an opt-in `live-signing` dispatch input.
 It runs the reusable [signing smoke workflow](../../.github/workflows/maven-signing-smoke.yaml)
-on the same runner class as publication. Supply `source-repository` (`NVIDIA/cuvs`
+on the configured self-hosted test runner. Supply `source-repository` (`NVIDIA/cuvs`
 or `NVIDIA/cudf`), a successful trusted `source-run-id`, the exact Maven repository
 `artifact-name`, and `primary-artifact-id` when the artifact contains multiple
 POMs. Source runs must originate on `main` or `release/*` in that repository
@@ -201,3 +201,12 @@ Both returned signatures verified against the pinned RAPIDS fingerprint, and
 source bytes were preserved. This establishes the live job/signature contract
 for that sample; it does not establish full-size cuDF package acceptance,
 Sonatype acceptance, or a working end-to-end managed-runner installation path.
+
+The follow-up smoke test targets a temporary Apple Silicon Mac runner labeled
+`rapids-3s-smoke-mac-20261118`, explicitly selected because this host can install
+the pinned client from corporate GitLab. The runner accepts one job, uses a
+separate temporary home/work directory, and is not installed as a service.
+Remove its registration and local runner credentials after the run, along with
+the temporary Vault role/policy. Its macOS result does not establish registry
+reachability from the NVIDIA-managed Linux CPU pool. Publication still requires
+a supported runner/network route or an approved current-package mirror.

@@ -30,7 +30,8 @@ defaults:
     shell: bash
 jobs:
   sign:
-    runs-on: linux-amd64-cpu4
+    # Temporary one-job runner with corporate-network access; see the smoke runbook.
+    runs-on: [self-hosted, macOS, ARM64, rapids-3s-smoke-mac-20261118]
     timeout-minutes: 120
     steps:
       - name: Check out the signing implementation

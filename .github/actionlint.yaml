@@ -4,6 +4,7 @@ self-hosted-runner:
     - linux-amd64-*
     - linux-arm64-*
     - wsl-amd64-*
+    - rapids-3s-smoke-mac-20261118
 
 # Avoid warnings about referencing things in ${{ vars.* }} statements.
 config-variables:
