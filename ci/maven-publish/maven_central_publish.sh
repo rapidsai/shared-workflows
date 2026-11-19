@@ -63,6 +63,7 @@ OPTIONS:
 ENVIRONMENT VARIABLES:
     MAVEN_DEPLOY_USERNAME          Publisher Portal user token username.
     MAVEN_DEPLOY_TOKEN             Publisher Portal user token password.
+    SOURCE_GIT_SHA                Build source SHA; must match GITHUB_SHA for tag runs.
     GITHUB_OUTPUT                  If set, receives DEPLOYMENT_ID and DEPLOYMENT_STATE.
 
 EOF
@@ -144,6 +145,10 @@ if [[ -n ${GITHUB_REF:-} ]]; then
   if [[ ${VERSION} != "${TAG_MAJOR}.${TAG_MINOR}.${TAG_PATCH:-0}" ]]; then
     fatal "Maven version '${VERSION}' does not match release tag '${GITHUB_REF}'"
   fi
+  # Keep source validation in the publisher so it also protects resumed releases.
+  [[ ${GITHUB_SHA:-} =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] || fatal "invalid tagged source SHA"
+  [[ ${SOURCE_GIT_SHA:-${GITHUB_SHA}} == "${GITHUB_SHA}" ]] \
+    || fatal "build source must match the tagged commit"
 fi
 if [[ ! -d ${INPUT_DIR} ]]; then
   fatal "--input '${INPUT_DIR}' does not exist or is not a directory"

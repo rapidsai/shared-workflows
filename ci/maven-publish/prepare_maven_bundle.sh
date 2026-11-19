@@ -32,7 +32,7 @@ Both release and -SNAPSHOT versions are accepted. The destination check
 REQUIRED:
     -i, --input                Maven repository directory to sign.
     -o, --output               Empty directory for the signed Maven tree.
-    --primary-artifact-id      Receipt coordinate (required for multiple POMs).
+    --primary-artifact-id      Primary coordinate for outputs (required for multiple POMs).
     --manifest-output          Manifest path outside the Maven tree (default: <output>.coordinates.json).
 
 ENVIRONMENT VARIABLES:

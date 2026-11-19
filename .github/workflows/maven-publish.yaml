@@ -31,21 +31,16 @@ on:
         required: true
         type: string
       primary-artifact-id:
-        description: Receipt coordinate; required when the Maven repository contains multiple POMs.
-        required: false
-        type: string
-        default: ''
-      docs-project:
         description: |
-          Optional registered Java docs project in rapidsai/docs, e.g. cudf-java.
-          Retain a completed-publication receipt after PUBLISHED. The standalone
-          dispatcher in release-tracking starts docs using its existing App.
+          Primary coordinate reported in workflow outputs; required when the
+          Maven repository contains multiple POMs.
         required: false
         type: string
         default: ''
       source-git-sha:
         description: |
-          Git SHA to include in the retained bundle name for provenance.
+          Build source SHA, also included in the retained bundle name.
+          Release builds must match the tagged commit. Defaults to github.sha.
         required: false
         type: string
         default: ''
@@ -120,17 +115,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RECEIPT_NAME: maven-central-deployment-${{ inputs.artifact-name }}-${{ github.run_id }}
-          PUBLICATION_NAME: maven-central-published-${{ inputs.docs-project }}
         run: |
           artifacts=$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts")
           ids=$(jq -er --arg name "${RECEIPT_NAME}" \
               '[.[].artifacts[] | select(.name == $name and .expired == false)]
                | if length <= 1 then (.[0].id // "") else error("duplicate receipts") end' <<< "${artifacts}")
           echo "artifact-id=${ids}" >> "${GITHUB_OUTPUT}"
-          published=$(jq -er --arg name "${PUBLICATION_NAME}" \
-            '[.[].artifacts[] | select(.name == $name and .expired == false)]
-             | if length <= 1 then (.[0].id // "") else error("duplicate publication receipts") end' <<< "${artifacts}")
-          echo "published-artifact-id=${published}" >> "${GITHUB_OUTPUT}"
 
       - name: Restore retained deployment
         if: ${{ steps.receipt.outputs.artifact-id != '' }}
@@ -164,9 +154,6 @@ jobs:
         id: publish-central
         if: ${{ steps.destination.outputs.is_release == 'true' }}
         run: |
-          if [[ -n ${DOCS_PROJECT} ]]; then
-            shared-workflows/ci/maven-publish/write_maven_publication_receipt.sh --validate
-          fi
           mkdir -p deployment-receipt
           args=(
             --input signed-maven-repo
@@ -186,32 +173,9 @@ jobs:
           PROFILE_ID: ${{ inputs.profile-id }}
           ARTIFACT_ID: ${{ steps.prepare.outputs.ARTIFACT_ID }}
           VERSION: ${{ steps.prepare.outputs.VERSION }}
-          DOCS_PROJECT: ${{ inputs.docs-project }}
           SOURCE_GIT_SHA: ${{ inputs.source-git-sha || github.sha }}
           MAVEN_DEPLOY_USERNAME: ${{ vars.MAVEN_DEPLOY_USERNAME }}
           MAVEN_DEPLOY_TOKEN: ${{ secrets.MAVEN_DEPLOY_TOKEN }}
-
-      - name: Write completed-publication receipt
-        if: ${{ !cancelled() && steps.publish-central.outputs.DEPLOYMENT_STATE == 'PUBLISHED' && inputs.docs-project != '' && steps.receipt.outputs.published-artifact-id == '' }}
-        env:
-          DOCS_PROJECT: ${{ inputs.docs-project }}
-          GROUP_ID: ${{ steps.prepare.outputs.GROUP_ID }}
-          ARTIFACT_ID: ${{ steps.prepare.outputs.ARTIFACT_ID }}
-          VERSION: ${{ steps.prepare.outputs.VERSION }}
-          SOURCE_GIT_SHA: ${{ inputs.source-git-sha || github.sha }}
-          DEPLOYMENT_ID: ${{ steps.publish-central.outputs.DEPLOYMENT_ID }}
-          DEPLOYMENT_STATE: ${{ steps.publish-central.outputs.DEPLOYMENT_STATE }}
-        run: |
-          shared-workflows/ci/maven-publish/write_maven_publication_receipt.sh completed-publication/publication.json
-
-      - name: Retain completed-publication receipt
-        if: ${{ !cancelled() && steps.publish-central.outputs.DEPLOYMENT_STATE == 'PUBLISHED' && inputs.docs-project != '' && steps.receipt.outputs.published-artifact-id == '' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: maven-central-published-${{ inputs.docs-project }}
-          path: completed-publication/publication.json
-          if-no-files-found: error
-          retention-days: 90
 
       - name: Retain deployment for publication recovery
         if: ${{ !cancelled() && steps.destination.outputs.is_release == 'true' && steps.receipt.outputs.artifact-id == '' }}
@@ -244,7 +208,7 @@ jobs:
         if: ${{ !cancelled() && steps.destination.outputs.is_release == 'true' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: maven-central-bundle-${{ steps.prepare.outputs.ARTIFACT_ID }}-${{ steps.prepare.outputs.VERSION }}-${{ inputs.source-git-sha }}
+          name: maven-central-bundle-${{ steps.prepare.outputs.ARTIFACT_ID }}-${{ steps.prepare.outputs.VERSION }}-${{ inputs.source-git-sha || github.sha }}
           path: central-bundle.zip
           if-no-files-found: ignore
           retention-days: 90
@@ -253,7 +217,7 @@ jobs:
         if: ${{ !cancelled() && steps.destination.outputs.is_release == 'false' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: sonatype-snapshot-bundle-${{ steps.prepare.outputs.ARTIFACT_ID }}-${{ steps.prepare.outputs.VERSION }}-${{ inputs.source-git-sha }}
+          name: sonatype-snapshot-bundle-${{ steps.prepare.outputs.ARTIFACT_ID }}-${{ steps.prepare.outputs.VERSION }}-${{ inputs.source-git-sha || github.sha }}
           path: snapshot-bundle.zip
           if-no-files-found: ignore
           retention-days: 90

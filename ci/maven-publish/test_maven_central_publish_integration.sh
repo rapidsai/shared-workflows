@@ -31,6 +31,7 @@ export GITHUB_OUTPUT MOCK_STATE_DIR
 export MAVEN_DEPLOY_USERNAME=test-user
 export MAVEN_DEPLOY_TOKEN=test-token
 export GITHUB_REF=refs/tags/v26.08.00
+export GITHUB_SHA=0123456789012345678901234567890123456789
 
 OUTPUT_BUNDLE="${TEST_ROOT}/central-bundle.zip"
 "${SCRIPT_DIR}/maven_central_publish.sh" \
@@ -86,6 +87,18 @@ fi
 [[ ! -f ${MOCK_STATE_DIR}/curl.log ]]
 export GITHUB_REF=refs/tags/v26.08.00
 
+# Source overrides must fail before upload or recovery can contact the Portal.
+if SOURCE_GIT_SHA=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa run_publish; then
+  echo 'a source override must not publish a different tagged commit' >&2
+  exit 1
+fi
+[[ ! -f ${MOCK_STATE_DIR}/curl.log ]]
+if GITHUB_SHA=invalid run_publish; then
+  echo 'an invalid tagged source SHA must fail publication' >&2
+  exit 1
+fi
+[[ ! -f ${MOCK_STATE_DIR}/curl.log ]]
+
 rm -f "${MOCK_STATE_DIR}"/*
 # A lost/failed HTTP response after acceptance must still complete successfully.
 export UNCERTAIN_PUBLISH=true
@@ -93,6 +106,14 @@ run_publish
 grep -Fx 'DEPLOYMENT_STATE=PUBLISHED' "${GITHUB_OUTPUT}"
 [[ -f ${RECEIPT} && ! -f ${MOCK_STATE_DIR}/portal-dropped ]]
 [[ $(wc -l < "${MOCK_STATE_DIR}/publish.log") -eq 1 ]]
+
+# A retained deployment must not bypass the tagged-source check on a rerun.
+rm -f "${MOCK_STATE_DIR}/curl.log"
+if SOURCE_GIT_SHA=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa run_publish; then
+  echo 'a source override must not resume another tagged commit' >&2
+  exit 1
+fi
+[[ ! -f ${MOCK_STATE_DIR}/curl.log ]]
 
 # Rerunning the same release uses its receipt, even when the output ZIP exists.
 rm -f "${MOCK_STATE_DIR}/uploads.log"

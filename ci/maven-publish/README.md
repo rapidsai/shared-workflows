@@ -12,9 +12,6 @@ Sonatype snapshots.
 | [maven_central_publish.sh](maven_central_publish.sh) | Publish a release and wait for `PUBLISHED`; resume interrupted publication using `deployment.json`. |
 | [maven_central_publish_steps.sh](maven_central_publish_steps.sh) | Sonatype requests, bundle checks, and publication polling. |
 | [maven_snapshot_publish.sh](maven_snapshot_publish.sh) | Upload snapshot artifacts. |
-| [write_maven_publication_receipt.sh](write_maven_publication_receipt.sh) | Record a completed release as `publication.json` so the docs dispatcher can start documentation deployment. |
-| [dispatch-java-docs.yml](https://github.com/rapidsai/release-tracking/blob/main/.github/workflows/dispatch-java-docs.yml) | Discover completed releases and dispatch the docs workflow using the existing release App. |
-| [deploy-java-docs.yaml](https://github.com/rapidsai/docs/blob/main/.github/workflows/deploy-java-docs.yaml) | Deploy released javadocs and open the stable-link update PR. |
 
 ## Caller
 
@@ -24,7 +21,7 @@ java-publish:
   permissions:
     actions: read
     contents: read
-  uses: rapidsai/shared-workflows/.github/workflows/maven-publish.yaml@main
+  uses: rapidsai/shared-workflows/.github/workflows/maven-publish.yaml@release/26.12
   secrets:
     GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
     GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
@@ -32,19 +29,18 @@ java-publish:
   with:
     artifact-name: cudf_java_maven_repo
     source-git-sha: ${{ github.sha }}
-    docs-project: cudf-java
 ```
 
 Configure `vars.MAVEN_DEPLOY_USERNAME` with the Sonatype token username.
-Set `docs-project` for projects registered with the docs dispatcher; omit it for
-publication without docs. `profile-id` is accepted for compatibility but unused:
-the direct Central Publisher Portal API checks the account's namespace access.
+The reusable workflow reference follows the caller's release branch.
+`profile-id` is accepted for compatibility but unused: the direct Central
+Publisher Portal API checks the account's namespace access.
 Release publication is automatic: callers must omit
 the removed `stage-for-maven-central-publish` and `publish-to-maven-central` inputs.
 
 For a reactor such as cuVS Lucene, include every supported versioned module and
 the POM-only parent and relocation in one repository artifact. Set
-`primary-artifact-id: cuvs-lucene` to keep the existing docs receipt coordinate.
+`primary-artifact-id: cuvs-lucene` to select the primary workflow output coordinate.
 All coordinates must have the same group and version. Preparation reads each
 POM's coordinates and packaging, signs every artifact, and writes a separate
 coordinate manifest outside the Maven tree. POM-only packages require a signed
@@ -55,12 +51,9 @@ The release uploads one `USER_MANAGED` ZIP using the direct Portal API. Before
 requesting publication it verifies that the Portal's complete package-URL set
 matches the manifest, independent of ordering. Missing, extra, and duplicate
 packages fail verification. Recovery receipts bind the deployment to the full
-coordinate set; a rerun resumes that deployment without uploading again. One
-completed-publication receipt is emitted only after the entire set is `PUBLISHED`.
-Its schema and primary coordinate remain compatible with the docs dispatcher.
-The Lucene docs registration must fetch javadoc from a versioned module such as
-`cuvs-lucene-10.2`; the relocation coordinate has no javadoc JAR. Verify that
-registration separately before enabling docs deployment.
+coordinate set; a rerun resumes that deployment without uploading again. The
+`deployment-state: PUBLISHED` output covers the entire set. Tagged runs also
+require the build source SHA to match the tagged commit, including on recovery.
 
 Signing and Maven credentials must be backed by the team's Vault records and
 made available to each caller through the existing secret synchronization path.
@@ -69,36 +62,25 @@ The workflow consumes `GPG_PRIVATE_KEY`, `GPG_PASSPHRASE`, and
 variable. Do not put a Vault token or credential value in workflow configuration.
 Verify consumer enrollment and synchronization for the caller before cutover.
 
-## Completed-publication receipt
-
-`publication.json` tells the dispatcher what was published and which source run
-published it. The workflow retains it for 90 days in the Actions artifact
-`maven-central-published-<docs-project>`. Example (illustrative deployment/run IDs):
-
-```json
-{
-  "schema_version": 1,
-  "state": "PUBLISHED",
-  "docs_project": "cudf-java",
-  "group_id": "ai.rapids",
-  "artifact_id": "cudf",
-  "version": "26.12.0",
-  "deployment_id": "00000000-0000-0000-0000-000000000001",
-  "source_repository": "NVIDIA/cudf",
-  "source_repository_id": 90506918,
-  "source_ref": "refs/tags/v26.12.00",
-  "source_sha": "0123456789abcdef0123456789abcdef01234567",
-  "workflow_run_id": 123456789,
-  "workflow_run_attempt": 1
-}
-```
-
-`deployment.json` serves a separate purpose: it records the Sonatype deployment
-for publication recovery, including when publication has not completed.
-
 ## Rollout and recovery
 
-See the dispatcher's [rollout and recovery guide](https://github.com/rapidsai/release-tracking/blob/main/docs/java-docs-dispatch.md)
-for App access, deployment order, and docs retries. Rerun a failed publisher job to
-resume its retained deployment within 90 days. If the upload response was lost
-before retaining `deployment.json`, reconcile the deployment in Sonatype first.
+Merge this publisher before its cuDF and cuVS callers, then confirm signing
+credentials and Sonatype namespace access before cutting the release tag.
+Retire legacy manual publishing at cutover so only one path publishes each
+release coordinate.
+
+`deployment.json` records the Sonatype deployment ID and complete coordinate set
+before polling. The workflow retains it for 90 days as
+`maven-central-deployment-<artifact-name>-<run-id>`. Rerun a failed publisher job
+in the same workflow run to restore the receipt and resume that deployment.
+If the upload response was lost before retaining `deployment.json`, reconcile
+the deployment in Sonatype first. A new workflow run does not automatically
+restore another run's recovery receipt.
+
+## Documentation
+
+Javadoc JARs remain part of the signed Maven release. Website documentation is
+published through each project's existing docs system: cuDF uses Sphinx, and
+cuVS Java and Lucene use Fern. This workflow publishes Maven artifacts and
+returns deployment outputs; website deployment does not depend on a separate
+Maven-publication receipt or docs dispatcher.

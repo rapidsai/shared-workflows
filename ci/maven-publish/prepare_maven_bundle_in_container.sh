@@ -31,7 +31,7 @@ remove_generated_sidecars "${BUNDLE_DIR}"
 mapfile -t POMS < <(find "${BUNDLE_DIR}" -type f -name '*.pom' | sort)
 (( ${#POMS[@]} > 0 )) || fatal "no POMs found"
 if (( ${#POMS[@]} > 1 )) && [[ -z ${PRIMARY_ARTIFACT_ID:-} ]]; then
-  fatal "multiple coordinates require --primary-artifact-id for receipt compatibility"
+  fatal "multiple coordinates require --primary-artifact-id to select workflow outputs"
 fi
 COORDINATES='[]'
 for POM_FILE in "${POMS[@]}"; do
