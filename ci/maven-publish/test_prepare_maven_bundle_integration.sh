@@ -57,4 +57,22 @@ grep -Fx 'GROUP_ID=ai.rapids' "${GITHUB_OUTPUT}"
 grep -Fx 'ARTIFACT_ID=example' "${GITHUB_OUTPUT}"
 grep -Fx 'VERSION=26.08.0' "${GITHUB_OUTPUT}"
 
+# A parent and relocation carry only POMs, with no JAR requirements.
+for artifact in example-parent example-relocation; do
+  target="${INPUT_DIR}/ai/rapids/${artifact}/26.08.0"
+  mkdir -p "${target}"
+  printf '%s\n' \
+    '<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>' \
+    "<groupId>ai.rapids</groupId><artifactId>${artifact}</artifactId><version>26.08.0</version>" \
+    '<packaging>pom</packaging></project>' > "${target}/${artifact}-26.08.0.pom"
+done
+"${SCRIPT_DIR}/prepare_maven_bundle.sh" \
+  --input "${INPUT_DIR}" --output "${TEST_ROOT}/mixed-signed" \
+  --primary-artifact-id example --manifest-output "${TEST_ROOT}/coordinates.json"
+jq -e 'length == 3 and ([.[] | select(.packaging == "pom")] | length == 2)' "${TEST_ROOT}/coordinates.json"
+for artifact in example-parent example-relocation; do
+  target="${TEST_ROOT}/mixed-signed/ai/rapids/${artifact}/26.08.0/${artifact}-26.08.0.pom"
+  gpg --verify "${target}.asc" "${target}"
+done
+
 echo "Maven bundle preparation integration test passed"

@@ -5,12 +5,12 @@
 # Step functions used by prepare_maven_bundle_in_container.sh.
 
 install_container_deps() {
-  if command -v gpg >/dev/null && command -v zip >/dev/null; then
+  if command -v gpg >/dev/null && command -v zip >/dev/null && command -v jq >/dev/null; then
     return 0
   fi
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq
-  apt-get install -qq -y --no-install-recommends gnupg zip
+  apt-get install -qq -y --no-install-recommends gnupg zip jq
 }
 
 remove_generated_sidecars() {
@@ -19,26 +19,6 @@ remove_generated_sidecars() {
     -name '*.asc' -o -name '*.md5' -o -name '*.sha1' -o \
     -name '*.sha256' -o -name '*.sha512' \
   \) -delete
-}
-
-discover_single_pom() {
-  local input_dir=$1
-  local -n out_pom_var=$2
-  local -a candidates
-  mapfile -t candidates < <(find "${input_dir}" -type f -name '*.pom' | sort)
-  # The single-candidate assignment is observed through the caller's nameref.
-  # shellcheck disable=SC2034
-  case ${#candidates[@]} in
-    0) fatal "no *.pom found anywhere under ${input_dir}" ;;
-    1) out_pom_var=${candidates[0]} ;;
-    *)
-      {
-        echo "Error: expected exactly one POM under ${input_dir}, found:"
-        printf '  %s\n' "${candidates[@]}"
-      } >&2
-      exit 1
-      ;;
-  esac
 }
 
 read_pom_coordinates() {

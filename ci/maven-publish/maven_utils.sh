@@ -52,3 +52,27 @@ require_maven_coordinates() {
 maven_group_path() {
   printf '%s\n' "$1" | tr '.' '/'
 }
+
+# The manifest is outside the Maven tree so it is never uploaded to Sonatype.
+# Legacy single-JAR callers can omit it; new callers always supply one.
+# These values are provided by the publishing script that sources this file.
+# shellcheck disable=SC2153
+load_publication_coordinates() {
+  local manifest=$1 coordinates
+  if [[ -n ${manifest} ]]; then
+    coordinates=$(jq -ce . "${manifest}") || fatal "invalid coordinate manifest"
+  else
+    coordinates=$(jq -cn --arg group "${GROUP_ID}" --arg artifact "${ARTIFACT_ID}" \
+      --arg version "${VERSION}" \
+      '[{groupId: $group, artifactId: $artifact, version: $version, packaging: "jar"}]')
+  fi
+  jq -e --arg group "${GROUP_ID}" --arg artifact "${ARTIFACT_ID}" --arg version "${VERSION}" '
+    type == "array" and length > 0
+    and all(.[]; .groupId == $group and .version == $version
+      and (.artifactId | type == "string" and test("^[A-Za-z0-9][A-Za-z0-9_.+-]*$"))
+      and (.packaging == "jar" or .packaging == "pom"))
+    and (map(.artifactId) | length == (unique | length))
+    and any(.[]; .artifactId == $artifact)
+  ' <<< "${coordinates}" >/dev/null || fatal "manifest does not match this release"
+  jq -c 'sort_by(.groupId, .artifactId, .version)' <<< "${coordinates}"
+}
