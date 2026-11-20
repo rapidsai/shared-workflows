@@ -69,13 +69,43 @@ credentials and Sonatype namespace access before cutting the release tag.
 Retire legacy manual publishing at cutover so only one path publishes each
 release coordinate.
 
-`deployment.json` records the Sonatype deployment ID and complete coordinate set
-before polling. The workflow retains it for 90 days as
-`maven-central-deployment-<artifact-name>-<run-id>`. Rerun a failed publisher job
-in the same workflow run to restore the receipt and resume that deployment.
-If the upload response was lost before retaining `deployment.json`, reconcile
-the deployment in Sonatype first. A new workflow run does not automatically
-restore another run's recovery receipt.
+### Rerunning a failed publication
+
+Use **Re-run failed jobs** on the original workflow run. After an upload returns
+its deployment ID, the publisher writes `deployment.json` with that ID and the
+complete coordinate set, before polling Sonatype. After the publishing step exits,
+even on ordinary failure, the workflow saves this receipt for 90 days as
+`maven-central-deployment-<artifact-name>-<run-id>`.
+
+The rerun restores the receipt, downloads the Maven repository artifact again,
+and repeats signing and validation. It checks the release tag, source SHA, and
+complete coordinate set before resuming the saved deployment. With a matching
+receipt, it skips ZIP creation and upload; the artifacts already in Sonatype
+remain the ones being published.
+
+| Sonatype state | Rerun behavior |
+| --- | --- |
+| `PENDING` / `VALIDATING` | Wait for validation. |
+| `VALIDATED` | Verify the complete coordinate set, then request publication. |
+| `PUBLISHING` | Verify the complete coordinate set and wait, without requesting publication again. |
+| `PUBLISHED` | Verify the complete coordinate set and succeed. |
+| `FAILED` / `VALIDATION_FAILED` | Fail with Sonatype's details; do not create a replacement deployment. Investigate the failure before retrying. |
+
+Each attempt polls for up to 30 minutes. A timeout or uncertain publication
+response does not cause a new upload: a rerun checks the saved deployment's state
+and continues from there.
+
+Automatic recovery requires the receipt to have been saved to GitHub. The local
+receipt is written immediately after upload, but its GitHub artifact is saved
+only after the publishing step exits. Cancellation, runner loss, a lost upload
+response, or failure to save that artifact can leave a Sonatype deployment
+without a retained receipt. Without a receipt, the publisher attempts a fresh
+upload, so reconcile the deployment in Sonatype before rerunning in these cases.
+The same applies if the receipt has expired or been deleted.
+
+A new workflow run does not automatically restore another run's recovery receipt.
+Snapshot publishing does not use deployment receipts; rerunning it repeats the
+snapshot deployment.
 
 ## Documentation
 
