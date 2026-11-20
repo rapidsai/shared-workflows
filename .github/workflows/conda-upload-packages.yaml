@@ -76,7 +76,7 @@ jobs:
     if: ${{ inputs.build_type != 'release-candidate' }}
     runs-on: linux-amd64-cpu4
     container:
-      image: "python:3.14-slim"
+      image: "python:3.15-slim"
       env:
         RAPIDS_BUILD_TYPE: ${{ inputs.build_type }}
     steps:
