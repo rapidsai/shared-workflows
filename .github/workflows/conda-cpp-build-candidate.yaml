@@ -363,6 +363,16 @@ jobs:
           image-preflight-file: ${{ github.workspace }}/.candidate-image-preflight.json
           consumer-id: ${{ inputs.candidate-image-consumer-id }}
           runtime-image-reference: ${{ matrix.candidate_image_reference }}
+      # Candidate trains freeze candidate_build_policy.sccache, and the step
+      # above exports it. When the train enables sccache, configure the same
+      # sccache-dist client and OIDC-exchanged token that CI builds use;
+      # without the token the build's sccache client cannot authenticate.
+      - name: Setup sccache-dist
+        if: ${{ env.RAPIDS_RELEASE_CANDIDATE_SCCACHE == 'true' }}
+        uses: rapidsai/shared-actions/setup-sccache-dist@4893f976ef8f2971fac85cd224f02498d4ee26a7
+        with:
+          log-file: "${{ env.RAPIDS_ARTIFACTS_DIR }}/sccache.log"
+          request-timeout: ${{ inputs.sccache-dist-request-timeout }}
       - name: Check GitHub API rate limits
         run: |
           if ! type gh >/dev/null; then

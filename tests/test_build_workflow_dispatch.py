@@ -309,7 +309,29 @@ def test_candidate_and_ci_authorities_are_separate(family):
     assert "gha-oidc-rc-producer" not in ci_text
     assert "release-catalog-dispatch@" not in ci_text
     assert "vars.AWS_ROLE_ARN" not in candidate_text
-    assert "setup-sccache-dist@" not in candidate_text
+    # Candidates may use sccache-dist only when the frozen train enables it.
+    # Its token comes from the job's own OIDC exchange, never the CI role.
+    sccache_steps = [
+        step
+        for step in candidate["jobs"]["build"]["steps"]
+        if "setup-sccache-dist@" in str(step.get("uses", ""))
+    ]
+    assert len(sccache_steps) == 1
+    assert sccache_steps[0]["if"] == (
+        "${{ env.RAPIDS_RELEASE_CANDIDATE_SCCACHE == 'true' }}"
+    )
+    assert "env" not in sccache_steps[0]
+    step_names = [step.get("name") for step in candidate["jobs"]["build"]["steps"]]
+    policy_step = max(
+        index
+        for index, name in enumerate(step_names)
+        if name
+        in (
+            "Prepare candidate dependencies and build policy",
+            "Bind pre-start image selection into candidate build input",
+        )
+    )
+    assert step_names.index("Setup sccache-dist") == policy_step + 1
     assert "inputs.build_type" not in candidate_text.replace(
         "github.event.inputs.build_type", ""
     )

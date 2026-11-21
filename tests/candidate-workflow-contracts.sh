@@ -168,9 +168,16 @@ for workflow in conda-cpp-build-candidate.yaml conda-python-build-candidate.yaml
   fi
   ci_path="${path%-candidate.yaml}-ci.yaml"
   if rg -Fq 'role-to-assume: ${{ vars.AWS_ROLE_ARN }}' "${path}" ||
-    rg -Fq 'name: Setup sccache-dist' "${path}" ||
     ! rg -Fq "if: \${{ needs.policy.outputs.allow-general-ci == 'true' }}" "${ci_path}"; then
     echo "${workflow} must keep general CI credentials behind evaluated policy" >&2
+    exit 1
+  fi
+  # sccache-dist runs only when the frozen train enables sccache, and its
+  # token comes from the job's own OIDC exchange rather than CI credentials.
+  if [[ "$(rg -Fc 'name: Setup sccache-dist' "${path}")" != 1 ]] ||
+    ! rg -n -A1 'name: Setup sccache-dist' "${path}" |
+      rg -Fq "if: \${{ env.RAPIDS_RELEASE_CANDIDATE_SCCACHE == 'true' }}"; then
+    echo "${workflow} must gate sccache-dist on the frozen train's sccache policy" >&2
     exit 1
   fi
 
