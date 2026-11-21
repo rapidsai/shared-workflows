@@ -192,7 +192,7 @@ jobs:
           persist-credentials: false
       - name: Setup caller cache
         if: ${{ needs.policy.outputs.caller-cache == 'true' }}
-        uses: rapidsai/shared-actions/setup-caller-cache@dac26ecb8ddc0d209f265b88f98e73d8c92fe013
+        uses: rapidsai/shared-actions/setup-caller-cache@4893f976ef8f2971fac85cd224f02498d4ee26a7
         with:
           cache-paths: ${{ inputs.cache-paths }}
           cache-key-prefix: ${{ inputs.cache-key-prefix }}
@@ -232,7 +232,7 @@ jobs:
       - name: Resolve controller-bound candidate metadata
         id: candidate-context
         if: ${{ inputs.candidate-train-sha256 == '' }}
-        uses: rapidsai/shared-actions/release-candidate-context@dac26ecb8ddc0d209f265b88f98e73d8c92fe013
+        uses: rapidsai/shared-actions/release-candidate-context@4893f976ef8f2971fac85cd224f02498d4ee26a7
         with:
           source-sha: ${{ env.RAPIDS_SHA }}
           audit-boundary: 'true'
@@ -244,7 +244,7 @@ jobs:
           repository: ${{ inputs.repo || github.repository }}
           source-sha: ${{ env.RAPIDS_SHA }}
       - name: Prepare candidate dependencies and build policy
-        uses: rapidsai/shared-actions/release-candidate-dependencies@dac26ecb8ddc0d209f265b88f98e73d8c92fe013
+        uses: rapidsai/shared-actions/release-candidate-dependencies@4893f976ef8f2971fac85cd224f02498d4ee26a7
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
           prepare-conda-channel: 'true'
@@ -333,7 +333,7 @@ jobs:
           role-duration-seconds: 3600 # 1h, the producer role's maximum session duration
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}
       - name: Create Conda release catalog companion
-        uses: rapidsai/shared-actions/release-catalog-dispatch@dac26ecb8ddc0d209f265b88f98e73d8c92fe013
+        uses: rapidsai/shared-actions/release-catalog-dispatch@4893f976ef8f2971fac85cd224f02498d4ee26a7
         with:
           config: >-
             {
