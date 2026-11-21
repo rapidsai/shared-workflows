@@ -11,12 +11,22 @@ workflows=(
 )
 # The GitHub expression is intentionally a literal assertion value.
 # shellcheck disable=SC2016
-expected_role='arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}'
+expected_role='arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ inputs.candidate-producer-repository-id || github.repository_id }}'
 
 for workflow in "${workflows[@]}"; do
   path="${root}/.github/workflows/${workflow}"
   if ! rg -Fq "${expected_role}" "${path}"; then
     echo "${workflow} has no caller-specific candidate producer role" >&2
+    exit 1
+  fi
+  # Every role assumption must go through the producer-ID input, whose empty default keeps the
+  # caller's own repository ID, so no step can bypass an explicit producer.
+  if rg -q 'gha-oidc-rc-producer-\$\{\{ github\.repository_id \}\}' "${path}"; then
+    echo "${workflow} assumes a producer role without honouring candidate-producer-repository-id" >&2
+    exit 1
+  fi
+  if ! rg -Uq 'candidate-producer-repository-id:\n(?:        .*\n)*?        type: string\n        default: '"''" "${path}"; then
+    echo "${workflow} must declare candidate-producer-repository-id as a string defaulting to empty" >&2
     exit 1
   fi
   if rg -q 'gha-oidc-rapids-release-candidates|gha-oidc-rc-producer-[0-9]+' "${path}"; then

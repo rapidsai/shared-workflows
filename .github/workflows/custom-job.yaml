@@ -28,6 +28,10 @@ on:
       repo:
         description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
         type: string
+      candidate-producer-repository-id:
+        description: "Numeric ID of the producer repository whose candidate-store role to assume; empty uses the caller's own. Forwarded to candidate mode only."
+        type: string
+        default: ''
       arch:
         description: "One of [amd64, arm64]. CPU architecture to run on."
         type: string
@@ -233,6 +237,7 @@ jobs:
           "candidate-artifact-name": "",
           "release-catalog-config": "",
           "candidate-train-sha256": "",
+          "candidate-producer-repository-id": "",
           "candidate-docs": false,
           "candidate-dependency-family": "",
           "candidate-unit-id": "",
@@ -280,6 +285,7 @@ jobs:
       sha: ${{ inputs.sha }}
       build-datetime: ${{ inputs.build-datetime }}
       repo: ${{ inputs.repo }}
+      candidate-producer-repository-id: ${{ inputs.candidate-producer-repository-id }}
       arch: ${{ inputs.arch }}
       node_type: ${{ inputs.node_type }}
       container_image: ${{ inputs.container_image }}

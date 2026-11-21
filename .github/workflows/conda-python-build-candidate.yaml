@@ -24,6 +24,14 @@ on:
       repo:
         description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
         type: string
+      candidate-producer-repository-id:
+        description: |
+          Numeric GitHub ID of the producer repository whose candidate-store role to assume.
+          Leave empty when the workflow runs inside the producer repository (the role then comes from
+          github.repository_id). Set it only for train-generated builds that run in another repository.
+          IAM remains the authority: a wrong ID names a role that does not trust the caller and is denied.
+        type: string
+        default: ''
       node_type:
         description: |
           Suffix, without leading '-', indicating the type of machine to run jobs on (e.g., 'cpu4' or 'gpu-l4-latest-1').
@@ -227,7 +235,7 @@ jobs:
         with:
           aws-region: us-east-2
           role-duration-seconds: 3600 # 1h, the producer role's maximum session duration
-          role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}
+          role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ inputs.candidate-producer-repository-id || github.repository_id }}
       # Resolve controller-bound candidate metadata before the build.
       - name: Resolve controller-bound candidate metadata
         id: candidate-context
@@ -341,7 +349,7 @@ jobs:
         with:
           aws-region: us-east-2
           role-duration-seconds: 3600 # 1h, the producer role's maximum session duration
-          role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ github.repository_id }}
+          role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ inputs.candidate-producer-repository-id || github.repository_id }}
       - name: Create Conda release catalog companion
         uses: rapidsai/shared-actions/release-catalog-dispatch@4893f976ef8f2971fac85cd224f02498d4ee26a7
         with:
