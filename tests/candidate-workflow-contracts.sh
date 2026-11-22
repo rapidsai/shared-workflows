@@ -11,7 +11,7 @@ workflows=(
 )
 # The GitHub expression is intentionally a literal assertion value.
 # shellcheck disable=SC2016
-expected_role='role-to-assume: ${{ inputs.candidate-role == '\''release-build'\'' && '\''arn:aws:iam::279114543810:role/gha-oidc-rc-release-build'\'' || format('\''arn:aws:iam::279114543810:role/gha-oidc-rc-producer-{0}'\'', inputs.candidate-producer-repository-id || github.repository_id) }}'
+expected_role='role-to-assume: ${{ inputs.candidate-role == '\''release-build'\'' && '\''arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates-release-build'\'' || format('\''arn:aws:iam::279114543810:role/gha-oidc-rc-producer-{0}'\'', inputs.candidate-producer-repository-id || github.repository_id) }}'
 
 for workflow in "${workflows[@]}"; do
   path="${root}/.github/workflows/${workflow}"
@@ -29,7 +29,8 @@ for workflow in "${workflows[@]}"; do
     echo "${workflow} must declare candidate-producer-repository-id as a string defaulting to empty" >&2
     exit 1
   fi
-  if rg -q 'gha-oidc-rapids-release-candidates|gha-oidc-rc-producer-[0-9]+' "${path}"; then
+  # The shared writer role stays forbidden; only the exact release-build role name may share its prefix.
+  if rg -qP 'gha-oidc-rapids-release-candidates(?!-release-build\b)|gha-oidc-rc-producer-[0-9]+' "${path}"; then
     echo "${workflow} contains a shared or hard-coded candidate producer role" >&2
     exit 1
   fi

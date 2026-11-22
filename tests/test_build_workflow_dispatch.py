@@ -561,7 +561,9 @@ def test_current_explicit_script_secrets_remain_in_normal_ci(index):
     assert "secrets" not in wrapper["jobs"]["candidate"]
 
 
-RELEASE_BUILD_ROLE = "arn:aws:iam::279114543810:role/gha-oidc-rc-release-build"
+RELEASE_BUILD_ROLE = (
+    "arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates-release-build"
+)
 
 
 def _candidate_policy(tmp_path, **overrides):
