@@ -30,6 +30,10 @@ on:
         description: "Numeric ID of the producer repository whose candidate-store role to assume; empty uses the caller's own. Forwarded to candidate mode only."
         type: string
         default: ''
+      candidate-role:
+        description: "Candidate-store role: 'producer' (default) or 'release-build'. Forwarded to candidate mode only."
+        type: string
+        default: 'producer'
       build_type:
         description: "One of: [branch, nightly, pull-request, release-candidate]"
         required: true
@@ -195,7 +199,8 @@ jobs:
       candidate-defaults-json: >-
         {
           "candidate-train-sha256": "",
-          "candidate-producer-repository-id": ""
+          "candidate-producer-repository-id": "",
+          "candidate-role": "producer"
         }
   ci:
     needs: validate
@@ -241,6 +246,7 @@ jobs:
       build-datetime: ${{ inputs.build-datetime }}
       repo: ${{ inputs.repo }}
       candidate-producer-repository-id: ${{ inputs.candidate-producer-repository-id }}
+      candidate-role: ${{ inputs.candidate-role }}
       script: ${{ inputs.script }}
       package-name: ${{ inputs.package-name }}
       package-type: ${{ inputs.package-type }}

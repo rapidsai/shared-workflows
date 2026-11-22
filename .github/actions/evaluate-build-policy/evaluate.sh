@@ -37,6 +37,20 @@ if [[ "${candidate}" == true ]] && jq -e '
   exit 1
 fi
 
+# The candidate role is an exact allowlist (jq compares case-sensitively). Every job that assumes a
+# candidate-store role needs this policy job, so an unknown role fails before any credentials.
+if [[ "${candidate}" == true ]]; then
+  if ! jq -e '(."candidate-role" // "producer") | IN("", "producer", "release-build")' <<<"${inputs}" >/dev/null; then
+    echo "candidate-role must be 'producer' or 'release-build'" >&2
+    exit 1
+  fi
+  if jq -e '."candidate-role" == "release-build"' <<<"${inputs}" >/dev/null &&
+    ! jq -e '(."candidate-producer-repository-id" // "") | test("^[1-9][0-9]*$")' <<<"${inputs}" >/dev/null; then
+    echo "candidate-role 'release-build' requires candidate-producer-repository-id to name the producer" >&2
+    exit 1
+  fi
+fi
+
 # Keep the dispatch-event and ref checks independent of the caller's build type.
 allow_general_ci=true
 if [[ "${candidate}" == true || "${DISPATCH_BUILD_TYPE}" == release-candidate ]]; then

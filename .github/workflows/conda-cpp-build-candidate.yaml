@@ -32,6 +32,13 @@ on:
           IAM remains the authority: a wrong ID names a role that does not trust the caller and is denied.
         type: string
         default: ''
+      candidate-role:
+        description: |
+          Which candidate-store role to assume: 'producer' (default; the producer's own role) or
+          'release-build' (the one role trusted only for the release workflow on release-tracking main).
+          'release-build' requires candidate-producer-repository-id. Any other value fails the policy job.
+        type: string
+        default: 'producer'
       node_type:
         description: |
           Suffix, without leading '-', indicating the type of machine to run jobs on (e.g., 'cpu4' or 'gpu-l4-latest-1').
@@ -318,7 +325,7 @@ jobs:
         with:
           aws-region: us-east-2
           role-duration-seconds: 3600 # 1h, the producer role's maximum session duration
-          role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ inputs.candidate-producer-repository-id || github.repository_id }}
+          role-to-assume: ${{ inputs.candidate-role == 'release-build' && 'arn:aws:iam::279114543810:role/gha-oidc-rc-release-build' || format('arn:aws:iam::279114543810:role/gha-oidc-rc-producer-{0}', inputs.candidate-producer-repository-id || github.repository_id) }}
       # Resolve controller-bound candidate metadata before the build.
       - name: Resolve controller-bound candidate metadata
         id: candidate-context
@@ -462,7 +469,7 @@ jobs:
         with:
           aws-region: us-east-2
           role-duration-seconds: 3600 # 1h, the producer role's maximum session duration
-          role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-producer-${{ inputs.candidate-producer-repository-id || github.repository_id }}
+          role-to-assume: ${{ inputs.candidate-role == 'release-build' && 'arn:aws:iam::279114543810:role/gha-oidc-rc-release-build' || format('arn:aws:iam::279114543810:role/gha-oidc-rc-producer-{0}', inputs.candidate-producer-repository-id || github.repository_id) }}
       - name: Create Conda release catalog companion
         uses: rapidsai/shared-actions/release-catalog-dispatch@22e86501a9faedec2d7a962b83a221fb37440c2c
         with:

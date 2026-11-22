@@ -32,6 +32,10 @@ on:
         description: "Numeric ID of the producer repository whose candidate-store role to assume; empty uses the caller's own. Forwarded to candidate mode only."
         type: string
         default: ''
+      candidate-role:
+        description: "Candidate-store role: 'producer' (default) or 'release-build'. Forwarded to candidate mode only."
+        type: string
+        default: 'producer'
       arch:
         description: "One of [amd64, arm64]. CPU architecture to run on."
         type: string
@@ -238,6 +242,7 @@ jobs:
           "release-catalog-config": "",
           "candidate-train-sha256": "",
           "candidate-producer-repository-id": "",
+          "candidate-role": "producer",
           "candidate-docs": false,
           "candidate-dependency-family": "",
           "candidate-unit-id": "",
@@ -286,6 +291,7 @@ jobs:
       build-datetime: ${{ inputs.build-datetime }}
       repo: ${{ inputs.repo }}
       candidate-producer-repository-id: ${{ inputs.candidate-producer-repository-id }}
+      candidate-role: ${{ inputs.candidate-role }}
       arch: ${{ inputs.arch }}
       node_type: ${{ inputs.node_type }}
       container_image: ${{ inputs.container_image }}

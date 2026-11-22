@@ -239,8 +239,17 @@ def test_every_candidate_option_rejected_on_ci_and_allowed_on_candidates(
     assert candidate_defaults == expected_defaults
     for key, default in candidate_defaults.items():
         value = not default if isinstance(default, bool) else "non-default"
+        extra = {}
+        if key == "candidate-role":
+            # An allowlisted value; release-build must also name the producer.
+            value, extra = "release-build", {"candidate-producer-repository-id": "1"}
         for mode in ("branch", "nightly", "pull-request", "release-candidate"):
-            values = {**default_values(wrapper), key: value, "build_type": mode}
+            values = {
+                **default_values(wrapper),
+                **extra,
+                key: value,
+                "build_type": mode,
+            }
             result, _ = run_step(
                 step,
                 {
@@ -550,3 +559,60 @@ def test_current_explicit_script_secrets_remain_in_normal_ci(index):
         assert name in wrapper[True]["workflow_call"]["secrets"]
         assert name in child[True]["workflow_call"]["secrets"]
     assert "secrets" not in wrapper["jobs"]["candidate"]
+
+
+RELEASE_BUILD_ROLE = "arn:aws:iam::279114543810:role/gha-oidc-rc-release-build"
+
+
+def _candidate_policy(tmp_path, **overrides):
+    wrapper = load("custom-job")
+    step = validation_step(wrapper)
+    values = {**default_values(wrapper), "build_type": "release-candidate", **overrides}
+    return run_step(
+        step, {**step["env"], "BUILD_INPUTS_JSON": json.dumps(values)}, tmp_path
+    )
+
+
+@pytest.mark.parametrize("role", ["", "producer"])
+def test_producer_role_is_the_default_candidate_role(role, tmp_path):
+    result, _ = _candidate_policy(tmp_path, **{"candidate-role": role})
+    assert result.returncode == 0, result.stderr
+
+
+def test_release_build_role_requires_an_explicit_producer(tmp_path):
+    result, _ = _candidate_policy(tmp_path, **{"candidate-role": "release-build"})
+    assert result.returncode != 0
+    assert "candidate-producer-repository-id" in result.stderr
+    result, _ = _candidate_policy(
+        tmp_path,
+        **{
+            "candidate-role": "release-build",
+            "candidate-producer-repository-id": "453147629",
+        },
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize(
+    "role", ["Release-Build", "release_build", "admin", "release-build "]
+)
+def test_unknown_candidate_role_fails_before_credentials(role, tmp_path):
+    result, outputs = _candidate_policy(
+        tmp_path, **{"candidate-role": role, "candidate-producer-repository-id": "1"}
+    )
+    assert result.returncode != 0
+    assert "candidate-role" in result.stderr
+    assert outputs.get("run-candidate") != "true"
+
+
+@pytest.mark.parametrize("family", FAMILIES)
+def test_candidate_role_selects_release_build_or_producer_role(family):
+    text = (WORKFLOWS / f"{family}-candidate.yaml").read_text()
+    expected = (
+        "role-to-assume: ${{ inputs.candidate-role == 'release-build' && "
+        f"'{RELEASE_BUILD_ROLE}' || "
+        "format('arn:aws:iam::279114543810:role/gha-oidc-rc-producer-{0}', "
+        "inputs.candidate-producer-repository-id || github.repository_id) }}"
+    )
+    lines = [line.strip() for line in text.splitlines() if "role-to-assume:" in line]
+    assert lines and all(line == expected for line in lines)
