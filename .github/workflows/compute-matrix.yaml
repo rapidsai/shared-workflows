@@ -25,6 +25,14 @@ on:
         required: false
         type: boolean
         default: false
+      python_versions:
+        description: |
+          Optional comma-separated Python versions (for example '3.12'). When set, matrix entries with any other
+          PY_VER are removed before matrix_filter and the pure-package defaults apply, so those still choose
+          within the allowed versions. Release candidates use this to build one Python per release.
+        required: false
+        type: string
+        default: ""
       pure-conda:
         required: false
         type: string
@@ -77,6 +85,7 @@ jobs:
           MATRIX_FILTER: ${{ inputs.matrix_filter }}
           PURE_WHEEL: ${{ inputs.pure_wheel }}
           PURE_CONDA: ${{ inputs.pure-conda }}
+          PYTHON_VERSIONS: ${{ inputs.python_versions }}
         run: |
           set -eo pipefail
 
@@ -104,6 +113,17 @@ jobs:
             MATRIX_FILTER="map(select(.ARCH == \"amd64\")) | group_by(.CUDA_VER|split(\".\")|map(tonumber)|.[0]) | map(max_by([(.PY_VER|split(\".\")|map(tonumber)), (.CUDA_VER|split(\".\")|map(tonumber))]))"
           fi
 
+          if [[ -n "${PYTHON_VERSIONS}" && ! "${PYTHON_VERSIONS}" =~ ^[0-9]+\.[0-9]+t?(,[0-9]+\.[0-9]+t?)*$ ]]; then
+            echo "::error::Invalid python_versions! Must be comma-separated versions such as '3.12' or '3.12,3.13'."
+            exit 1
+          fi
+          PYTHON_RESTRICTION="."
+          if [[ -n "${PYTHON_VERSIONS}" ]]; then
+            # A jq program, not shell: $version and $ENV must reach jq unexpanded.
+            # shellcheck disable=SC2016
+            PYTHON_RESTRICTION='map(select(.PY_VER as $version | $ENV.PYTHON_VERSIONS | split(",") | any(. == $version)))'
+          fi
+
           if ! MATRIX="$(
             jq -n -c "
               \$ENV.MATRIX | fromjson as \$matrix
@@ -116,6 +136,7 @@ jobs:
                   [];
                   if index(\$entry) == null then . + [\$entry] else . end
                 )
+              | ${PYTHON_RESTRICTION}
               | ${MATRIX_FILTER}
               | if (. | length) > 0 then {include: .} else \"\" | halt_error(1) end
             "

@@ -41,6 +41,12 @@ on:
           'release-build' requires candidate-producer-repository-id. Any other value fails the policy job.
         type: string
         default: 'producer'
+      candidate-python-versions:
+        description: |
+          Optional comma-separated Python versions for release candidates (for example '3.12'); other versions
+          are removed from the matrix before matrix_filter. Empty keeps every version.
+        type: string
+        default: ''
       script:
         required: true
         type: string
@@ -206,6 +212,7 @@ jobs:
   compute-matrix:
     uses: $/.github/workflows/compute-matrix.yaml
     with:
+      python_versions: ${{ inputs.candidate-python-versions }}
       build_type: release-candidate
       matrix_name: wheels-build
       matrix_type: ${{ inputs.matrix_type }}

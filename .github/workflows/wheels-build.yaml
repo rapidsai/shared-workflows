@@ -34,6 +34,10 @@ on:
         description: "Candidate-store role: 'producer' (default) or 'release-build'. Forwarded to candidate mode only."
         type: string
         default: 'producer'
+      candidate-python-versions:
+        description: "Release-candidate Python versions, comma-separated; empty keeps all. Forwarded to candidate mode only."
+        type: string
+        default: ''
       build_type:
         description: "One of: [branch, nightly, pull-request, release-candidate]"
         required: true
@@ -200,7 +204,8 @@ jobs:
         {
           "candidate-train-sha256": "",
           "candidate-producer-repository-id": "",
-          "candidate-role": "producer"
+          "candidate-role": "producer",
+          "candidate-python-versions": ""
         }
   ci:
     needs: validate
@@ -247,6 +252,7 @@ jobs:
       repo: ${{ inputs.repo }}
       candidate-producer-repository-id: ${{ inputs.candidate-producer-repository-id }}
       candidate-role: ${{ inputs.candidate-role }}
+      candidate-python-versions: ${{ inputs.candidate-python-versions }}
       script: ${{ inputs.script }}
       package-name: ${{ inputs.package-name }}
       package-type: ${{ inputs.package-type }}
