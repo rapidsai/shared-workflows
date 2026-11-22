@@ -139,7 +139,7 @@ jobs:
       # publish <project>/latest
       - name: Publish latest version to docs.nvidia.com/<project>/latest
         if: github.ref == 'refs/heads/main'
-        uses: rapidsai/shared-actions/publish-docs@4893f976ef8f2971fac85cd224f02498d4ee26a7
+        uses: rapidsai/shared-actions/publish-docs@22e86501a9faedec2d7a962b83a221fb37440c2c
         with:
           akamai-access-token: ${{ secrets.NVIDIA_DOCS_AKAMAI_ACCESS_TOKEN }}
           akamai-client-secret: ${{ secrets.NVIDIA_DOCS_AKAMAI_CLIENT_SECRET }}
@@ -161,7 +161,7 @@ jobs:
       # publish <project>/<version>
       - name: Publish calendar version to docs.nvidia.com/<project>/<version>
         if: startsWith(github.ref_name, 'release/')
-        uses: rapidsai/shared-actions/publish-docs@4893f976ef8f2971fac85cd224f02498d4ee26a7
+        uses: rapidsai/shared-actions/publish-docs@22e86501a9faedec2d7a962b83a221fb37440c2c
         with:
           akamai-access-token: ${{ secrets.NVIDIA_DOCS_AKAMAI_ACCESS_TOKEN }}
           akamai-client-secret: ${{ secrets.NVIDIA_DOCS_AKAMAI_CLIENT_SECRET }}
@@ -326,7 +326,7 @@ jobs:
           echo "request-name=${name}" >> "${GITHUB_OUTPUT}"
 
       - name: Publish versions.json
-        uses: rapidsai/shared-actions/publish-one-doc@4893f976ef8f2971fac85cd224f02498d4ee26a7
+        uses: rapidsai/shared-actions/publish-one-doc@22e86501a9faedec2d7a962b83a221fb37440c2c
         with:
           akamai-access-token: ${{ secrets.NVIDIA_DOCS_AKAMAI_ACCESS_TOKEN }}
           akamai-client-secret: ${{ secrets.NVIDIA_DOCS_AKAMAI_CLIENT_SECRET }}

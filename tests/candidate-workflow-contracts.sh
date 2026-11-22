@@ -44,6 +44,24 @@ for workflow in "${workflows[@]}"; do
   done < <(rg -n -F --no-heading "${expected_role}" "${path}" | cut -d: -f1)
 done
 
+# Every producer-aware shared action must receive the producer identity, so a train-generated run
+# cannot fall back to the repository it happens to execute in.
+for workflow in "${workflows[@]}"; do
+  path="${root}/.github/workflows/${workflow}"
+  uses_count="$(rg -c 'uses: rapidsai/shared-actions/(release-candidate-context|release-candidate-dependencies|release-catalog-dispatch)@' "${path}")"
+  producer_count="$(rg -c '^\s+producer-repository: \$\{\{ inputs\.candidate-producer-repository-id != .. && inputs\.repo \|\| .. \}\}$' "${path}")"
+  if [[ "${uses_count}" != "${producer_count}" ]]; then
+    echo "${workflow} must pass producer-repository to every producer-aware shared action (${producer_count}/${uses_count})" >&2
+    exit 1
+  fi
+  context_count="$(rg -c 'uses: rapidsai/shared-actions/release-candidate-context@' "${path}")"
+  id_count="$(rg -c '^\s+producer-repository-id: \$\{\{ inputs\.candidate-producer-repository-id \}\}$' "${path}")"
+  if [[ "${context_count}" != "${id_count}" ]]; then
+    echo "${workflow} must pass producer-repository-id to the candidate context action" >&2
+    exit 1
+  fi
+done
+
 candidate_action_paths=(
   "${root}/.github/workflows/conda-cpp-build-candidate.yaml"
   "${root}/.github/workflows/conda-python-build-candidate.yaml"
@@ -170,7 +188,7 @@ for workflow in conda-cpp-build-candidate.yaml conda-python-build-candidate.yaml
     echo "${workflow} must preserve main's telemetry retirement" >&2
     exit 1
   fi
-  context_steps="$(rg -c 'uses: rapidsai/shared-actions/release-candidate-context@4893f976ef8f2971fac85cd224f02498d4ee26a7' "${path}")"
+  context_steps="$(rg -c 'uses: rapidsai/shared-actions/release-candidate-context@22e86501a9faedec2d7a962b83a221fb37440c2c' "${path}")"
   boundary_audits="$(rg -c "audit-boundary: 'true'" "${path}")"
   if [[ "${context_steps}" != 1 || "${boundary_audits}" != 1 ]]; then
     echo "${workflow} candidate context must run the private boundary audit" >&2
