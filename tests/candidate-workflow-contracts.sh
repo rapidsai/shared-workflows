@@ -11,7 +11,7 @@ workflows=(
 )
 # The GitHub expression is intentionally a literal assertion value.
 # shellcheck disable=SC2016
-expected_role='role-to-assume: ${{ inputs.candidate-role == '\''release-build'\'' && '\''arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates-release-build'\'' || format('\''arn:aws:iam::279114543810:role/gha-oidc-rc-producer-{0}'\'', inputs.candidate-producer-repository-id || github.repository_id) }}'
+expected_role='role-to-assume: ${{ inputs.candidate-role == '\''release-build'\'' && '\''arn:aws:iam::279114543810:role/gha-oidc-rc-release-build'\'' || format('\''arn:aws:iam::279114543810:role/gha-oidc-rc-producer-{0}'\'', inputs.candidate-producer-repository-id || github.repository_id) }}'
 
 for workflow in "${workflows[@]}"; do
   path="${root}/.github/workflows/${workflow}"

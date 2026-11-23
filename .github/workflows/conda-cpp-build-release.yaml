@@ -271,7 +271,7 @@ jobs:
         with:
           aws-region: us-east-2
           role-duration-seconds: 3600 # 1h, the producer role's maximum session duration
-          role-to-assume: ${{ inputs.candidate-role == 'release-build' && 'arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates-release-build' || format('arn:aws:iam::279114543810:role/gha-oidc-rc-producer-{0}', inputs.candidate-producer-repository-id || github.repository_id) }}
+          role-to-assume: ${{ inputs.candidate-role == 'release-build' && 'arn:aws:iam::279114543810:role/gha-oidc-rc-release-build' || format('arn:aws:iam::279114543810:role/gha-oidc-rc-producer-{0}', inputs.candidate-producer-repository-id || github.repository_id) }}
       # Resolve controller-bound candidate metadata before the build.
       - name: Resolve controller-bound candidate metadata
         id: candidate-context
@@ -415,7 +415,7 @@ jobs:
         with:
           aws-region: us-east-2
           role-duration-seconds: 3600 # 1h, the producer role's maximum session duration
-          role-to-assume: ${{ inputs.candidate-role == 'release-build' && 'arn:aws:iam::279114543810:role/gha-oidc-rapids-release-candidates-release-build' || format('arn:aws:iam::279114543810:role/gha-oidc-rc-producer-{0}', inputs.candidate-producer-repository-id || github.repository_id) }}
+          role-to-assume: ${{ inputs.candidate-role == 'release-build' && 'arn:aws:iam::279114543810:role/gha-oidc-rc-release-build' || format('arn:aws:iam::279114543810:role/gha-oidc-rc-producer-{0}', inputs.candidate-producer-repository-id || github.repository_id) }}
       - name: Create Conda release catalog companion
         uses: rapidsai/shared-actions/release-catalog-dispatch@22e86501a9faedec2d7a962b83a221fb37440c2c
         with:
