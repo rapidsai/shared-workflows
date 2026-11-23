@@ -416,13 +416,25 @@ jobs:
           aws-region: us-east-2
           role-duration-seconds: 3600 # 1h, the producer role's maximum session duration
           role-to-assume: ${{ inputs.candidate-role == 'release-build' && 'arn:aws:iam::279114543810:role/gha-oidc-rc-release-build' || format('arn:aws:iam::279114543810:role/gha-oidc-rc-producer-{0}', inputs.candidate-producer-repository-id || github.repository_id) }}
+      # The catalog unit is the producer's: a release-build run in release-tracking builds another
+      # repository, so the calling repository's name would name a unit the train does not have.
+      - name: Name the producer repository for the release catalog
+        id: catalog-repository
+        env:
+          REPOSITORY: ${{ inputs.candidate-producer-repository-id != '' && inputs.repo || github.repository }}
+        run: |
+          if [[ ! "${REPOSITORY}" =~ ^[A-Za-z0-9_.-]+/([A-Za-z0-9_.-]+)$ ]]; then
+            echo "cannot name the release catalog unit for repository '${REPOSITORY}'" >&2
+            exit 1
+          fi
+          echo "name=${BASH_REMATCH[1]}" >> "${GITHUB_OUTPUT}"
       - name: Create Conda release catalog companion
         uses: rapidsai/shared-actions/release-catalog-dispatch@22e86501a9faedec2d7a962b83a221fb37440c2c
         with:
           producer-repository: ${{ inputs.candidate-producer-repository-id != '' && inputs.repo || '' }}
           config: >-
             {
-              "release_catalog_key": ${{ toJSON(format('conda:{0}', github.event.repository.name)) }},
+              "release_catalog_key": ${{ toJSON(format('conda:{0}', steps.catalog-repository.outputs.name)) }},
               "artifact_directory": ".release-candidate-artifacts/conda"
             }
           source-artifact-name: ${{ steps.package-name.outputs.RAPIDS_PACKAGE_NAME }}
