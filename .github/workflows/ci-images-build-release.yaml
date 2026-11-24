@@ -1,0 +1,211 @@
+# Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# The release-build entrypoint for rapidsai/ci-imgs' CI images. Hand-written: ci-imgs has no candidate workflow
+# here for ci/release_build_entrypoints.py to derive it from. Ported from the release 26.12 job that
+# release-tracking carried inline (releases/26.12/handwritten/ci-imgs.yml), so that a release workflow calls it
+# like the other release-build entrypoints and the run page groups its matrix rows under one job.
+#
+# It runs only as a release-build candidate in release-tracking: credentials use the release-build role, the
+# producer is named explicitly to shared-actions, and the train comes from the caller's load-train job.
+# The private BuildKit layer cache is not used yet: ci/private_buildkit_cache.py only accepts rapidsai/ci-imgs
+# on release-test-* refs, so builds import the public main cache only.
+on:
+  workflow_call:
+    inputs:
+      candidate-matrix:
+        description: >-
+          The image matrix ({"include": [...]}), as RAPIDS_VERSION_MAJOR_MINOR=<version>
+          ci/compute-candidate-matrix.sh printed it, written into the per-release workflow by its generator.
+          Every row re-runs that script at sha and fails if the matrix changed.
+        required: true
+        type: string
+      sha:
+        description: "Full ci-imgs commit SHA the train builds."
+        required: true
+        type: string
+      candidate-train-sha256:
+        description: "Canonical SHA-256 of the release train."
+        required: true
+        type: string
+      rapids-version:
+        description: "RAPIDS version (YY.MM) the images are built for; must match the train and ci-imgs' VERSION."
+        required: true
+        type: string
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: ${{ matrix.IMAGE_REPO }}, ${{ matrix.CUDA_VER }}, ${{ matrix.LINUX_VER }}, py${{ matrix.PYTHON_VER }}, ${{ matrix.ARCH }}
+    strategy:
+      fail-fast: false
+      max-parallel: 50
+      matrix: ${{ fromJSON(inputs.candidate-matrix) }}
+    runs-on: linux-${{ matrix.ARCH }}-cpu4
+    timeout-minutes: 240
+    permissions:
+      contents: read
+      id-token: write
+      packages: read
+    env:
+      RAPIDS_SHA: ${{ inputs.sha }}
+      BUILD_TYPE: release-candidate
+      IMAGE_REPO: ${{ matrix.IMAGE_REPO }}
+      DOCKER_TARGET: ${{ matrix.DOCKER_TARGET }}
+      ARCH: ${{ matrix.ARCH }}
+      CUDA_VER: ${{ matrix.CUDA_VER }}
+      LINUX_VER: ${{ matrix.LINUX_VER }}
+      PYTHON_VER: ${{ matrix.PYTHON_VER }}
+      RAPIDS_VERSION_MAJOR_MINOR: ${{ inputs.rapids-version }}
+    steps:
+      - name: Check the caller's inputs
+        env:
+          SOURCE_SHA: ${{ inputs.sha }}
+          TRAIN_SHA256: ${{ inputs.candidate-train-sha256 }}
+          CALLER: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          [[ "${SOURCE_SHA}" =~ ^[0-9a-f]{40}$ ]] || { echo 'sha must be a full commit SHA' >&2; exit 1; }
+          [[ "${TRAIN_SHA256}" =~ ^[0-9a-f]{64}$ ]] || { echo 'candidate-train-sha256 must be a SHA-256' >&2; exit 1; }
+          [[ "${RAPIDS_VERSION_MAJOR_MINOR}" =~ ^[0-9]{2}\.[0-9]{2}$ ]] || { echo 'rapids-version must be YY.MM' >&2; exit 1; }
+          [[ "${CALLER}" == rapidsai/release-tracking ]] || { echo 'only release-tracking runs release builds' >&2; exit 1; }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: rapidsai/ci-imgs
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+      - name: Verify runner BuildKit configuration is readable
+        run: ci/check-candidate-buildkit-config.sh
+      - name: Isolate Docker registry configuration
+        run: |
+          candidate_docker_config=$(mktemp -d "${RUNNER_TEMP}/candidate-docker-config.XXXXXX")
+          echo "DOCKER_CONFIG=${candidate_docker_config}" >> "${GITHUB_ENV}"
+      - uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6.2.2
+        with:
+          aws-region: us-east-2
+          role-duration-seconds: 3600
+          role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-release-build
+      - name: Check this row against the frozen train and ci-imgs' own matrix
+        env:
+          TRAIN_SHA256: ${{ inputs.candidate-train-sha256 }}
+          SOURCE_SHA: ${{ inputs.sha }}
+          ROW: ${{ toJSON(matrix) }}
+          ROWS: ${{ strategy.job-total }}
+        run: |
+          set -euo pipefail
+          if [[ "$(git rev-parse HEAD)" != "${SOURCE_SHA}" ]]; then
+            echo 'ci-imgs checkout does not match the train source commit' >&2
+            exit 1
+          fi
+          train="${RUNNER_TEMP}/candidate-train.json"
+          aws s3 cp "s3://rapids-release-candidates/train-state/${TRAIN_SHA256}/release-train.json" "${train}"
+          actual_digest=$(jq -cSj 'del(.train_sha256)' "${train}" | sha256sum | awk '{print $1}')
+          if [[ "${actual_digest}" != "${TRAIN_SHA256}" ]]; then
+            echo 'Stored train digest does not match candidate-train-sha256' >&2
+            exit 1
+          fi
+          if ! jq -e --arg sha "${SOURCE_SHA}" '
+            .source_revisions["ci-imgs"] == $sha and
+            any(.release_units[]; .id == "container:ci-images" and .source_revision == $sha)
+          ' "${train}" > /dev/null; then
+            echo 'The train does not build container:ci-images from this ci-imgs commit' >&2
+            exit 1
+          fi
+          version=$(jq -r '.version_contract.package_versions.container' "${train}")
+          if [[ "${version}" != "${RAPIDS_VERSION_MAJOR_MINOR}" ]]; then
+            echo "The train's container version ${version} is not the caller's ${RAPIDS_VERSION_MAJOR_MINOR}" >&2
+            exit 1
+          fi
+          if [[ "$(cut -d. -f1,2 VERSION)" != "${version}" ]]; then
+            echo 'CI image source VERSION does not match the frozen train container version' >&2
+            exit 1
+          fi
+          # The rows are fixed in the release file; ci-imgs at the train's commit must still produce exactly them.
+          matrix=$(ci/compute-candidate-matrix.sh)
+          if ! jq -e --argjson row "${ROW}" --argjson rows "${ROWS}" \
+            '(.include | length) == $rows and any(.include[]; . == $row)' <<<"${matrix}" > /dev/null; then
+            echo "::error title=ci-imgs matrix changed::ci-imgs ${SOURCE_SHA} no longer produces this row or ${ROWS} rows. Regenerate the release's ci-imgs matrix and its release workflow." >&2
+            exit 1
+          fi
+      - name: Prepare frozen candidate build inputs
+        uses: rapidsai/shared-actions/release-candidate-dependencies@22e86501a9faedec2d7a962b83a221fb37440c2c
+        env:
+          RELEASE_CANDIDATE_SHARED_ACTIONS_REPOSITORY: rapidsai/shared-actions
+          RELEASE_CANDIDATE_SHARED_ACTIONS_REVISION: '22e86501a9faedec2d7a962b83a221fb37440c2c'
+        with:
+          producer-repository: rapidsai/ci-imgs
+          candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
+          artifact-family: container
+          candidate-unit-id: container:ci-images
+          implementation-mode: direct
+          # These build images consume no train package dependencies or private channel.
+          prepare-conda-channel: 'false'
+          arch: ${{ matrix.ARCH }}
+          cuda-version: ${{ matrix.CUDA_VER }}
+          python-version: ${{ matrix.PYTHON_VER }}
+      - name: Stage train-frozen gha-tools for image bootstrap
+        run: ci/stage-candidate-gha-tools.sh
+      - name: Set up Docker Context for Buildx
+        run: docker context create builders
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+        with:
+          endpoint: builders
+          buildkitd-config: /etc/buildkit/buildkitd.toml
+          buildkitd-flags: --debug
+      - name: Generate frozen build arguments
+        id: args
+        env:
+          CANDIDATE_IMAGE_MIRROR: 'true'
+          CANDIDATE_GHA_TOOLS_SOURCE: 'true'
+        run: ci/compute-build-args.sh
+      - name: Preserve the CI wheel base environment
+        if: ${{ matrix.DOCKERFILE == 'ci-wheel.Dockerfile' }}
+        env:
+          DOCKERFILE: ${{ matrix.DOCKERFILE }}
+          BASE_IMAGE: ${{ steps.args.outputs.BASE_IMAGE }}
+        run: ci/sync-base-env.sh "${BASE_IMAGE}" "${DOCKERFILE}"
+      - name: Prepare local archive directory
+        run: mkdir -p .release-candidate-artifacts/container
+      - name: Build the real CI image to an OCI archive
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: context
+          file: ${{ matrix.DOCKERFILE }}
+          target: ${{ matrix.DOCKER_TARGET }}
+          platforms: linux/${{ matrix.ARCH }}
+          pull: true
+          push: false
+          cache-from: type=registry,ref=${{ matrix.MAIN_CACHE_IMAGE_NAME }}-buildcache-${{ matrix.ARCH }}
+          build-args: ${{ steps.args.outputs.ARGS }}
+          tags: docker.io/${{ matrix.IMAGE_NAME }}-${{ matrix.ARCH }}
+          outputs: type=oci,dest=.release-candidate-artifacts/container/image.tar,oci-mediatypes=true
+          provenance: false
+          sbom: false
+          secrets: |
+            GH_TOKEN=${{ github.token }}
+      - name: Freeze image package identity
+        env:
+          IMAGE_NAME: ${{ matrix.IMAGE_NAME }}
+        run: ci/prepare-candidate-image.sh
+      - uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6.2.2
+        with:
+          aws-region: us-east-2
+          role-duration-seconds: 3600
+          role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-release-build
+      - name: Publish run-bound private image catalog
+        uses: rapidsai/shared-actions/release-catalog-dispatch@22e86501a9faedec2d7a962b83a221fb37440c2c
+        with:
+          producer-repository: rapidsai/ci-imgs
+          config: >-
+            {"release_catalog_key":"container:ci-images",
+            "artifact_directory":".release-candidate-artifacts/container",
+            "artifacts":[{"path":"*.tar.gz","package_identity_file":"package-identity.json"}]}
+          source-artifact-name: ci-images-${{ strategy.job-index }}-${{ matrix.ARCH }}
+          candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
+          candidate-matrix-arch: ${{ matrix.ARCH }}
+          candidate-matrix-cuda-version: ${{ matrix.CUDA_VER }}
+          candidate-matrix-python-version: ${{ matrix.PYTHON_VER }}
+          upload-to-s3: 'true'
