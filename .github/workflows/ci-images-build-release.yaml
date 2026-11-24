@@ -6,8 +6,11 @@
 #
 # It runs only as a release-build candidate in release-tracking: credentials use the release-build role, the
 # producer is named explicitly to shared-actions, and the train comes from the caller's load-train job.
-# The private BuildKit layer cache is not used yet: ci/private_buildkit_cache.py only accepts rapidsai/ci-imgs
-# on release-test-* refs, so builds import the public main cache only.
+# Each row also pushes its image to private GHCR (ghcr.io/rapidsai/release-candidates/<ci-conda|ci-wheel>) in the
+# same build that writes the OCI archive, so both are one image. Release builds will run in these images by digest;
+# until they do, the archive upload to S3 stays. The BuildKit layer cache is in the same private namespace and only
+# release runs write it; the public main cache stays a second source until it is warm. See rapids-work
+# plans/ghcr-candidate-images.md.
 on:
   workflow_call:
     inputs:
@@ -49,7 +52,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-      packages: read
+      packages: write
     env:
       RAPIDS_SHA: ${{ inputs.sha }}
       BUILD_TYPE: release-candidate
@@ -170,7 +173,41 @@ jobs:
         run: ci/sync-base-env.sh "${BASE_IMAGE}" "${DOCKERFILE}"
       - name: Prepare local archive directory
         run: mkdir -p .release-candidate-artifacts/container
-      - name: Build the real CI image to an OCI archive
+      - name: Name the GHCR candidate image and layer cache
+        id: ghcr
+        env:
+          IMAGE_REPO: ${{ matrix.IMAGE_REPO }}
+          IMAGE_NAME: ${{ matrix.IMAGE_NAME }}
+          ARCH: ${{ matrix.ARCH }}
+          TRAIN_SHA256: ${{ inputs.candidate-train-sha256 }}
+        run: |
+          set -euo pipefail
+          [[ "${IMAGE_REPO}" == ci-conda || "${IMAGE_REPO}" == ci-wheel ]] || { echo "unexpected image repository ${IMAGE_REPO}" >&2; exit 1; }
+          [[ "${ARCH}" == amd64 || "${ARCH}" == arm64 ]] || { echo "unexpected architecture ${ARCH}" >&2; exit 1; }
+          [[ "${TRAIN_SHA256}" =~ ^[0-9a-f]{64}$ ]] || { echo 'candidate-train-sha256 must be a SHA-256' >&2; exit 1; }
+          variant="${IMAGE_NAME#*:}"
+          if [[ "${IMAGE_NAME}" != *:* || ! "${variant}" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]]; then
+            echo "unexpected image name ${IMAGE_NAME}" >&2
+            exit 1
+          fi
+          tag="${TRAIN_SHA256}-${variant}-${ARCH}"
+          cache_tag="${IMAGE_REPO}-${variant}-${ARCH}"
+          if (( ${#tag} > 128 || ${#cache_tag} > 128 )); then
+            echo "image tag for ${IMAGE_NAME} is longer than 128 characters" >&2
+            exit 1
+          fi
+          {
+            echo "image=ghcr.io/rapidsai/release-candidates/${IMAGE_REPO}:${tag}"
+            echo "cache=ghcr.io/rapidsai/release-candidates/buildcache:${cache_tag}"
+          } >> "${GITHUB_OUTPUT}"
+      - name: Log in to GHCR for candidate images
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Build the real CI image to an OCI archive and private GHCR
+        id: build
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         env:
           # One summary block and build-record artifact per image row floods the release run's page.
@@ -183,14 +220,35 @@ jobs:
           platforms: linux/${{ matrix.ARCH }}
           pull: true
           push: false
-          cache-from: type=registry,ref=${{ matrix.MAIN_CACHE_IMAGE_NAME }}-buildcache-${{ matrix.ARCH }}
+          cache-from: |
+            type=registry,ref=${{ steps.ghcr.outputs.cache }}
+            type=registry,ref=${{ matrix.MAIN_CACHE_IMAGE_NAME }}-buildcache-${{ matrix.ARCH }}
+          cache-to: type=registry,ref=${{ steps.ghcr.outputs.cache }},mode=max,oci-mediatypes=true,image-manifest=true
           build-args: ${{ steps.args.outputs.ARGS }}
           tags: docker.io/${{ matrix.IMAGE_NAME }}-${{ matrix.ARCH }}
-          outputs: type=oci,dest=.release-candidate-artifacts/container/image.tar,oci-mediatypes=true
+          outputs: |
+            type=oci,dest=.release-candidate-artifacts/container/image.tar,oci-mediatypes=true
+            type=registry,name=${{ steps.ghcr.outputs.image }},oci-mediatypes=true
           provenance: false
           sbom: false
           secrets: |
             GH_TOKEN=${{ github.token }}
+      - name: Check the GHCR image is the archived image
+        env:
+          IMAGE: ${{ steps.ghcr.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          [[ "${DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "the build reported no image digest" >&2; exit 1; }
+          archived="$(tar -xOf .release-candidate-artifacts/container/image.tar index.json | jq -r '.manifests[0].digest')"
+          if [[ "${archived}" != "${DIGEST}" ]]; then
+            echo "the GHCR image ${DIGEST} is not the archived image ${archived}" >&2
+            exit 1
+          fi
+          # Read the pushed manifest back by digest; a missing or different image fails the row.
+          docker buildx imagetools inspect "${IMAGE%:*}@${DIGEST}" --format '{{json .Manifest}}' > "${RUNNER_TEMP}/ghcr-manifest.json"
+          jq -e --arg d "${DIGEST}" '.digest == $d' "${RUNNER_TEMP}/ghcr-manifest.json" > /dev/null
+          echo "Candidate image ${IMAGE%:*}@${DIGEST}"
       - name: Freeze image package identity
         env:
           IMAGE_NAME: ${{ matrix.IMAGE_NAME }}
