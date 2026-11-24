@@ -63,7 +63,7 @@ jobs:
           persist-credentials: true
       - name: Calculate changed files
         id: changed-files
-        uses: rapidsai/shared-actions/changed-files@b6643c627af2c43936650c21868fd134e1b2ed73
+        uses: rapidsai/shared-actions/changed-files@2ac3e5bea1c8081c0bbfdee52f346561d6bcd622
         with:
           files_yaml: ${{ inputs.files_yaml }}
           transform_expr: ${{ inputs.transform_expr }}

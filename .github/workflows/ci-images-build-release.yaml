@@ -131,10 +131,10 @@ jobs:
             exit 1
           fi
       - name: Prepare frozen candidate build inputs
-        uses: rapidsai/shared-actions/release-candidate-dependencies@b6643c627af2c43936650c21868fd134e1b2ed73
+        uses: rapidsai/shared-actions/release-candidate-dependencies@2ac3e5bea1c8081c0bbfdee52f346561d6bcd622
         env:
           RELEASE_CANDIDATE_SHARED_ACTIONS_REPOSITORY: rapidsai/shared-actions
-          RELEASE_CANDIDATE_SHARED_ACTIONS_REVISION: 'b6643c627af2c43936650c21868fd134e1b2ed73'
+          RELEASE_CANDIDATE_SHARED_ACTIONS_REVISION: '2ac3e5bea1c8081c0bbfdee52f346561d6bcd622'
         with:
           producer-repository: rapidsai/ci-imgs
           producer-sha: ${{ inputs.sha }}
@@ -172,6 +172,10 @@ jobs:
         run: mkdir -p .release-candidate-artifacts/container
       - name: Build the real CI image to an OCI archive
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        env:
+          # One summary block and build-record artifact per image row floods the release run's page.
+          DOCKER_BUILD_SUMMARY: false
+          DOCKER_BUILD_RECORD_UPLOAD: false
         with:
           context: context
           file: ${{ matrix.DOCKERFILE }}
@@ -197,7 +201,7 @@ jobs:
           role-duration-seconds: 3600
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-release-build
       - name: Publish run-bound private image catalog
-        uses: rapidsai/shared-actions/release-catalog-dispatch@b6643c627af2c43936650c21868fd134e1b2ed73
+        uses: rapidsai/shared-actions/release-catalog-dispatch@2ac3e5bea1c8081c0bbfdee52f346561d6bcd622
         with:
           producer-repository: rapidsai/ci-imgs
           config: >-
