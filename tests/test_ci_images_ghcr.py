@@ -50,10 +50,21 @@ def test_the_build_writes_the_archive_and_the_ghcr_image_in_one_build():
     _, build = step("build")
     outputs = [line.strip() for line in build["with"]["outputs"].strip().splitlines()]
     assert outputs == [
-        "type=oci,dest=.release-candidate-artifacts/container/image.tar,oci-mediatypes=true",
+        "type=oci,dest=.release-candidate-artifacts/container/image.tar,"
+        "name=docker.io/${{ matrix.IMAGE_NAME }}-${{ matrix.ARCH }},oci-mediatypes=true",
         "type=registry,name=${{ steps.ghcr.outputs.image }},oci-mediatypes=true",
     ]
     assert build["with"]["push"] is False
+
+
+def test_the_build_can_push_only_to_the_private_candidate_namespace():
+    # Release run 45474940796: with `tags` set, buildx pushed the registry export to the docker.io tag (the public
+    # rapidsai/ci-conda image) instead of the GHCR name. Only Docker Hub's refusal stopped an overwrite.
+    _, build = step("build")
+    assert "tags" not in build["with"]
+    registry = [line.strip() for line in build["with"]["outputs"].splitlines() if "type=registry" in line]
+    assert registry == ["type=registry,name=${{ steps.ghcr.outputs.image }},oci-mediatypes=true"]
+    assert all("docker.io" not in line for line in registry)
 
 
 def test_the_layer_cache_lives_in_ghcr():

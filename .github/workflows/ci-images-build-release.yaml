@@ -225,9 +225,10 @@ jobs:
             type=registry,ref=${{ matrix.MAIN_CACHE_IMAGE_NAME }}-buildcache-${{ matrix.ARCH }}
           cache-to: type=registry,ref=${{ steps.ghcr.outputs.cache }},mode=max,oci-mediatypes=true,image-manifest=true
           build-args: ${{ steps.args.outputs.ARGS }}
-          tags: docker.io/${{ matrix.IMAGE_NAME }}-${{ matrix.ARCH }}
+          # No `tags`: buildx pushes a registry export to every tag, and the archive's docker.io name must never be
+          # pushed (release run 45474940796). Each exporter names its own image; only the GHCR one is a registry.
           outputs: |
-            type=oci,dest=.release-candidate-artifacts/container/image.tar,oci-mediatypes=true
+            type=oci,dest=.release-candidate-artifacts/container/image.tar,name=docker.io/${{ matrix.IMAGE_NAME }}-${{ matrix.ARCH }},oci-mediatypes=true
             type=registry,name=${{ steps.ghcr.outputs.image }},oci-mediatypes=true
           provenance: false
           sbom: false
