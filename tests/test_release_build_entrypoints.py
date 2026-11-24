@@ -33,21 +33,24 @@ def test_entrypoint_is_the_candidate_build_job_with_an_input_matrix(family):
     assert release["permissions"] == candidate["permissions"]
     inputs = release[True]["workflow_call"]["inputs"]
     assert inputs["candidate-matrix"]["required"] is True
-    assert {key: value for key, value in inputs.items() if key != "candidate-matrix"} == candidate[True][
-        "workflow_call"
-    ]["inputs"]
-    # The policy runs first, then every original step in order.
+    assert inputs["candidate-image-map"]["required"] is True
+    added = {"candidate-matrix", "candidate-image-map"}
+    assert {key: value for key, value in inputs.items() if key not in added} == candidate[True]["workflow_call"][
+        "inputs"
+    ]
+    # The image check runs first, then the policy, then every original step in order.
     names = [step.get("name") or step.get("uses") for step in build["steps"]]
-    assert names[:2] == [
+    assert names[:3] == [
+        "Require the train's verified candidate image",
         "Evaluate the build policy for this release build",
         "Require a release-build candidate without image preflight",
     ]
-    assert len(build["steps"]) == len(original["steps"]) + 2
+    assert len(build["steps"]) == len(original["steps"]) + 3
     assert "needs." not in (WORKFLOWS / f"{family}-release.yaml").read_text().split("jobs:", 1)[1]
 
 
 def run_gate(family, run_candidate, image_preflight, role):
-    step = yaml.safe_load((WORKFLOWS / f"{family}-release.yaml").read_text())["jobs"]["build"]["steps"][1]
+    step = yaml.safe_load((WORKFLOWS / f"{family}-release.yaml").read_text())["jobs"]["build"]["steps"][2]
     env = {**os.environ, "RUN_CANDIDATE": run_candidate, "IMAGE_PREFLIGHT": image_preflight, "CANDIDATE_ROLE": role}
     return subprocess.run(  # nosec B603 - checked-in step, test-controlled environment
         [shutil.which("bash"), "-c", step["run"]], env=env, capture_output=True, text=True, check=False
@@ -69,3 +72,44 @@ def test_changed_candidate_shape_fails_instead_of_guessing():
         entrypoints.generate(text.replace("    needs: [compute-matrix, policy]\n", ""), "wheels-build")
     with pytest.raises(entrypoints.EntrypointError, match="reads another job"):
         entrypoints.generate(text.replace("${{ inputs.node_type }}", "${{ needs.other.outputs.x }}", 1), "wheels-build")
+
+
+IMAGE_EXPRESSION = "${{ fromJSON(inputs.candidate-image-map)[matrix.candidate_image_key] }}"
+FAMILY_IMAGES = {"conda-cpp-build": "ci-conda", "conda-python-build": "ci-conda", "wheels-build": "ci-wheel"}
+DIGEST = "sha256:" + "a" * 64
+
+
+@pytest.mark.parametrize("family", entrypoints.FAMILIES)
+def test_every_release_build_runs_in_its_trains_image_from_private_ghcr(family):
+    build = yaml.safe_load((WORKFLOWS / f"{family}-release.yaml").read_text())["jobs"]["build"]
+    assert build["container"]["image"] == IMAGE_EXPRESSION
+    assert build["container"]["credentials"] == {"username": "${{ github.actor }}", "password": "${{ github.token }}"}
+    # No public tag is left anywhere in the job.
+    assert "rapidsai/ci-" not in yaml.safe_dump(build)
+
+
+def run_image_check(family, image):
+    step = yaml.safe_load((WORKFLOWS / f"{family}-release.yaml").read_text())["jobs"]["build"]["steps"][0]
+    assert step["env"]["IMAGE"] == IMAGE_EXPRESSION
+    env = {**os.environ, **{key: value for key, value in step["env"].items() if key != "IMAGE"}, "IMAGE": image}
+    return subprocess.run(  # nosec B603 - checked-in step, test-controlled environment
+        [shutil.which("bash"), "-c", step["run"]], env=env, capture_output=True, text=True, check=False
+    )
+
+
+@pytest.mark.parametrize("family", entrypoints.FAMILIES)
+def test_the_image_check_admits_only_a_digest_pinned_candidate_of_the_right_family(family):
+    image = FAMILY_IMAGES[family]
+    other = "ci-wheel" if image == "ci-conda" else "ci-conda"
+    assert run_image_check(family, f"ghcr.io/rapidsai/release-candidates/{image}@{DIGEST}").returncode == 0
+    for refused in (
+        "",  # a missing map key: GitHub would run the job on the host
+        f"rapidsai/{image}:26.12-cuda12.9.2-rockylinux8-py3.12",
+        f"ghcr.io/rapidsai/release-candidates/{image}:latest",
+        f"ghcr.io/rapidsai/release-candidates/{other}@{DIGEST}",
+        f"ghcr.io/rapidsai/release-candidates/{image}@sha256:abc",
+        f"ghcr.io/other/release-candidates/{image}@{DIGEST}",
+    ):
+        result = run_image_check(family, refused)
+        assert result.returncode != 0, refused
+        assert "verified candidate image" in result.stderr

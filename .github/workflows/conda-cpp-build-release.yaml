@@ -10,6 +10,12 @@ on:
           into the per-release workflow by its generator.
         required: true
         type: string
+      candidate-image-map:
+        description: >-
+          JSON map from each matrix row's candidate_image_key to its train's verified CI image,
+          ghcr.io/rapidsai/release-candidates/<ci-conda|ci-wheel>@sha256:<digest>.
+        required: true
+        type: string
       branch:
         description: |
           Git branch the workflow run targets.
@@ -201,7 +207,10 @@ jobs:
     env:
       RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
     container:
-      image: ${{ matrix.candidate_image_reference }} # zizmor: ignore[unpinned-images]
+      image: ${{ fromJSON(inputs.candidate-image-map)[matrix.candidate_image_key] }} # zizmor: ignore[unpinned-images] - the first step requires a digest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
       env:
         # Candidate orchestration retains its own input mode, while RAPIDS
         # build helpers use the established nightly dependency behavior.
@@ -209,6 +218,15 @@ jobs:
         RAPIDS_RELEASE_CANDIDATE: true
         RAPIDS_DATETIME_STRING: ${{ inputs.build-datetime }}
     steps:
+      - name: Require the train's verified candidate image
+        env:
+          IMAGE: ${{ fromJSON(inputs.candidate-image-map)[matrix.candidate_image_key] }}
+          FAMILY: ci-conda
+        run: |
+          if [[ ! "${IMAGE}" =~ ^ghcr\.io/rapidsai/release-candidates/${FAMILY}@sha256:[0-9a-f]{64}$ ]]; then
+            echo "this row has no verified candidate image (got '${IMAGE}'); release builds run only in their train's ${FAMILY} image" >&2
+            exit 1
+          fi
       - name: Evaluate the build policy for this release build
         id: release-policy
         uses: $/.github/actions/evaluate-build-policy
