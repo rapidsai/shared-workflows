@@ -24,7 +24,7 @@ assert spec is not None and spec.loader is not None
 MATRIX_HELPER = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(MATRIX_HELPER)
 
-SHARED_ACTIONS_SHA = "fee02a0d6bae83981d30f7bd69535f61005b3158"
+SHARED_ACTIONS_SHA = "2f4d62952a24619342ee27be6d9c5832f4da0821"
 SHARED_ACTIONS_ROOT = os.environ.get("SHARED_ACTIONS_IMAGE_INPUT_CHECKOUT")
 
 
