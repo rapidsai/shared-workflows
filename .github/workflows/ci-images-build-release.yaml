@@ -134,10 +134,10 @@ jobs:
             exit 1
           fi
       - name: Prepare frozen candidate build inputs
-        uses: rapidsai/shared-actions/release-candidate-dependencies@195c41a41005cc0bfa1cb0be00ada36195989608
+        uses: rapidsai/shared-actions/release-candidate-dependencies@fee02a0d6bae83981d30f7bd69535f61005b3158
         env:
           RELEASE_CANDIDATE_SHARED_ACTIONS_REPOSITORY: rapidsai/shared-actions
-          RELEASE_CANDIDATE_SHARED_ACTIONS_REVISION: '195c41a41005cc0bfa1cb0be00ada36195989608'
+          RELEASE_CANDIDATE_SHARED_ACTIONS_REVISION: 'fee02a0d6bae83981d30f7bd69535f61005b3158'
         with:
           producer-repository: rapidsai/ci-imgs
           producer-sha: ${{ inputs.sha }}
@@ -290,7 +290,7 @@ jobs:
           role-duration-seconds: 3600
           role-to-assume: arn:aws:iam::279114543810:role/gha-oidc-rc-release-build
       - name: Publish run-bound private image catalog
-        uses: rapidsai/shared-actions/release-catalog-dispatch@195c41a41005cc0bfa1cb0be00ada36195989608
+        uses: rapidsai/shared-actions/release-catalog-dispatch@fee02a0d6bae83981d30f7bd69535f61005b3158
         with:
           producer-repository: rapidsai/ci-imgs
           config: >-

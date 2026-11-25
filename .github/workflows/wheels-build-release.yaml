@@ -273,7 +273,7 @@ jobs:
           persist-credentials: false
       - name: Setup caller cache
         if: ${{ steps.release-policy.outputs.caller-cache == 'true' }}
-        uses: rapidsai/shared-actions/setup-caller-cache@195c41a41005cc0bfa1cb0be00ada36195989608
+        uses: rapidsai/shared-actions/setup-caller-cache@fee02a0d6bae83981d30f7bd69535f61005b3158
         with:
           cache-paths: ${{ inputs.cache-paths }}
           cache-key-prefix: ${{ inputs.cache-key-prefix }}
@@ -284,7 +284,7 @@ jobs:
           matrix: ${{ toJSON(matrix) }}
 
       - name: Standardize repository information
-        uses: rapidsai/shared-actions/rapids-github-info@195c41a41005cc0bfa1cb0be00ada36195989608
+        uses: rapidsai/shared-actions/rapids-github-info@fee02a0d6bae83981d30f7bd69535f61005b3158
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
@@ -329,7 +329,7 @@ jobs:
       - name: Resolve controller-bound candidate metadata
         id: candidate-context
         if: ${{ inputs.candidate-train-sha256 == '' }}
-        uses: rapidsai/shared-actions/release-candidate-context@195c41a41005cc0bfa1cb0be00ada36195989608
+        uses: rapidsai/shared-actions/release-candidate-context@fee02a0d6bae83981d30f7bd69535f61005b3158
         with:
           producer-repository: ${{ inputs.candidate-producer-repository-id != '' && inputs.repo || '' }}
           producer-repository-id: ${{ inputs.candidate-producer-repository-id }}
@@ -343,7 +343,7 @@ jobs:
           repository: ${{ inputs.repo || github.repository }}
           source-sha: ${{ env.RAPIDS_SHA }}
       - name: Prepare candidate dependencies and build policy
-        uses: rapidsai/shared-actions/release-candidate-dependencies@195c41a41005cc0bfa1cb0be00ada36195989608
+        uses: rapidsai/shared-actions/release-candidate-dependencies@fee02a0d6bae83981d30f7bd69535f61005b3158
         with:
           row-entrypoint: wheels-build-release
           row-inputs: ${{ toJSON(inputs) }}
@@ -364,7 +364,7 @@ jobs:
         run: candidate-row-reuse
       - name: Setup sccache-dist
         if: ${{ (env.RAPIDS_RELEASE_CANDIDATE_SCCACHE == 'true') && steps.row-reuse.outputs.reused != 'true' }}
-        uses: rapidsai/shared-actions/setup-sccache-dist@195c41a41005cc0bfa1cb0be00ada36195989608
+        uses: rapidsai/shared-actions/setup-sccache-dist@fee02a0d6bae83981d30f7bd69535f61005b3158
         with:
           log-file: "${{ env.RAPIDS_ARTIFACTS_DIR }}/sccache.log"
           request-timeout: ${{ inputs.sccache-dist-request-timeout }}
@@ -486,7 +486,7 @@ jobs:
           echo "name=${BASH_REMATCH[1]}" >> "${GITHUB_OUTPUT}"
       - name: Create wheel release catalog companion
         if: ${{ steps.row-reuse.outputs.reused != 'true' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@195c41a41005cc0bfa1cb0be00ada36195989608
+        uses: rapidsai/shared-actions/release-catalog-dispatch@fee02a0d6bae83981d30f7bd69535f61005b3158
         with:
           producer-repository: ${{ inputs.candidate-producer-repository-id != '' && inputs.repo || '' }}
           config: >-
