@@ -36,6 +36,7 @@ WORKFLOWS = ROOT / ".github/workflows"
 FAMILIES = ("conda-cpp-build", "conda-python-build", "wheels-build")
 MATRIX_INPUT = "candidate-matrix"
 IMAGE_MAP_INPUT = "candidate-image-map"
+ROW_IDENTITY_INPUT = "candidate-row-identity"
 IMAGE_FAMILIES = {"conda-cpp-build": "ci-conda", "conda-python-build": "ci-conda", "wheels-build": "ci-wheel"}
 IMAGE_EXPRESSION = f"${{{{ fromJSON(inputs.{IMAGE_MAP_INPUT})[matrix.candidate_image_key] }}}}"
 POLICY_STEP = "release-policy"
@@ -54,6 +55,13 @@ IMAGE_MAP_INPUT_TEXT = f"""      {IMAGE_MAP_INPUT}:
         description: >-
           JSON map from each matrix row's candidate_image_key to its train's verified CI image,
           ghcr.io/rapidsai/release-candidates/<ci-conda|ci-wheel>@sha256:<digest>.
+        required: true
+        type: string
+"""
+ROW_IDENTITY_INPUT_TEXT = f"""      {ROW_IDENTITY_INPUT}:
+        description: >-
+          The release file's static with: values for this job, as JSON, written by its generator. Dependency setup
+          keys the row on it, and the release file's reuse plan computes the same key before the job starts.
         required: true
         type: string
 """
@@ -121,8 +129,9 @@ def _block(lines: list[str], start: int) -> int:
 def _name_the_build(body: str, family: str) -> str:
     """Give every dependency setup step the build this row runs, which goes into the row's reuse key.
 
-    A repository's C++ and Python rows share unit, family, arch, CUDA and Python; only the entrypoint and its inputs
-    tell them apart.
+    A repository's C++ and Python rows share unit, family, arch, CUDA and Python; only the entrypoint and the release
+    file's static with: values (candidate-row-identity) tell them apart. toJSON(inputs) is not used: it also carries
+    run- and train-bound values, and the reuse plan, which computes the same key, can't see it.
     """
     lines = body.splitlines(keepends=True)
     result: list[str] = []
@@ -136,7 +145,7 @@ def _name_the_build(body: str, family: str) -> str:
         result.append(line)
         if in_setup and line == "        with:\n":
             result.append(f"          row-entrypoint: {family}-release\n")
-            result.append("          row-inputs: ${{ toJSON(inputs) }}\n")
+            result.append(f"          row-identity: ${{{{ inputs.{ROW_IDENTITY_INPUT} }}}}\n")
             named += 1
             in_setup = False
     if named == 0:
@@ -221,7 +230,7 @@ def generate(text: str, family: str) -> str:
     if "needs." in body:
         raise EntrypointError(f"{family}-candidate.yaml build job reads another job: {re.findall(r'needs[.][\\w.-]+', body)}")
     preamble = lines[:jobs]
-    preamble.insert(inputs + 1, MATRIX_INPUT_TEXT + IMAGE_MAP_INPUT_TEXT)
+    preamble.insert(inputs + 1, MATRIX_INPUT_TEXT + IMAGE_MAP_INPUT_TEXT + ROW_IDENTITY_INPUT_TEXT)
     # Keep the copyright line first; the generated-file notice follows it.
     copyright_lines = 1 if preamble and preamble[0].startswith("# Copyright") else 0
     preamble.insert(copyright_lines, HEADER.format(source=f".github/workflows/{family}-candidate.yaml"))

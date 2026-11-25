@@ -34,7 +34,8 @@ def test_entrypoint_is_the_candidate_build_job_with_an_input_matrix(family):
     inputs = release[True]["workflow_call"]["inputs"]
     assert inputs["candidate-matrix"]["required"] is True
     assert inputs["candidate-image-map"]["required"] is True
-    added = {"candidate-matrix", "candidate-image-map"}
+    assert inputs["candidate-row-identity"]["required"] is True
+    added = {"candidate-matrix", "candidate-image-map", "candidate-row-identity"}
     assert {key: value for key, value in inputs.items() if key not in added} == candidate[True]["workflow_call"][
         "inputs"
     ]
@@ -170,13 +171,16 @@ def test_a_row_tries_reuse_right_after_dependency_setup_and_then_skips_its_build
 @pytest.mark.parametrize("family", entrypoints.FAMILIES)
 def test_dependency_setup_names_the_build_each_row_runs(family):
     # A repository's C++ and Python rows differ only in the build they run, so setup puts it in the reuse key
-    # (release run 45540771695 gave kvikio's C++ and Python rows one key).
+    # (release run 45540771695 gave kvikio's C++ and Python rows one key). The build is the entrypoint and the
+    # release file's static with: values, which the generator passes as candidate-row-identity: toJSON(inputs) also
+    # carried run- and train-bound values (release runs 45664183656 and 45690532489), and the reuse plan can't see it.
     steps = yaml.safe_load((WORKFLOWS / f"{family}-release.yaml").read_text())["jobs"]["build"]["steps"]
     setups = [step for step in steps if "/release-candidate-dependencies@" in step.get("uses", "")]
     assert setups
     for step in setups:
         assert step["with"]["row-entrypoint"] == f"{family}-release"
-        assert step["with"]["row-inputs"] == "${{ toJSON(inputs) }}"
+        assert step["with"]["row-identity"] == "${{ inputs.candidate-row-identity }}"
+        assert "row-inputs" not in step["with"]
     candidate = yaml.safe_load((WORKFLOWS / f"{family}-candidate.yaml").read_text())["jobs"]["build"]["steps"]
     for step in candidate:
         assert "row-entrypoint" not in (step.get("with") or {})
