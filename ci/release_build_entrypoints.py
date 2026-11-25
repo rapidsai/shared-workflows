@@ -74,6 +74,14 @@ IMAGE_STEP = r"""      - name: Require the train's verified candidate image
           # Dependency setup puts the exact image into the row's reuse key.
           echo "RELEASE_CANDIDATE_RUNTIME_IMAGE=${{IMAGE}}" >> "${{GITHUB_ENV}}"
 """
+SETUP_STEP = "      - name: Prepare candidate dependencies and build policy\n"
+REUSE_STEP_ID = "row-reuse"
+REUSED_CONDITION = f"steps.{REUSE_STEP_ID}.outputs.reused != 'true'"
+REUSE_STEP = f"""      - name: Reuse this row from an earlier complete run
+        id: {REUSE_STEP_ID}
+        if: ${{{{ env.RELEASE_CANDIDATE_ROW_REUSE_KEY != '' }}}}
+        run: candidate-row-reuse
+"""
 POLICY_STEPS = f"""      - name: Evaluate the build policy for this release build
         id: {POLICY_STEP}
         uses: $/.github/actions/evaluate-build-policy
@@ -108,6 +116,35 @@ def _block(lines: list[str], start: int) -> int:
     while end < len(lines) and not re.match(r"^  \S", lines[end]) and not re.match(r"^\S", lines[end]):
         end += 1
     return end
+
+
+def _skip_reused_rows(body: str, family: str) -> str:
+    """Insert the reuse step after dependency setup and make every later step skip when the row was reused."""
+    lines = body.splitlines(keepends=True)
+    if lines.count(SETUP_STEP) != 1:
+        raise EntrypointError(f"{family}-candidate.yaml has no single dependency setup step")
+    end = lines.index(SETUP_STEP) + 1
+    while end < len(lines) and not lines[end].startswith("      - "):
+        end += 1
+    starts = [index for index in range(end, len(lines)) if lines[index].startswith("      - ")]
+    later = []
+    for position, start in enumerate(starts):
+        stop = starts[position + 1] if position + 1 < len(starts) else len(lines)
+        later.extend(_skip_when_reused(lines[start:stop], family))
+    return "".join([*lines[:end], REUSE_STEP, *later])
+
+
+def _skip_when_reused(step: list[str], family: str) -> list[str]:
+    """Add the reuse condition to one step's single-line condition, or give it one."""
+    conditions = [index for index, line in enumerate(step) if line.startswith("        if: ")]
+    if not conditions:
+        return [step[0], f"        if: ${{{{ {REUSED_CONDITION} }}}}\n", *step[1:]]
+    index = conditions[0]
+    expression = step[index].removeprefix("        if: ").strip()
+    if len(conditions) > 1 or not expression or expression in {">", ">-", "|", "|-"}:
+        raise EntrypointError(f"{family}-candidate.yaml has a step condition this generator cannot extend")
+    inner = expression.removeprefix("${{").removesuffix("}}").strip()
+    return [*step[:index], f"        if: ${{{{ ({inner}) && {REUSED_CONDITION} }}}}\n", *step[index + 1 :]]
 
 
 def generate(text: str, family: str) -> str:
@@ -153,6 +190,7 @@ def generate(text: str, family: str) -> str:
     body = "".join(edited)
     for old, new in REPLACEMENTS:
         body = body.replace(old, new)
+    body = _skip_reused_rows(body, family)
     if "needs." in body:
         raise EntrypointError(f"{family}-candidate.yaml build job reads another job: {re.findall(r'needs[.][\\w.-]+', body)}")
     preamble = lines[:jobs]

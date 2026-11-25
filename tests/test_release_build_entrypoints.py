@@ -45,7 +45,7 @@ def test_entrypoint_is_the_candidate_build_job_with_an_input_matrix(family):
         "Evaluate the build policy for this release build",
         "Require a release-build candidate without image preflight",
     ]
-    assert len(build["steps"]) == len(original["steps"]) + 3
+    assert len(build["steps"]) == len(original["steps"]) + 4
     assert "needs." not in (WORKFLOWS / f"{family}-release.yaml").read_text().split("jobs:", 1)[1]
 
 
@@ -133,3 +133,47 @@ def test_the_image_check_tells_dependency_setup_which_image_the_row_runs_in(fami
     )
     assert result.returncode == 0, result.stderr
     assert env_file.read_text() == f"RELEASE_CANDIDATE_RUNTIME_IMAGE={image}\n"
+
+
+
+REUSED = "steps.row-reuse.outputs.reused != 'true'"
+SETUP = "Prepare candidate dependencies and build policy"
+
+
+@pytest.mark.parametrize("family", entrypoints.FAMILIES)
+def test_a_row_tries_reuse_right_after_dependency_setup_and_then_skips_its_build(family):
+    candidate = yaml.safe_load((WORKFLOWS / f"{family}-candidate.yaml").read_text())["jobs"]["build"]["steps"]
+    steps = yaml.safe_load((WORKFLOWS / f"{family}-release.yaml").read_text())["jobs"]["build"]["steps"]
+    names = [step.get("name") or step.get("uses") for step in steps]
+    setup = names.index(SETUP)
+    reuse = steps[setup + 1]
+    assert reuse == {
+        "name": "Reuse this row from an earlier complete run",
+        "id": "row-reuse",
+        "if": "${{ env.RELEASE_CANDIDATE_ROW_REUSE_KEY != '' }}",
+        "run": "candidate-row-reuse",
+    }
+    # Every step up to dependency setup runs as before; every later one skips when the row was reused.
+    for step in steps[: setup + 1]:
+        assert REUSED not in str(step.get("if", ""))
+    originals = {step.get("name") or step.get("uses"): step for step in candidate}
+    for step in steps[setup + 2 :]:
+        condition = step["if"]
+        assert condition.startswith("${{ ") and condition.endswith(" }}")
+        assert REUSED in condition
+        original = originals[step.get("name") or step.get("uses")].get("if")
+        if original:
+            inner = original.removeprefix("${{").removesuffix("}}").strip()
+            assert f"({inner})" in condition
+
+
+def test_a_step_condition_the_generator_cannot_extend_fails():
+    text = (WORKFLOWS / "wheels-build-candidate.yaml").read_text()
+    changed = text.replace(
+        "        if: ${{ env.RAPIDS_RELEASE_CANDIDATE_SCCACHE == 'true' }}",
+        "        if: >-\n          ${{ env.RAPIDS_RELEASE_CANDIDATE_SCCACHE == 'true' }}",
+        1,
+    )
+    assert changed != text
+    with pytest.raises(entrypoints.EntrypointError, match="condition"):
+        entrypoints.generate(changed, "wheels-build")

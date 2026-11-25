@@ -242,7 +242,7 @@ jobs:
           persist-credentials: false
       - name: Setup caller cache
         if: ${{ steps.release-policy.outputs.caller-cache == 'true' }}
-        uses: rapidsai/shared-actions/setup-caller-cache@5c1490f1b2dea510ecfb4af1d9e85bdd2e492488
+        uses: rapidsai/shared-actions/setup-caller-cache@5a0500bbe22bf0ad5c47f110bd8d25b6f9a7c597
         with:
           cache-paths: ${{ inputs.cache-paths }}
           cache-key-prefix: ${{ inputs.cache-key-prefix }}
@@ -282,7 +282,7 @@ jobs:
       - name: Resolve controller-bound candidate metadata
         id: candidate-context
         if: ${{ inputs.candidate-train-sha256 == '' }}
-        uses: rapidsai/shared-actions/release-candidate-context@5c1490f1b2dea510ecfb4af1d9e85bdd2e492488
+        uses: rapidsai/shared-actions/release-candidate-context@5a0500bbe22bf0ad5c47f110bd8d25b6f9a7c597
         with:
           producer-repository: ${{ inputs.candidate-producer-repository-id != '' && inputs.repo || '' }}
           producer-repository-id: ${{ inputs.candidate-producer-repository-id }}
@@ -296,7 +296,7 @@ jobs:
           repository: ${{ inputs.repo || github.repository }}
           source-sha: ${{ env.RAPIDS_SHA }}
       - name: Prepare candidate dependencies and build policy
-        uses: rapidsai/shared-actions/release-candidate-dependencies@5c1490f1b2dea510ecfb4af1d9e85bdd2e492488
+        uses: rapidsai/shared-actions/release-candidate-dependencies@5a0500bbe22bf0ad5c47f110bd8d25b6f9a7c597
         with:
           producer-repository: ${{ inputs.candidate-producer-repository-id != '' && inputs.repo || '' }}
           producer-sha: ${{ inputs.candidate-producer-repository-id != '' && (env.RAPIDS_SHA) || '' }}
@@ -310,13 +310,18 @@ jobs:
       # above exports it. When the train enables sccache, configure the same
       # sccache-dist client and OIDC-exchanged token that CI builds use;
       # without the token the build's sccache client cannot authenticate.
+      - name: Reuse this row from an earlier complete run
+        id: row-reuse
+        if: ${{ env.RELEASE_CANDIDATE_ROW_REUSE_KEY != '' }}
+        run: candidate-row-reuse
       - name: Setup sccache-dist
-        if: ${{ env.RAPIDS_RELEASE_CANDIDATE_SCCACHE == 'true' }}
-        uses: rapidsai/shared-actions/setup-sccache-dist@5c1490f1b2dea510ecfb4af1d9e85bdd2e492488
+        if: ${{ (env.RAPIDS_RELEASE_CANDIDATE_SCCACHE == 'true') && steps.row-reuse.outputs.reused != 'true' }}
+        uses: rapidsai/shared-actions/setup-sccache-dist@5a0500bbe22bf0ad5c47f110bd8d25b6f9a7c597
         with:
           log-file: "${{ env.RAPIDS_ARTIFACTS_DIR }}/sccache.log"
           request-timeout: ${{ inputs.sccache-dist-request-timeout }}
       - name: Check GitHub API rate limits
+        if: ${{ steps.row-reuse.outputs.reused != 'true' }}
         run: |
           if ! type gh >/dev/null; then
               echo "'gh' CLI is not installed... skipping rate-limits check"
@@ -327,6 +332,7 @@ jobs:
           # NEEDS alternative-gh-token-secret_name - API limits need to be for whatever token is used for upload/download. Repo token may be a different pool for rate limits.
           GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
       - name: Python build
+        if: ${{ steps.row-reuse.outputs.reused != 'true' }}
         id: python-build
         run: |
           ulimit -n "$(ulimit -Hn)"
@@ -351,6 +357,7 @@ jobs:
           MAMBA_USE_SHARDED_REPODATA: false
           RATTLER_SHARDED: false
       - name: Get Package Name and Location
+        if: ${{ steps.row-reuse.outputs.reused != 'true' }}
         env:
           # Pass RAPIDS_PACKAGE_NAME from python-build step if available
           RAPIDS_PACKAGE_NAME: ${{ steps.python-build.outputs.rapids-package-name }}
@@ -364,12 +371,14 @@ jobs:
           echo "CONDA_OUTPUT_DIR=${RAPIDS_CONDA_BLD_OUTPUT_DIR}" >> "${GITHUB_OUTPUT}"
         id: package-name
       - name: Show files to be uploaded
+        if: ${{ steps.row-reuse.outputs.reused != 'true' }}
         env:
           CONDA_OUTPUT_DIR: ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
         run: |
           echo "Contents of directory to be uploaded:"
           ls -R "${CONDA_OUTPUT_DIR}"
       - name: Stage candidate Conda packages for the release catalog
+        if: ${{ steps.row-reuse.outputs.reused != 'true' }}
         env:
           CONDA_OUTPUT_DIR: ${{ steps.package-name.outputs.CONDA_OUTPUT_DIR }}
         run: |
@@ -391,6 +400,7 @@ jobs:
           fi
 
       - name: Configure release-candidate store credentials
+        if: ${{ steps.row-reuse.outputs.reused != 'true' }}
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           aws-region: us-east-2
@@ -399,6 +409,7 @@ jobs:
       # The catalog unit is the producer's: a release-build run in release-tracking builds another
       # repository, so the calling repository's name would name a unit the train does not have.
       - name: Name the producer repository for the release catalog
+        if: ${{ steps.row-reuse.outputs.reused != 'true' }}
         id: catalog-repository
         env:
           REPOSITORY: ${{ inputs.candidate-producer-repository-id != '' && inputs.repo || github.repository }}
@@ -409,7 +420,8 @@ jobs:
           fi
           echo "name=${BASH_REMATCH[1]}" >> "${GITHUB_OUTPUT}"
       - name: Create Conda release catalog companion
-        uses: rapidsai/shared-actions/release-catalog-dispatch@5c1490f1b2dea510ecfb4af1d9e85bdd2e492488
+        if: ${{ steps.row-reuse.outputs.reused != 'true' }}
+        uses: rapidsai/shared-actions/release-catalog-dispatch@5a0500bbe22bf0ad5c47f110bd8d25b6f9a7c597
         with:
           producer-repository: ${{ inputs.candidate-producer-repository-id != '' && inputs.repo || '' }}
           config: >-
