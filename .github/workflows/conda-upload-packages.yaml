@@ -121,7 +121,7 @@ jobs:
             'anaconda-client>=1.13.1'
 
       - name: Standardize repository information
-        uses: rapidsai/shared-actions/rapids-github-info@ed866dd01feaedd2a3d7ea8327bedc28cd73762c
+        uses: rapidsai/shared-actions/rapids-github-info@c84f411a4b85c2cb88f8e33f3609ee8438e84e07
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
