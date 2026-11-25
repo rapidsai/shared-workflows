@@ -71,6 +71,8 @@ IMAGE_STEP = r"""      - name: Require the train's verified candidate image
             echo "this row has no verified candidate image (got '${{IMAGE}}'); release builds run only in their train's ${{FAMILY}} image" >&2
             exit 1
           fi
+          # Dependency setup puts the exact image into the row's reuse key.
+          echo "RELEASE_CANDIDATE_RUNTIME_IMAGE=${{IMAGE}}" >> "${{GITHUB_ENV}}"
 """
 POLICY_STEPS = f"""      - name: Evaluate the build policy for this release build
         id: {POLICY_STEP}

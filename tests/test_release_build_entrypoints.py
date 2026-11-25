@@ -91,7 +91,12 @@ def test_every_release_build_runs_in_its_trains_image_from_private_ghcr(family):
 def run_image_check(family, image):
     step = yaml.safe_load((WORKFLOWS / f"{family}-release.yaml").read_text())["jobs"]["build"]["steps"][0]
     assert step["env"]["IMAGE"] == IMAGE_EXPRESSION
-    env = {**os.environ, **{key: value for key, value in step["env"].items() if key != "IMAGE"}, "IMAGE": image}
+    env = {
+        **os.environ,
+        **{key: value for key, value in step["env"].items() if key != "IMAGE"},
+        "IMAGE": image,
+        "GITHUB_ENV": os.devnull,
+    }
     return subprocess.run(  # nosec B603 - checked-in step, test-controlled environment
         [shutil.which("bash"), "-c", step["run"]], env=env, capture_output=True, text=True, check=False
     )
@@ -113,3 +118,18 @@ def test_the_image_check_admits_only_a_digest_pinned_candidate_of_the_right_fami
         result = run_image_check(family, refused)
         assert result.returncode != 0, refused
         assert "verified candidate image" in result.stderr
+
+
+
+@pytest.mark.parametrize("family", entrypoints.FAMILIES)
+def test_the_image_check_tells_dependency_setup_which_image_the_row_runs_in(family, tmp_path):
+    # The row's reuse key covers its exact image; setup reads it from RELEASE_CANDIDATE_RUNTIME_IMAGE.
+    step = yaml.safe_load((WORKFLOWS / f"{family}-release.yaml").read_text())["jobs"]["build"]["steps"][0]
+    image = f"ghcr.io/rapidsai/release-candidates/{FAMILY_IMAGES[family]}@{DIGEST}"
+    env_file = tmp_path / "github-env"
+    env = {**os.environ, **step["env"], "IMAGE": image, "GITHUB_ENV": str(env_file)}
+    result = subprocess.run(  # nosec B603 - checked-in step, test-controlled environment
+        [shutil.which("bash"), "-c", step["run"]], env=env, capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
+    assert env_file.read_text() == f"RELEASE_CANDIDATE_RUNTIME_IMAGE={image}\n"
