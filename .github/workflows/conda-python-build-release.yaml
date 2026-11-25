@@ -242,7 +242,7 @@ jobs:
           persist-credentials: false
       - name: Setup caller cache
         if: ${{ steps.release-policy.outputs.caller-cache == 'true' }}
-        uses: rapidsai/shared-actions/setup-caller-cache@2f4d62952a24619342ee27be6d9c5832f4da0821
+        uses: rapidsai/shared-actions/setup-caller-cache@ed866dd01feaedd2a3d7ea8327bedc28cd73762c
         with:
           cache-paths: ${{ inputs.cache-paths }}
           cache-key-prefix: ${{ inputs.cache-key-prefix }}
@@ -282,7 +282,7 @@ jobs:
       - name: Resolve controller-bound candidate metadata
         id: candidate-context
         if: ${{ inputs.candidate-train-sha256 == '' }}
-        uses: rapidsai/shared-actions/release-candidate-context@2f4d62952a24619342ee27be6d9c5832f4da0821
+        uses: rapidsai/shared-actions/release-candidate-context@ed866dd01feaedd2a3d7ea8327bedc28cd73762c
         with:
           producer-repository: ${{ inputs.candidate-producer-repository-id != '' && inputs.repo || '' }}
           producer-repository-id: ${{ inputs.candidate-producer-repository-id }}
@@ -296,7 +296,7 @@ jobs:
           repository: ${{ inputs.repo || github.repository }}
           source-sha: ${{ env.RAPIDS_SHA }}
       - name: Prepare candidate dependencies and build policy
-        uses: rapidsai/shared-actions/release-candidate-dependencies@2f4d62952a24619342ee27be6d9c5832f4da0821
+        uses: rapidsai/shared-actions/release-candidate-dependencies@ed866dd01feaedd2a3d7ea8327bedc28cd73762c
         with:
           row-entrypoint: conda-python-build-release
           row-inputs: ${{ toJSON(inputs) }}
@@ -318,7 +318,7 @@ jobs:
         run: candidate-row-reuse
       - name: Setup sccache-dist
         if: ${{ (env.RAPIDS_RELEASE_CANDIDATE_SCCACHE == 'true') && steps.row-reuse.outputs.reused != 'true' }}
-        uses: rapidsai/shared-actions/setup-sccache-dist@2f4d62952a24619342ee27be6d9c5832f4da0821
+        uses: rapidsai/shared-actions/setup-sccache-dist@ed866dd01feaedd2a3d7ea8327bedc28cd73762c
         with:
           log-file: "${{ env.RAPIDS_ARTIFACTS_DIR }}/sccache.log"
           request-timeout: ${{ inputs.sccache-dist-request-timeout }}
@@ -423,7 +423,7 @@ jobs:
           echo "name=${BASH_REMATCH[1]}" >> "${GITHUB_OUTPUT}"
       - name: Create Conda release catalog companion
         if: ${{ steps.row-reuse.outputs.reused != 'true' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@2f4d62952a24619342ee27be6d9c5832f4da0821
+        uses: rapidsai/shared-actions/release-catalog-dispatch@ed866dd01feaedd2a3d7ea8327bedc28cd73762c
         with:
           producer-repository: ${{ inputs.candidate-producer-repository-id != '' && inputs.repo || '' }}
           config: >-

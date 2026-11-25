@@ -186,7 +186,7 @@ jobs:
           persist-credentials: false
       - name: Setup caller cache
         if: ${{ needs.policy.outputs.caller-cache == 'true' }}
-        uses: rapidsai/shared-actions/setup-caller-cache@2f4d62952a24619342ee27be6d9c5832f4da0821
+        uses: rapidsai/shared-actions/setup-caller-cache@ed866dd01feaedd2a3d7ea8327bedc28cd73762c
         with:
           cache-paths: ${{ inputs.cache-paths }}
           cache-key-prefix: ${{ inputs.cache-key-prefix }}
@@ -221,7 +221,7 @@ jobs:
       # and the checkout step would destroy it.
       - name: Setup sccache-dist
         if: ${{ needs.policy.outputs.allow-general-ci == 'true' }}
-        uses: rapidsai/shared-actions/setup-sccache-dist@2f4d62952a24619342ee27be6d9c5832f4da0821
+        uses: rapidsai/shared-actions/setup-sccache-dist@ed866dd01feaedd2a3d7ea8327bedc28cd73762c
         env:
           AWS_REGION: "${{env.AWS_REGION}}"
           AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"

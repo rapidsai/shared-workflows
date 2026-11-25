@@ -189,7 +189,7 @@ for workflow in conda-cpp-build-candidate.yaml conda-python-build-candidate.yaml
     echo "${workflow} must preserve main's telemetry retirement" >&2
     exit 1
   fi
-  context_steps="$(rg -c 'uses: rapidsai/shared-actions/release-candidate-context@2f4d62952a24619342ee27be6d9c5832f4da0821' "${path}")"
+  context_steps="$(rg -c 'uses: rapidsai/shared-actions/release-candidate-context@ed866dd01feaedd2a3d7ea8327bedc28cd73762c' "${path}")"
   boundary_audits="$(rg -c "audit-boundary: 'true'" "${path}")"
   if [[ "${context_steps}" != 1 || "${boundary_audits}" != 1 ]]; then
     echo "${workflow} candidate context must run the private boundary audit" >&2
