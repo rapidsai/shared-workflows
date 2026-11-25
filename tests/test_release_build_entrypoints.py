@@ -167,6 +167,20 @@ def test_a_row_tries_reuse_right_after_dependency_setup_and_then_skips_its_build
             assert f"({inner})" in condition
 
 
+@pytest.mark.parametrize("family", entrypoints.FAMILIES)
+def test_dependency_setup_names_the_build_each_row_runs(family):
+    # A repository's C++ and Python rows differ only in the build they run, so setup puts it in the reuse key
+    # (release run 45540771695 gave kvikio's C++ and Python rows one key).
+    steps = yaml.safe_load((WORKFLOWS / f"{family}-release.yaml").read_text())["jobs"]["build"]["steps"]
+    setups = [step for step in steps if "/release-candidate-dependencies@" in step.get("uses", "")]
+    assert setups
+    for step in setups:
+        assert step["with"]["row-entrypoint"] == f"{family}-release"
+        assert step["with"]["row-inputs"] == "${{ toJSON(inputs) }}"
+    candidate = yaml.safe_load((WORKFLOWS / f"{family}-candidate.yaml").read_text())["jobs"]["build"]["steps"]
+    for step in candidate:
+        assert "row-entrypoint" not in (step.get("with") or {})
+
 def test_a_step_condition_the_generator_cannot_extend_fails():
     text = (WORKFLOWS / "wheels-build-candidate.yaml").read_text()
     changed = text.replace(

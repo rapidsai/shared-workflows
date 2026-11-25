@@ -118,6 +118,32 @@ def _block(lines: list[str], start: int) -> int:
     return end
 
 
+def _name_the_build(body: str, family: str) -> str:
+    """Give every dependency setup step the build this row runs, which goes into the row's reuse key.
+
+    A repository's C++ and Python rows share unit, family, arch, CUDA and Python; only the entrypoint and its inputs
+    tell them apart.
+    """
+    lines = body.splitlines(keepends=True)
+    result: list[str] = []
+    in_setup = False
+    named = 0
+    for line in lines:
+        if line.startswith("      - "):
+            in_setup = False
+        if line.startswith("        uses: rapidsai/shared-actions/release-candidate-dependencies@"):
+            in_setup = True
+        result.append(line)
+        if in_setup and line == "        with:\n":
+            result.append(f"          row-entrypoint: {family}-release\n")
+            result.append("          row-inputs: ${{ toJSON(inputs) }}\n")
+            named += 1
+            in_setup = False
+    if named == 0:
+        raise EntrypointError(f"{family}-candidate.yaml has no dependency setup step to name the build in")
+    return "".join(result)
+
+
 def _skip_reused_rows(body: str, family: str) -> str:
     """Insert the reuse step after dependency setup and make every later step skip when the row was reused."""
     lines = body.splitlines(keepends=True)
@@ -190,6 +216,7 @@ def generate(text: str, family: str) -> str:
     body = "".join(edited)
     for old, new in REPLACEMENTS:
         body = body.replace(old, new)
+    body = _name_the_build(body, family)
     body = _skip_reused_rows(body, family)
     if "needs." in body:
         raise EntrypointError(f"{family}-candidate.yaml build job reads another job: {re.findall(r'needs[.][\\w.-]+', body)}")
