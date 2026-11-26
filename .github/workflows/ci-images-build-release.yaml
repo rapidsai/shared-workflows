@@ -169,9 +169,10 @@ jobs:
               (.candidate_image_bases[$key] // error("the release train records no base images for \($key)")) | tojson
             else "" end' "${train}")
           # Named from the image, not the job index: the plan's filtered matrix renumbers the rows, and a reused
-          # image's binding and a built image's upload must never share a name in one run.
+          # image's binding and a built image's upload must never share a name in one run. The catalog upload takes
+          # only letters, digits, _ and -, so the variant's dots become underscores.
           {
-            echo "artifact=ci-images-${IMAGE_REPO}-${variant}-${ARCH}"
+            echo "artifact=ci-images-${IMAGE_REPO}-${variant//./_}-${ARCH}"
             echo "base-images=${bases}"
           } >> "${GITHUB_OUTPUT}"
       - name: Prepare frozen candidate build inputs

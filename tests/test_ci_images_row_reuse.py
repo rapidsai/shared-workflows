@@ -9,6 +9,7 @@ matrix row and identity for the key, and skips every build step when an earlier 
 import hashlib
 import json
 import os
+import re
 import subprocess  # nosec B404
 from pathlib import Path
 
@@ -119,8 +120,25 @@ def check_row(tmp_path, *, row=None, full=FULL, computed=FULL, bases=BASES):
 def test_a_row_names_its_artifact_from_its_image_and_takes_its_bases_from_the_train(tmp_path):
     result, outputs = check_row(tmp_path)
     assert result.returncode == 0, result.stderr
-    assert outputs["artifact"] == "ci-images-ci-conda-26.12-cuda13.4.3-rockylinux8-py3.12-amd64"
+    assert outputs["artifact"] == "ci-images-ci-conda-26_12-cuda13_4_3-rockylinux8-py3_12-amd64"
     assert json.loads(outputs["base-images"]) == BASES[KEY]
+
+
+# shared-actions release-catalog/upload-candidate-s3.sh rejects any other RELEASE_SOURCE_ARTIFACT_NAME. Release run
+# 45853248242 built all 8 images and then failed every row there, because the names kept the variant's dots.
+UPLOAD_ARTIFACT_NAME = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def test_every_row_names_an_artifact_the_catalog_upload_accepts_and_no_two_rows_share_one(tmp_path):
+    names = []
+    for index, row in enumerate(FULL["include"]):
+        directory = tmp_path / str(index)
+        directory.mkdir()
+        result, outputs = check_row(directory, row=row)
+        assert result.returncode == 0, result.stderr
+        assert UPLOAD_ARTIFACT_NAME.fullmatch(outputs["artifact"]), outputs["artifact"]
+        names.append(outputs["artifact"])
+    assert len(set(names)) == len(names)
 
 
 def test_a_train_from_before_base_digests_passes_no_bases(tmp_path):
