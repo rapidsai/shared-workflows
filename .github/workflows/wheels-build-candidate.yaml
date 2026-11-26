@@ -397,33 +397,73 @@ jobs:
           echo "WHEEL_OUTPUT_DIR=${RAPIDS_WHEEL_BLD_OUTPUT_DIR}" >> "${GITHUB_OUTPUT}"
         id: package-name
 
+      # A build script that builds several packages in one job (rmm's ci/build_wheel.sh: librmm, then rmm against
+      # it) leaves each package's wheels in its own directory and reports it as the step output
+      # <package>_output_dir. Every reported directory goes into the row's catalog artifact, under the package's
+      # name; a script that reports none leaves its wheels in RAPIDS_WHEEL_BLD_OUTPUT_DIR.
       - name: Show files to be uploaded
         env:
           WHEEL_OUTPUT_DIR: ${{ steps.package-name.outputs.WHEEL_OUTPUT_DIR }}
+          BUILD_OUTPUTS: ${{ toJSON(steps.build-wheel.outputs) }}
         run: |
           echo "Contents of directory to be uploaded:"
-          ls -R "$WHEEL_OUTPUT_DIR"
+          mapfile -t directories < <(jq -r 'to_entries[] | select(.key | endswith("_output_dir")) | .value' <<<"${BUILD_OUTPUTS}")
+          if (( ${#directories[@]} == 0 )); then
+            directories=("${WHEEL_OUTPUT_DIR}")
+          fi
+          ls -R "${directories[@]}"
 
       - name: Stage candidate wheels for the release catalog
         env:
           WHEEL_OUTPUT_DIR: ${{ steps.package-name.outputs.WHEEL_OUTPUT_DIR }}
+          BUILD_OUTPUTS: ${{ toJSON(steps.build-wheel.outputs) }}
         run: |
           cd "${GITHUB_WORKSPACE}"
-          source_directory="$(realpath "${WHEEL_OUTPUT_DIR}")"
+          workspace="$(realpath "${GITHUB_WORKSPACE}")"
           artifact_directory=".release-candidate-artifacts/wheels"
-          mkdir -p "${artifact_directory}"
-          found_wheel=false
-          while IFS= read -r -d '' wheel; do
-            relative_path="${wheel#"${source_directory}/"}"
-            destination="${artifact_directory}/${relative_path}"
-            mkdir -p "$(dirname "${destination}")"
-            cp -- "${wheel}" "${destination}"
-            found_wheel=true
-          done < <(find "${source_directory}" -type f -name '*.whl' -print0)
-          if [[ "${found_wheel}" != true ]]; then
-            echo "no wheels found under ${WHEEL_OUTPUT_DIR}" >&2
-            exit 1
+          # package key (empty for a single-package build) <TAB> its output directory
+          mapfile -t reported < <(jq -r 'to_entries[] | select(.key | endswith("_output_dir"))
+            | "\(.key | sub("_output_dir$"; ""))\t\(.value)"' <<<"${BUILD_OUTPUTS}")
+          if (( ${#reported[@]} == 0 )); then
+            reported=($'\t'"${WHEEL_OUTPUT_DIR}")
           fi
+          # Check every directory before copying anything, so a bad one stages no partial row.
+          sources=()
+          for entry in "${reported[@]}"; do
+            key="${entry%%$'\t'*}"
+            directory="${entry#*$'\t'}"
+            if (( ${#reported[@]} > 1 )) || [[ -n "${key}" ]]; then
+              if [[ ! "${key}" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]]; then
+                echo "invalid staged package key '${key}' in the build step's outputs" >&2
+                exit 1
+              fi
+              if ! resolved="$(realpath -e -- "${directory}")" || [[ "${resolved}" != "${workspace}/"* ]]; then
+                echo "staged output directory for ${key} is missing or outside the workspace: ${directory}" >&2
+                exit 1
+              fi
+            else
+              resolved="$(realpath -- "${directory}")"
+            fi
+            if [[ -z "$(find "${resolved}" -type f -name '*.whl' -print -quit 2>/dev/null)" ]]; then
+              echo "no wheels found under ${directory}" >&2
+              exit 1
+            fi
+            sources+=("${key}"$'\t'"${resolved}")
+          done
+          for entry in "${sources[@]}"; do
+            key="${entry%%$'\t'*}"
+            source_directory="${entry#*$'\t'}"
+            target="${artifact_directory}${key:+/${key}}"
+            while IFS= read -r -d '' wheel; do
+              destination="${target}/${wheel#"${source_directory}/"}"
+              if [[ -e "${destination}" ]]; then
+                echo "two staged wheels would both be ${destination}" >&2
+                exit 1
+              fi
+              mkdir -p "$(dirname "${destination}")"
+              cp -- "${wheel}" "${destination}"
+            done < <(find "${source_directory}" -type f -name '*.whl' -print0)
+          done
 
       - name: Configure release-candidate store credentials
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
