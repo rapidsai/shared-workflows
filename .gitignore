@@ -1,0 +1,3 @@
+# Python bytecode is built locally by tests, never source.
+__pycache__/
+*.py[cod]
