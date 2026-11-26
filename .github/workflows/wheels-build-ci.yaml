@@ -228,7 +228,7 @@ jobs:
           persist-credentials: false
       - name: Setup caller cache
         if: ${{ needs.policy.outputs.caller-cache == 'true' }}
-        uses: rapidsai/shared-actions/setup-caller-cache@32f51924f3b4b3c9773fdb7e6f774b2872641ccc
+        uses: rapidsai/shared-actions/setup-caller-cache@2aa6690c49422ee410cd0ff3774e0d7e9bb42377
         with:
           cache-paths: ${{ inputs.cache-paths }}
           cache-key-prefix: ${{ inputs.cache-key-prefix }}
@@ -239,7 +239,7 @@ jobs:
           matrix: ${{ toJSON(matrix) }}
 
       - name: Standardize repository information
-        uses: rapidsai/shared-actions/rapids-github-info@32f51924f3b4b3c9773fdb7e6f774b2872641ccc
+        uses: rapidsai/shared-actions/rapids-github-info@2aa6690c49422ee410cd0ff3774e0d7e9bb42377
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
@@ -276,7 +276,7 @@ jobs:
 
       - name: Setup sccache-dist
         if: ${{ needs.policy.outputs.allow-general-ci == 'true' }}
-        uses: rapidsai/shared-actions/setup-sccache-dist@32f51924f3b4b3c9773fdb7e6f774b2872641ccc
+        uses: rapidsai/shared-actions/setup-sccache-dist@2aa6690c49422ee410cd0ff3774e0d7e9bb42377
         env:
           AWS_REGION: "${{env.AWS_REGION}}"
           AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"

@@ -105,7 +105,7 @@ jobs:
       - name: Check changed files
         id: changed-files
         if: ${{ inputs.enable_check_version_files_changed && steps.burndown-version-pr.outputs.exempt != 'true' }}
-        uses: rapidsai/shared-actions/changed-files@32f51924f3b4b3c9773fdb7e6f774b2872641ccc
+        uses: rapidsai/shared-actions/changed-files@2aa6690c49422ee410cd0ff3774e0d7e9bb42377
         with:
           files_yaml: |
             version_files:
