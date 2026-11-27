@@ -248,7 +248,7 @@ jobs:
       - name: Resolve controller-bound candidate metadata
         id: candidate-context
         if: ${{ inputs.candidate-train-sha256 == '' }}
-        uses: rapidsai/shared-actions/release-candidate-context@ee4348c2f4b70c2904d3fe5952e2462f685fbe81
+        uses: rapidsai/shared-actions/release-candidate-context@ed9e34d053daed96219cc206de611a5ccbfe9b71
         with:
           producer-repository: ${{ inputs.candidate-producer-repository-id != '' && inputs.repo || '' }}
           producer-repository-id: ${{ inputs.candidate-producer-repository-id }}
@@ -283,7 +283,7 @@ jobs:
         run: | # zizmor: ignore[template-injection]
           echo "RAPIDS_BASE_BRANCH=${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}" >> "${GITHUB_ENV}"
       - name: Standardize repository information
-        uses: rapidsai/shared-actions/rapids-github-info@ee4348c2f4b70c2904d3fe5952e2462f685fbe81
+        uses: rapidsai/shared-actions/rapids-github-info@ed9e34d053daed96219cc206de611a5ccbfe9b71
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
@@ -299,7 +299,7 @@ jobs:
           role-to-assume: ${{ inputs.candidate-role == 'release-build' && 'arn:aws:iam::279114543810:role/gha-oidc-rc-release-build' || format('arn:aws:iam::279114543810:role/gha-oidc-rc-producer-{0}', inputs.candidate-producer-repository-id || github.repository_id) }}
       - name: Prepare candidate dependencies and build policy
         if: ${{ (inputs.candidate-docs || inputs.candidate-dependency-family != '') }}
-        uses: rapidsai/shared-actions/release-candidate-dependencies@ee4348c2f4b70c2904d3fe5952e2462f685fbe81
+        uses: rapidsai/shared-actions/release-candidate-dependencies@ed9e34d053daed96219cc206de611a5ccbfe9b71
         with:
           producer-repository: ${{ inputs.candidate-producer-repository-id != '' && inputs.repo || '' }}
           producer-sha: ${{ inputs.candidate-producer-repository-id != '' && (inputs.sha || github.sha) || '' }}
@@ -316,7 +316,7 @@ jobs:
       # without the token the build's sccache client cannot authenticate.
       - name: Setup sccache-dist
         if: ${{ env.RAPIDS_RELEASE_CANDIDATE_SCCACHE == 'true' }}
-        uses: rapidsai/shared-actions/setup-sccache-dist@ee4348c2f4b70c2904d3fe5952e2462f685fbe81
+        uses: rapidsai/shared-actions/setup-sccache-dist@ed9e34d053daed96219cc206de611a5ccbfe9b71
         with:
           log-file: "${{ env.RAPIDS_ARTIFACTS_DIR }}/sccache.log"
           request-timeout: ${{ inputs.sccache-dist-request-timeout }}
@@ -341,7 +341,7 @@ jobs:
           persist-credentials: false
       - name: Stage candidate documentation privately
         if: ${{ inputs.candidate-docs }}
-        uses: rapidsai/shared-actions/release-candidate-docs@ee4348c2f4b70c2904d3fe5952e2462f685fbe81
+        uses: rapidsai/shared-actions/release-candidate-docs@ed9e34d053daed96219cc206de611a5ccbfe9b71
         with:
           candidate-train-sha256: ${{ inputs.candidate-train-sha256 || steps.candidate-context.outputs.train-sha256 }}
       - name: Set up uv for candidate documentation
@@ -393,7 +393,7 @@ jobs:
           role-to-assume: ${{ inputs.candidate-role == 'release-build' && 'arn:aws:iam::279114543810:role/gha-oidc-rc-release-build' || format('arn:aws:iam::279114543810:role/gha-oidc-rc-producer-{0}', inputs.candidate-producer-repository-id || github.repository_id) }}
       - name: Create release catalog companion
         if: ${{ inputs.release-catalog-config != '' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@ee4348c2f4b70c2904d3fe5952e2462f685fbe81
+        uses: rapidsai/shared-actions/release-catalog-dispatch@ed9e34d053daed96219cc206de611a5ccbfe9b71
         with:
           producer-repository: ${{ inputs.candidate-producer-repository-id != '' && inputs.repo || '' }}
           config: ${{ inputs.release-catalog-config }}

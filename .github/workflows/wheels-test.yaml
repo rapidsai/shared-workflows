@@ -242,7 +242,7 @@ jobs:
 
       - name: Setup caller cache
         if: inputs.cache-paths != '' || inputs.cache-key-prefix != '' || inputs.cache-key-files != '' || inputs.cache-environment != ''
-        uses: rapidsai/shared-actions/setup-caller-cache@ee4348c2f4b70c2904d3fe5952e2462f685fbe81
+        uses: rapidsai/shared-actions/setup-caller-cache@ed9e34d053daed96219cc206de611a5ccbfe9b71
         with:
           cache-paths: ${{ inputs.cache-paths }}
           cache-key-prefix: ${{ inputs.cache-key-prefix }}
@@ -253,7 +253,7 @@ jobs:
           matrix: ${{ toJSON(matrix) }}
 
       - name: Standardize repository information
-        uses: rapidsai/shared-actions/rapids-github-info@ee4348c2f4b70c2904d3fe5952e2462f685fbe81
+        uses: rapidsai/shared-actions/rapids-github-info@ed9e34d053daed96219cc206de611a5ccbfe9b71
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
@@ -272,7 +272,7 @@ jobs:
       # Install latest rapidsai/sccache client and configure sccache-dist
       - name: Setup sccache-dist
         if: ${{ !(github.ref_type == 'branch' && startsWith(github.ref_name, 'release-test-')) && !startsWith(github.head_ref, 'release-test-') }}
-        uses: rapidsai/shared-actions/setup-sccache-dist@ee4348c2f4b70c2904d3fe5952e2462f685fbe81
+        uses: rapidsai/shared-actions/setup-sccache-dist@ed9e34d053daed96219cc206de611a5ccbfe9b71
         env:
           AWS_REGION: "${{env.AWS_REGION}}"
           AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"
