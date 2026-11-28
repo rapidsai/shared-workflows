@@ -76,7 +76,19 @@ def test_changed_candidate_shape_fails_instead_of_guessing():
 
 
 IMAGE_EXPRESSION = "${{ fromJSON(inputs.candidate-image-map)[matrix.candidate_image_key] }}"
-FAMILY_IMAGES = {"conda-cpp-build": "ci-conda", "conda-python-build": "ci-conda", "wheels-build": "ci-wheel"}
+# maven-build names its image family by input; these tests give it cudf's, ci-wheel.
+FAMILY_IMAGES = {
+    "conda-cpp-build": "ci-conda",
+    "conda-python-build": "ci-conda",
+    "wheels-build": "ci-wheel",
+    "maven-build": "ci-wheel",
+}
+FAMILY_INPUT = "${{ inputs.container-image-family }}"
+
+
+def step_environment(family, step):
+    """The image step's env as GitHub would pass it, with maven-build's family input resolved."""
+    return {key: FAMILY_IMAGES[family] if value == FAMILY_INPUT else value for key, value in step["env"].items()}
 DIGEST = "sha256:" + "a" * 64
 
 
@@ -94,7 +106,7 @@ def run_image_check(family, image):
     assert step["env"]["IMAGE"] == IMAGE_EXPRESSION
     env = {
         **os.environ,
-        **{key: value for key, value in step["env"].items() if key != "IMAGE"},
+        **{key: value for key, value in step_environment(family, step).items() if key != "IMAGE"},
         "IMAGE": image,
         "GITHUB_ENV": os.devnull,
     }
@@ -128,13 +140,24 @@ def test_the_image_check_tells_dependency_setup_which_image_the_row_runs_in(fami
     step = yaml.safe_load((WORKFLOWS / f"{family}-release.yaml").read_text())["jobs"]["build"]["steps"][0]
     image = f"ghcr.io/rapidsai/release-candidates/{FAMILY_IMAGES[family]}@{DIGEST}"
     env_file = tmp_path / "github-env"
-    env = {**os.environ, **step["env"], "IMAGE": image, "GITHUB_ENV": str(env_file)}
+    env = {**os.environ, **step_environment(family, step), "IMAGE": image, "GITHUB_ENV": str(env_file)}
     result = subprocess.run(  # nosec B603 - checked-in step, test-controlled environment
         [shutil.which("bash"), "-c", step["run"]], env=env, capture_output=True, text=True, check=False
     )
     assert result.returncode == 0, result.stderr
     assert env_file.read_text() == f"RELEASE_CANDIDATE_RUNTIME_IMAGE={image}\n"
 
+
+
+def test_a_maven_row_runs_only_in_a_ci_conda_or_ci_wheel_image():
+    step = yaml.safe_load((WORKFLOWS / "maven-build-release.yaml").read_text())["jobs"]["build"]["steps"][0]
+    assert step["env"]["FAMILY"] == FAMILY_INPUT
+    env = {**os.environ, **step["env"], "FAMILY": "ci-imgs", "IMAGE": f"ghcr.io/rapidsai/release-candidates/ci-imgs@{DIGEST}"}
+    result = subprocess.run(  # nosec B603 - checked-in step, test-controlled environment
+        [shutil.which("bash"), "-c", step["run"]], env={**env, "GITHUB_ENV": os.devnull}, capture_output=True, text=True
+    )
+    assert result.returncode != 0
+    assert "ci-conda or ci-wheel image" in result.stderr
 
 
 REUSED = "steps.row-reuse.outputs.reused != 'true'"

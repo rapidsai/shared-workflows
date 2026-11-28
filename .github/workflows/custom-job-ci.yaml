@@ -230,7 +230,7 @@ jobs:
         run: | # zizmor: ignore[template-injection]
           echo "RAPIDS_BASE_BRANCH=${{ fromJSON(steps.get-pr-info.outputs.pr-info).base.ref }}" >> "${GITHUB_ENV}"
       - name: Standardize repository information
-        uses: rapidsai/shared-actions/rapids-github-info@3ba719a33a10f65001fa71b6fae5211853431219
+        uses: rapidsai/shared-actions/rapids-github-info@69226d290c628399642d4c583f430bb46cac8cf8
         with:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
@@ -239,7 +239,7 @@ jobs:
           build_workflow_name: ${{ inputs.build_workflow_name }}
       - name: Setup sccache-dist
         if: ${{ needs.policy.outputs.allow-general-ci == 'true' }}
-        uses: rapidsai/shared-actions/setup-sccache-dist@3ba719a33a10f65001fa71b6fae5211853431219
+        uses: rapidsai/shared-actions/setup-sccache-dist@69226d290c628399642d4c583f430bb46cac8cf8
         env:
           AWS_REGION: "${{env.AWS_REGION}}"
           AWS_ACCESS_KEY_ID: "${{env.AWS_ACCESS_KEY_ID}}"

@@ -229,6 +229,10 @@ jobs:
           IMAGE: ${{ fromJSON(inputs.candidate-image-map)[matrix.candidate_image_key] }}
           FAMILY: ci-conda
         run: |
+          if [[ "${FAMILY}" != ci-conda && "${FAMILY}" != ci-wheel ]]; then
+            echo "release builds run in a ci-conda or ci-wheel image, not '${FAMILY}'" >&2
+            exit 1
+          fi
           if [[ ! "${IMAGE}" =~ ^ghcr\.io/rapidsai/release-candidates/${FAMILY}@sha256:[0-9a-f]{64}$ ]]; then
             echo "this row has no verified candidate image (got '${IMAGE}'); release builds run only in their train's ${FAMILY} image" >&2
             exit 1
@@ -259,7 +263,7 @@ jobs:
           persist-credentials: false
       - name: Setup caller cache
         if: ${{ steps.release-policy.outputs.caller-cache == 'true' }}
-        uses: rapidsai/shared-actions/setup-caller-cache@3ba719a33a10f65001fa71b6fae5211853431219
+        uses: rapidsai/shared-actions/setup-caller-cache@69226d290c628399642d4c583f430bb46cac8cf8
         with:
           cache-paths: ${{ inputs.cache-paths }}
           cache-key-prefix: ${{ inputs.cache-key-prefix }}
@@ -302,7 +306,7 @@ jobs:
       - name: Resolve controller-bound candidate metadata
         id: candidate-context
         if: ${{ inputs.candidate-train-sha256 == '' }}
-        uses: rapidsai/shared-actions/release-candidate-context@3ba719a33a10f65001fa71b6fae5211853431219
+        uses: rapidsai/shared-actions/release-candidate-context@69226d290c628399642d4c583f430bb46cac8cf8
         with:
           producer-repository: ${{ inputs.candidate-producer-repository-id != '' && inputs.repo || '' }}
           producer-repository-id: ${{ inputs.candidate-producer-repository-id }}
@@ -317,7 +321,7 @@ jobs:
           source-sha: ${{ env.RAPIDS_SHA }}
       - name: Prepare candidate dependencies and build policy
         if: ${{ inputs.candidate-image-preflight-json == '' }}
-        uses: rapidsai/shared-actions/release-candidate-dependencies@3ba719a33a10f65001fa71b6fae5211853431219
+        uses: rapidsai/shared-actions/release-candidate-dependencies@69226d290c628399642d4c583f430bb46cac8cf8
         with:
           row-entrypoint: conda-cpp-build-release
           row-identity: ${{ inputs.candidate-row-identity }}
@@ -349,7 +353,7 @@ jobs:
           fi
       - name: Bind pre-start image selection into candidate build input
         if: ${{ (inputs.candidate-image-preflight-json != '') && steps.row-reuse.outputs.reused != 'true' }}
-        uses: rapidsai/shared-actions/release-candidate-dependencies@3ba719a33a10f65001fa71b6fae5211853431219
+        uses: rapidsai/shared-actions/release-candidate-dependencies@69226d290c628399642d4c583f430bb46cac8cf8
         with:
           row-entrypoint: conda-cpp-build-release
           row-identity: ${{ inputs.candidate-row-identity }}
@@ -370,7 +374,7 @@ jobs:
       # without the token the build's sccache client cannot authenticate.
       - name: Setup sccache-dist
         if: ${{ (env.RAPIDS_RELEASE_CANDIDATE_SCCACHE == 'true') && steps.row-reuse.outputs.reused != 'true' }}
-        uses: rapidsai/shared-actions/setup-sccache-dist@3ba719a33a10f65001fa71b6fae5211853431219
+        uses: rapidsai/shared-actions/setup-sccache-dist@69226d290c628399642d4c583f430bb46cac8cf8
         with:
           log-file: "${{ env.RAPIDS_ARTIFACTS_DIR }}/sccache.log"
           request-timeout: ${{ inputs.sccache-dist-request-timeout }}
@@ -473,7 +477,7 @@ jobs:
           echo "name=${BASH_REMATCH[1]}" >> "${GITHUB_OUTPUT}"
       - name: Create Conda release catalog companion
         if: ${{ steps.row-reuse.outputs.reused != 'true' }}
-        uses: rapidsai/shared-actions/release-catalog-dispatch@3ba719a33a10f65001fa71b6fae5211853431219
+        uses: rapidsai/shared-actions/release-catalog-dispatch@69226d290c628399642d4c583f430bb46cac8cf8
         with:
           producer-repository: ${{ inputs.candidate-producer-repository-id != '' && inputs.repo || '' }}
           config: >-

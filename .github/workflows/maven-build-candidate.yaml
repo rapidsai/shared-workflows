@@ -1,0 +1,307 @@
+# Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# A Maven release-candidate build: one row per conda-cpp-build matrix entry the caller's filter keeps, each running
+# the project's own Maven build script and cataloging its output as one Maven-repository archive of one release unit.
+# ci/release_build_entrypoints.py generates maven-build-release.yaml, the release file's entrypoint, from this file.
+on:
+  workflow_call:
+    inputs:
+      branch:
+        description: |
+          Git branch the workflow run targets.
+          This is required even when 'sha' is provided because it is also used for organizing artifacts.
+        type: string
+      date:
+        description: "Date (YYYY-MM-DD) this run is for. Used to organize artifacts produced by nightly builds"
+        type: string
+      sha:
+        description: "Full git commit SHA to check out"
+        type: string
+      build_type:
+        description: "Only release-candidate: a Maven candidate build has no CI mode; the policy job refuses anything else."
+        type: string
+        default: release-candidate
+      build-datetime:
+        description: "Date-time to use in build strings, computed at runtime by the calling workflow."
+        default: null
+        required: false
+        type: string
+      repo:
+        description: "Git repo to check out, in '{org}/{repo}' form, e.g. 'rapidsai/cudf'"
+        type: string
+      candidate-producer-repository-id:
+        description: |
+          Numeric GitHub ID of the producer repository whose candidate-store role to assume.
+          Leave empty when the workflow runs inside the producer repository (the role then comes from
+          github.repository_id). Set it only for train-generated builds that run in another repository.
+          IAM remains the authority: a wrong ID names a role that does not trust the caller and is denied.
+        type: string
+        default: ''
+      candidate-role:
+        description: |
+          Which candidate-store role to assume: 'producer' (default; the producer's own role) or
+          'release-build' (the one role trusted only for the release workflow on release-tracking main).
+          'release-build' requires candidate-producer-repository-id. Any other value fails the policy job.
+        type: string
+        default: 'producer'
+      candidate-unit-id:
+        description: "The maven: release unit every row of this job catalogs, e.g. maven:cuvs-java."
+        required: true
+        type: string
+      container-image-family:
+        description: "The CI image each row runs in: ci-conda or ci-wheel, as the project's own Maven build uses."
+        required: true
+        type: string
+      node_type:
+        description: "Runner label suffix, e.g. 'cpu8'."
+        type: string
+        default: "cpu8"
+      script:
+        description: "The project's Maven build script."
+        required: true
+        type: string
+      script-build-type:
+        description: >-
+          RAPIDS_BUILD_TYPE while the script runs: nightly (as every release build), or release-candidate for a
+          project whose script makes the release version only for a release build (cudf strips -SNAPSHOT when
+          rapids-is-release-build; that build type also turns off sccache caching).
+        type: string
+        default: nightly
+      maven-package:
+        description: >-
+          JSON declaration of where the script leaves its Maven output, for
+          shared-actions/release-candidate-maven/package_maven.py (its unit must be candidate-unit-id).
+        required: true
+        type: string
+      maven-downloads:
+        description: >-
+          Optional JSON object mapping an artifact-name prefix the script downloads with rapids-download-from-github
+          to the Maven group:artifact of an upstream unit that dependency setup put in the local Maven repository.
+        type: string
+        default: ''
+      candidate-prepare-conda-channel:
+        description: "Build a local Conda channel from the unit's Conda upstreams in the train (cuvs-java: libcuvs)."
+        type: boolean
+        default: false
+      candidate-train-sha256:
+        description: "Canonical SHA-256 of the release train; required for release-candidate builds."
+        type: string
+        default: ""
+      matrix_type:
+        description: "Matrix types of the conda-cpp-build matrix, e.g. 'nightly'."
+        type: string
+        default: "nightly"
+      matrix_filter:
+        description: "jq expression applied to the conda-cpp-build matrix."
+        type: string
+        default: "."
+      sccache-dist-request-timeout:
+        type: string
+        default: 7140
+        description: |
+          The maximum time (in seconds) the sccache client should wait for a distributed compilation to complete.
+      alternative-gh-token-secret-name:
+        type: string
+        required: false
+        description: |
+          If provided, should contain the name of a secret in the repo which holds a GitHub API token.
+          When this is non-empty, that secret's value is used in place of the default repo-level token
+          anywhere that environment variable GH_TOKEN is set.
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  actions: read
+  checks: none
+  contents: read
+  deployments: none
+  discussions: none
+  id-token: write
+  issues: none
+  packages: read
+  pages: none
+  pull-requests: read
+  repository-projects: none
+  security-events: none
+  statuses: none
+
+jobs:
+  policy:
+    uses: $/.github/workflows/evaluate-build-policy.yaml
+    permissions: {}
+    with:
+      inputs-json: ${{ toJSON(inputs) }}
+      build-type: release-candidate
+  compute-matrix:
+    uses: $/.github/workflows/compute-matrix.yaml
+    with:
+      build_type: release-candidate
+      matrix_name: conda-cpp-build
+      matrix_type: ${{ inputs.matrix_type }}
+      matrix_filter: ${{ inputs.matrix_filter }}
+  prepare-build-matrix:
+    needs: [compute-matrix, policy]
+    if: ${{ !cancelled() && needs.compute-matrix.result == 'success' && needs.policy.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - name: Select the matrix and container images
+        id: select
+        uses: $/.github/actions/select-candidate-matrix
+        with:
+          preflight-requested: 'false'
+          preflight-result: skipped
+          legacy-matrix: ${{ needs.compute-matrix.outputs.matrix }}
+  build:
+    name: ${{ matrix.CUDA_VER }}, ${{ matrix.PY_VER }}, ${{ matrix.ARCH }}, ${{ matrix.LINUX_VER }}
+    needs: [prepare-build-matrix, policy]
+    if: ${{ !cancelled() && needs.prepare-build-matrix.result == 'success' }}
+    timeout-minutes: 480
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare-build-matrix.outputs.matrix) }}
+    runs-on: "linux-${{ matrix.ARCH }}-${{ inputs.node_type }}"
+    env:
+      RAPIDS_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
+    container:
+      image: ${{ matrix.candidate_image_reference }} # zizmor: ignore[unpinned-images]
+      env:
+        RAPIDS_BUILD_TYPE: nightly
+        RAPIDS_RELEASE_CANDIDATE: true
+        RAPIDS_DATETIME_STRING: ${{ inputs.build-datetime }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.repo }}
+          ref: ${{ inputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Standardize repository information
+        env:
+          RAPIDS_REPOSITORY: ${{ inputs.repo || github.repository }}
+          RAPIDS_REF_NAME: ${{ inputs.branch || github.ref_name }}
+          RAPIDS_NIGHTLY_DATE: ${{ inputs.date }}
+        run: |
+          {
+            echo "RAPIDS_REPOSITORY=${RAPIDS_REPOSITORY}"
+            echo "RAPIDS_SHA=$(git rev-parse HEAD)"
+            echo "RAPIDS_REF_NAME=${RAPIDS_REF_NAME}"
+            echo "RAPIDS_NIGHTLY_DATE=${RAPIDS_NIGHTLY_DATE}"
+          } >> "${GITHUB_ENV}"
+      - name: Setup proxy cache
+        uses: nv-gha-runners/setup-proxy-cache@eadc57871cde0c92a223d0f486ab669a2360f978
+        continue-on-error: true
+        with:
+          enable-apt: true
+          enable-conda: true
+          enable-pip: true
+          enable-pypi-anaconda: true
+      - name: Configure candidate dependency store credentials
+        uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6.2.2
+        with:
+          aws-region: us-east-2
+          role-duration-seconds: 3600 # 1h, the producer role's maximum session duration
+          role-to-assume: ${{ inputs.candidate-role == 'release-build' && 'arn:aws:iam::279114543810:role/gha-oidc-rc-release-build' || format('arn:aws:iam::279114543810:role/gha-oidc-rc-producer-{0}', inputs.candidate-producer-repository-id || github.repository_id) }}
+      - name: Require a Maven release unit
+        env:
+          UNIT: ${{ inputs.candidate-unit-id }}
+        run: |
+          if [[ ! "${UNIT}" =~ ^maven:[A-Za-z0-9_.-]+$ ]]; then
+            echo "candidate-unit-id must be a maven: release unit, not '${UNIT}'" >&2
+            exit 1
+          fi
+      - name: Prepare candidate dependencies and build policy
+        uses: rapidsai/shared-actions/release-candidate-dependencies@69226d290c628399642d4c583f430bb46cac8cf8
+        with:
+          producer-repository: ${{ inputs.candidate-producer-repository-id != '' && inputs.repo || '' }}
+          producer-sha: ${{ inputs.candidate-producer-repository-id != '' && (env.RAPIDS_SHA) || '' }}
+          candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
+          prepare-conda-channel: ${{ inputs.candidate-prepare-conda-channel }}
+          artifact-family: maven
+          candidate-unit-id: ${{ inputs.candidate-unit-id }}
+          arch: ${{ matrix.ARCH }}
+          cuda-version: ${{ matrix.CUDA_VER }}
+          python-version: ${{ matrix.PY_VER }}
+      - name: Serve the script's same-run Maven downloads from the local Maven repository
+        if: ${{ inputs.maven-downloads != '' }}
+        uses: rapidsai/shared-actions/release-candidate-maven@69226d290c628399642d4c583f430bb46cac8cf8
+        with:
+          operation: install-download-shim
+          downloads: ${{ inputs.maven-downloads }}
+      # Candidate trains freeze candidate_build_policy.sccache, and the step
+      # above exports it. When the train enables sccache, configure the same
+      # sccache-dist client and OIDC-exchanged token that CI builds use;
+      # without the token the build's sccache client cannot authenticate.
+      - name: Setup sccache-dist
+        if: ${{ env.RAPIDS_RELEASE_CANDIDATE_SCCACHE == 'true' }}
+        uses: rapidsai/shared-actions/setup-sccache-dist@69226d290c628399642d4c583f430bb46cac8cf8
+        with:
+          log-file: "${{ env.RAPIDS_ARTIFACTS_DIR }}/sccache.log"
+          request-timeout: ${{ inputs.sccache-dist-request-timeout }}
+      - name: Maven build
+        run: |
+          ulimit -n "$(ulimit -Hn)"
+          if [[ "${SCRIPT_BUILD_TYPE}" != nightly && "${SCRIPT_BUILD_TYPE}" != release-candidate ]]; then
+            echo "script-build-type must be nightly or release-candidate, not '${SCRIPT_BUILD_TYPE}'" >&2
+            exit 1
+          fi
+          RAPIDS_BUILD_TYPE="${SCRIPT_BUILD_TYPE}" $INPUTS_SCRIPT
+        env:
+          INPUTS_SCRIPT: ${{ inputs.script }}
+          SCRIPT_BUILD_TYPE: ${{ inputs.script-build-type }}
+          RAPIDS_CUDA_VERSION: ${{ matrix.CUDA_VER }}
+          # NEEDS alternative-gh-token-secret-name - may require a token with more permissions
+          GH_TOKEN: ${{ inputs.alternative-gh-token-secret-name && secrets[inputs.alternative-gh-token-secret-name] || github.token }} # zizmor: ignore[overprovisioned-secrets]
+          # opt out of conda sharded repodata
+          #
+          # TODO: remove these when this is resolved: https://github.com/conda/infrastructure/issues/1286#issuecomment-4628580232
+          CONDA_PLUGINS_USE_SHARDED_REPODATA: false
+          MAMBA_USE_SHARDED_REPODATA: false
+          RATTLER_SHARDED: false
+      # Unique per row, so a unit's rows never share a catalog path, and [A-Za-z0-9_-]+ as the store requires.
+      - name: Name the row's catalog artifact
+        id: artifact-name
+        env:
+          UNIT: ${{ inputs.candidate-unit-id }}
+          ARCH: ${{ matrix.ARCH }}
+          CUDA_VERSION: ${{ matrix.CUDA_VER }}
+        run: echo "name=${UNIT#maven:}-${ARCH}-cuda${CUDA_VERSION//./_}" >> "${GITHUB_OUTPUT}"
+      - name: Package the Maven build for the release catalog
+        id: package
+        uses: rapidsai/shared-actions/release-candidate-maven@69226d290c628399642d4c583f430bb46cac8cf8
+        with:
+          operation: package
+          package: ${{ inputs.maven-package }}
+          version: ${{ env.RAPIDS_RELEASE_CANDIDATE_UNIT_VERSION }}
+          arch: ${{ matrix.ARCH }}
+          cuda-version: ${{ matrix.CUDA_VER }}
+          artifact-name: ${{ steps.artifact-name.outputs.name }}
+      - name: Require the packaged unit to be this job's
+        env:
+          CONFIG: ${{ steps.package.outputs.config }}
+          UNIT: ${{ inputs.candidate-unit-id }}
+        run: |
+          if [[ "$(jq -r '.release_catalog_key' <<<"${CONFIG}")" != "${UNIT}" ]]; then
+            echo "maven-package names another unit than candidate-unit-id ${UNIT}" >&2
+            exit 1
+          fi
+      - name: Configure release-candidate store credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          aws-region: us-east-2
+          role-duration-seconds: 3600 # 1h, the producer role's maximum session duration
+          role-to-assume: ${{ inputs.candidate-role == 'release-build' && 'arn:aws:iam::279114543810:role/gha-oidc-rc-release-build' || format('arn:aws:iam::279114543810:role/gha-oidc-rc-producer-{0}', inputs.candidate-producer-repository-id || github.repository_id) }}
+      - name: Create Maven release catalog companion
+        uses: rapidsai/shared-actions/release-catalog-dispatch@69226d290c628399642d4c583f430bb46cac8cf8
+        with:
+          producer-repository: ${{ inputs.candidate-producer-repository-id != '' && inputs.repo || '' }}
+          config: ${{ steps.package.outputs.config }}
+          source-artifact-name: ${{ steps.artifact-name.outputs.name }}
+          candidate-train-sha256: ${{ inputs.candidate-train-sha256 }}
+          upload-to-s3: 'true'
+          candidate-matrix-arch: ${{ matrix.ARCH }}
+          candidate-matrix-cuda-version: ${{ matrix.CUDA_VER }}
+          candidate-matrix-python-version: ${{ matrix.PY_VER }}

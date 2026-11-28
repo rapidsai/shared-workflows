@@ -33,11 +33,17 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github/workflows"
-FAMILIES = ("conda-cpp-build", "conda-python-build", "wheels-build")
+FAMILIES = ("conda-cpp-build", "conda-python-build", "wheels-build", "maven-build")
 MATRIX_INPUT = "candidate-matrix"
 IMAGE_MAP_INPUT = "candidate-image-map"
 ROW_IDENTITY_INPUT = "candidate-row-identity"
-IMAGE_FAMILIES = {"conda-cpp-build": "ci-conda", "conda-python-build": "ci-conda", "wheels-build": "ci-wheel"}
+# A Maven build runs in the image its project's own Maven build uses (cudf ci-wheel, cuvs ci-conda), named by an input.
+IMAGE_FAMILIES = {
+    "conda-cpp-build": "ci-conda",
+    "conda-python-build": "ci-conda",
+    "wheels-build": "ci-wheel",
+    "maven-build": "${{ inputs.container-image-family }}",
+}
 IMAGE_EXPRESSION = f"${{{{ fromJSON(inputs.{IMAGE_MAP_INPUT})[matrix.candidate_image_key] }}}}"
 POLICY_STEP = "release-policy"
 HEADER = (
@@ -75,6 +81,10 @@ IMAGE_STEP = r"""      - name: Require the train's verified candidate image
           IMAGE: {expression}
           FAMILY: {family}
         run: |
+          if [[ "${{FAMILY}}" != ci-conda && "${{FAMILY}}" != ci-wheel ]]; then
+            echo "release builds run in a ci-conda or ci-wheel image, not '${{FAMILY}}'" >&2
+            exit 1
+          fi
           if [[ ! "${{IMAGE}}" =~ ^ghcr\.io/rapidsai/release-candidates/${{FAMILY}}@sha256:[0-9a-f]{{64}}$ ]]; then
             echo "this row has no verified candidate image (got '${{IMAGE}}'); release builds run only in their train's ${{FAMILY}} image" >&2
             exit 1
